@@ -121,6 +121,10 @@ services:
       - media:/app/media
     networks:
       - interna
+    # o healthcheck da imagem testa a porta 8000 do gunicorn, que este
+    # container nao roda — sem desligar, ele viveria marcado como unhealthy
+    healthcheck:
+      disable: true
     # o entrypoint faria migrate de novo; aqui só queremos o laço do cron
     entrypoint: ["/bin/sh", "-c"]
     command:
