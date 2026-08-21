@@ -35,6 +35,12 @@
     <a href="{% url 'dashboard:assinaturas' %}" class="panel__link {% if secao == 'assinaturas' %}is-active{% endif %}">
       <svg width="16" height="16"><use href="#i-refresh"></use></svg>Assinaturas
     </a>
+    <a href="{% url 'dashboard:gestao' 'banners' %}" class="panel__link {% if secao == 'conteudo' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-imagem"></use></svg>Conteúdo
+    </a>
+    <a href="{% url 'dashboard:auditoria' 'pagamentos' %}" class="panel__link {% if secao == 'auditoria' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-escudo"></use></svg>Auditoria
+    </a>
     <a href="{% url 'dashboard:configuracoes' %}" class="panel__link {% if secao == 'config' %}is-active{% endif %}">
       <svg width="16" height="16"><use href="#i-config"></use></svg>Configurações
     </a>

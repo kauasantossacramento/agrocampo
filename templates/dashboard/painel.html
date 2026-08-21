@@ -10,7 +10,7 @@
 
   {# ---------------------------------------------------- FILA DE PEDIDOS #}
   <div class="table-wrap" data-reveal="left">
-    <table class="data">
+    <table class="data tabela-cartao">
       <thead>
         <tr><th>Pedido</th><th>Cliente / Itens</th><th>Total</th><th>Pagamento</th><th>Status</th></tr>
       </thead>
@@ -18,16 +18,16 @@
         {% for p in pedidos %}
           <tr class="{% if selecionado.numero == p.numero %}is-selected{% endif %}"
               onclick="location.href='?pedido={{ p.numero }}'" style="cursor:pointer">
-            <td class="strong">{{ p.numero }}</td>
-            <td>
+            <td data-rotulo="Pedido" class="strong">{{ p.numero }}</td>
+            <td data-rotulo="Cliente">
               <div style="font-weight:600;color:var(--ink)">{{ p.nome_cliente }}</div>
               <div class="xs muted">
                 {% for i in p.itens.all|slice:":2" %}{{ i.nome_produto|truncatechars:26 }}{% if not forloop.last %} + {% endif %}{% endfor %}
               </div>
             </td>
-            <td class="strong nowrap">R$ {{ p.total|floatformat:2 }}</td>
-            <td class="small">{{ p.pagamento_atual.get_metodo_display|default:"—" }}</td>
-            <td>
+            <td data-rotulo="Total" class="strong nowrap">R$ {{ p.total|floatformat:2 }}</td>
+            <td data-rotulo="Pagamento" class="small">{{ p.pagamento_atual.get_metodo_display|default:"—" }}</td>
+            <td data-rotulo="Status">
               <span class="badge
                 {% if p.status == 'aprovado' or p.status == 'entregue' %}badge--green
                 {% elif p.status == 'recusado' or p.status == 'cancelado' %}badge--red

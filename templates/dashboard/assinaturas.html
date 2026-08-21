@@ -7,7 +7,7 @@
 {% include 'dashboard/_stats.html' %}
 
 <div class="table-wrap" style="margin-top:var(--s-6)" data-reveal>
-  <table class="data">
+  <table class="data tabela-cartao">
     <thead>
       <tr><th>Cliente</th><th>Produto</th><th>Qtd</th><th>Frequência</th><th>Próxima entrega</th><th>Valor/ciclo</th><th>Status</th><th>Ciclos</th></tr>
     </thead>
@@ -45,10 +45,9 @@
 <div class="alert alert--info" style="margin-top:var(--s-5)">
   <svg width="16" height="16"><use href="#i-info"></use></svg>
   <span>
-    O processamento dos ciclos vencidos roda pelo comando
-    <code>python manage.py processar_assinaturas</code> — agende-o diariamente no cron/Task Scheduler.
-    Você também pode disparar um ciclo específico pelo
-    <a href="/admin/subscriptions/assinatura/">admin</a>.
+    O processamento dos ciclos vencidos roda todo dia às 6h, automaticamente.
+    Uma assinatura com três falhas seguidas de cobrança é cancelada, e o
+    cliente é avisado a cada tentativa.
   </span>
 </div>
 {% endblock %}

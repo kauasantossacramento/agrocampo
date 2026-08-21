@@ -42,7 +42,7 @@
 {% endfor %}
 
 <div class="table-wrap" data-reveal>
-  <table class="data">
+  <table class="data tabela-cartao">
     <thead>
       <tr>
         <th>Foto</th><th>Produto</th><th>Categoria</th>
@@ -52,7 +52,7 @@
     <tbody>
       {% for p in produtos %}
         <tr>
-          <td>
+          <td data-rotulo="Foto">
             <span class="cart-line__media" style="width:52px;height:52px;padding:4px">
               {% with imagem=p.imagem_principal %}
                 {% if imagem %}
@@ -63,7 +63,7 @@
               {% endwith %}
             </span>
           </td>
-          <td>
+          <td data-rotulo="Produto">
             <button type="button" class="link-produto"
                     data-produto-modal="{% url 'dashboard:produto_form' p.id %}"
                     data-produto-titulo="Editar produto">
@@ -76,22 +76,22 @@
               {% endif %}
             </div>
           </td>
-          <td class="small">{{ p.categoria.nome }}</td>
-          <td>
+          <td data-rotulo="Categoria" class="small">{{ p.categoria.nome }}</td>
+          <td data-rotulo="Preço">
             <input form="f{{ p.id }}" type="text" name="preco" value="{{ p.preco|floatformat:2 }}"
                    style="width:88px;padding:.4rem .5rem" aria-label="Preço de {{ p.nome }}">
           </td>
-          <td>
+          <td data-rotulo="Estoque">
             <input form="f{{ p.id }}" type="number" name="estoque" value="{{ p.estoque }}"
                    style="width:74px;padding:.4rem .5rem" aria-label="Estoque de {{ p.nome }}">
           </td>
-          <td>
+          <td data-rotulo="No ar">
             <label class="switch-row" style="gap:6px">
               <input form="f{{ p.id }}" type="checkbox" name="publicado" value="1"
                      {% if p.publicado %}checked{% endif %} aria-label="Publicar {{ p.nome }}">
             </label>
           </td>
-          <td>
+          <td data-rotulo="Ações">
             <div class="row" style="gap:var(--s-2)">
               <button form="f{{ p.id }}" type="submit" class="btn btn--ghost btn--sm nowrap">Salvar</button>
               <button type="button" class="icon-btn" aria-label="Editar {{ p.nome }}"

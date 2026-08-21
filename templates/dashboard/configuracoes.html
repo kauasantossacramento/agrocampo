@@ -449,55 +449,58 @@
     <div class="card card--pad">
       <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Conteúdo da loja</h2>
       <p class="small muted" style="margin-bottom:var(--s-4)">
-        Banners, categorias, marcas, espécies e páginas institucionais.
+        Tudo editável direto no painel — sem passar pelo cadastro técnico.
       </p>
       <div class="stack" style="gap:var(--s-1)">
-        <a href="/admin/core/banner/" class="filters__link">
+        <a href="{% url 'dashboard:gestao' 'banners' %}" class="filters__link">
           <span>Banners da home</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/core/diferencial/" class="filters__link">
+        <a href="{% url 'dashboard:gestao' 'diferenciais' %}" class="filters__link">
           <span>Faixa de garantias</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/core/pagina/" class="filters__link">
+        <a href="{% url 'dashboard:gestao' 'paginas' %}" class="filters__link">
           <span>Páginas institucionais</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/catalog/categoria/" class="filters__link">
+        <a href="{% url 'dashboard:gestao' 'categorias' %}" class="filters__link">
           <span>Categorias</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/catalog/marca/" class="filters__link">
+        <a href="{% url 'dashboard:gestao' 'marcas' %}" class="filters__link">
           <span>Marcas</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/catalog/especie/" class="filters__link">
+        <a href="{% url 'dashboard:gestao' 'especies' %}" class="filters__link">
           <span>Espécies</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/orders/cupom/" class="filters__link">
+        <a href="{% url 'dashboard:gestao' 'cupons' %}" class="filters__link">
           <span>Cupons de desconto</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
       </div>
-      <p class="xs muted" style="margin-top:var(--s-4)">
-        Estas telas ainda usam o cadastro técnico do Django.
-      </p>
     </div>
 
     <div class="card card--pad">
       <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Auditoria de pagamentos</h2>
       <p class="small muted" style="margin-bottom:var(--s-4)">
-        Rastro bruto de tudo que foi trocado com o adquirente.
+        Rastro do que foi trocado com o adquirente. Somente leitura.
       </p>
       <div class="stack" style="gap:var(--s-1)">
-        <a href="/admin/payments/pagamento/" class="filters__link">
+        <a href="{% url 'dashboard:auditoria' 'pagamentos' %}" class="filters__link">
           <span>Pagamentos</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/payments/eventowebhook/" class="filters__link">
+        <a href="{% url 'dashboard:auditoria' 'webhooks' %}" class="filters__link">
           <span>Eventos de webhook</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/payments/estorno/" class="filters__link">
+        <a href="{% url 'dashboard:auditoria' 'estornos' %}" class="filters__link">
           <span>Estornos</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
-        <a href="/admin/payments/transacaopagamento/" class="filters__link">
+        <a href="{% url 'dashboard:auditoria' 'transacoes' %}" class="filters__link">
           <span>Transações com a Stone</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
       </div>
+      {% if user.is_superuser %}
+        <p class="xs muted" style="margin-top:var(--s-4)">
+          Cadastro técnico do Django (só para analista):
+          <a href="/admin/">/admin/</a>
+        </p>
+      {% endif %}
     </div>
   </div>
 

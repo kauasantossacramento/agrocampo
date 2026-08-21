@@ -1,0 +1,97 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}{{ secao_atual.titulo }}{% endblock %}
+{% block painel_heading %}{{ secao_atual.titulo }}{% endblock %}
+
+{% block painel_content %}
+
+<nav class="abas" aria-label="Seções de conteúdo">
+  {% for s in secoes %}
+    <a href="{% url 'dashboard:gestao' s.slug %}"
+       class="aba {% if s.slug == secao_atual.slug %}is-atual{% endif %}">
+      <svg width="15" height="15"><use href="#{{ s.icone }}"></use></svg>{{ s.titulo }}
+    </a>
+  {% endfor %}
+</nav>
+
+<div class="row row--between" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:var(--s-3)">
+  <div style="flex:1;min-width:220px">
+    <p class="small muted" style="margin:0">{{ secao_atual.descricao }}</p>
+  </div>
+  <button type="button" class="btn btn--primary btn--sm nowrap"
+          data-produto-modal="{% url 'dashboard:gestao_form_novo' secao_atual.slug %}"
+          data-produto-titulo="{{ secao_atual.artigo }} {{ secao_atual.singular }}">
+    + {{ secao_atual.artigo }} {{ secao_atual.singular }}
+  </button>
+</div>
+
+{% if secao_atual.busca %}
+  <form method="get" class="input-icon" style="margin-bottom:var(--s-5);max-width:420px">
+    <svg width="17" height="17"><use href="#i-busca"></use></svg>
+    <input type="search" name="q" value="{{ busca }}"
+           placeholder="Buscar em {{ secao_atual.titulo|lower }}...">
+  </form>
+{% endif %}
+
+<div class="table-wrap" data-reveal>
+  <table class="data tabela-cartao">
+    <thead>
+      <tr>
+        {% for coluna in colunas %}<th>{{ coluna }}</th>{% endfor %}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for linha in linhas %}
+        <tr>
+          {% for rotulo, valor in linha.celulas %}
+            <td data-rotulo="{{ rotulo }}">
+              {% if valor is True %}
+                <span class="badge badge--green">sim</span>
+              {% elif valor is False %}
+                <span class="badge badge--gray">não</span>
+              {% else %}
+                {{ valor }}
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td data-rotulo="Ações">
+            <div class="row" style="gap:var(--s-2);justify-content:flex-end">
+              <button type="button" class="btn btn--ghost btn--sm nowrap"
+                      data-produto-modal="{% url 'dashboard:gestao_form' secao_atual.slug linha.obj.pk %}"
+                      data-produto-titulo="Editar {{ secao_atual.singular }}">
+                <svg width="14" height="14"><use href="#i-lapis"></use></svg>Editar
+              </button>
+              <form method="post" action="{% url 'dashboard:gestao_excluir' secao_atual.slug linha.obj.pk %}"
+                    onsubmit="return confirm('Remover “{{ linha.obj }}”? Não dá para desfazer.')">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn" aria-label="Remover {{ linha.obj }}">
+                  <svg width="16" height="16"><use href="#i-x"></use></svg>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="{{ colunas|length|add:1 }}" class="center" style="padding:var(--s-12)">
+            <p class="empty__title">Nada cadastrado aqui ainda</p>
+            <p class="small muted">{{ secao_atual.descricao }}</p>
+            <button type="button" class="btn btn--primary" style="margin-top:var(--s-4)"
+                    data-produto-modal="{% url 'dashboard:gestao_form_novo' secao_atual.slug %}"
+                    data-produto-titulo="{{ secao_atual.artigo }} {{ secao_atual.singular }}">
+              + {{ secao_atual.artigo }} {{ secao_atual.singular }}
+            </button>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total > 300 %}
+  <p class="small muted" style="margin-top:var(--s-4)">
+    Mostrando os 300 primeiros de {{ total }}. Use a busca para achar o resto.
+  </p>
+{% endif %}
+{% endblock %}

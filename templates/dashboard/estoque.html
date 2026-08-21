@@ -13,26 +13,26 @@
 </div>
 
 <div class="table-wrap" data-reveal>
-  <table class="data">
+  <table class="data tabela-cartao">
     <thead>
       <tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Estoque</th><th>Mínimo</th><th>Vendas</th><th>Repor</th></tr>
     </thead>
     <tbody>
       {% for p in produtos %}
         <tr>
-          <td>
+          <td data-rotulo="Produto">
             <a href="{{ p.get_absolute_url }}" style="font-weight:600;color:var(--ink)">{{ p.nome|truncatechars:44 }}</a>
           </td>
-          <td class="xs muted">{{ p.sku }}</td>
-          <td class="small">{{ p.categoria.nome }}</td>
-          <td>
+          <td data-rotulo="SKU" class="xs muted">{{ p.sku }}</td>
+          <td data-rotulo="Categoria" class="small">{{ p.categoria.nome }}</td>
+          <td data-rotulo="Estoque">
             <strong style="color:{% if p.estoque <= 0 %}var(--red){% elif p.estoque_baixo %}var(--amber){% else %}var(--green){% endif %}">
               {{ p.estoque }}
             </strong>
           </td>
-          <td class="small muted">{{ p.estoque_minimo }}</td>
-          <td class="small">{{ p.vendas }}</td>
-          <td>
+          <td data-rotulo="Mínimo" class="small muted">{{ p.estoque_minimo }}</td>
+          <td data-rotulo="Vendas" class="small">{{ p.vendas }}</td>
+          <td data-rotulo="Repor">
             <form method="post" action="{% url 'dashboard:repor_estoque' p.id %}" class="row" style="gap:var(--s-2)">
               {% csrf_token %}
               <input type="number" name="quantidade" min="1" value="10" style="width:76px;padding:.4rem .5rem" aria-label="Quantidade a repor">

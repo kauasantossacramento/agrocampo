@@ -95,9 +95,88 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .cart-line__media { width: 68px; height: 68px; }
   .cart-line > div:last-child { width: 100%; text-align: left; }
 
-  /* tabelas de dados rolam dentro do próprio container */
+  /* ── Tabelas do painel viram cartões ──────────────────────────────
+     Rolar uma tabela de 800px numa tela de 320px é inviável no dedo: o
+     lojista perde o cabeçalho e não sabe que coluna está lendo. Cada
+     linha vira um cartão e o rótulo da coluna vem do data-rotulo. */
+  .tabela-cartao,
+  .tabela-cartao thead,
+  .tabela-cartao tbody,
+  .tabela-cartao tr,
+  .tabela-cartao td { display: block; width: 100%; }
+
+  .tabela-cartao thead { display: none; }
+
+  .tabela-cartao tbody tr {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: var(--s-3) var(--s-4);
+    margin-bottom: var(--s-3);
+    box-shadow: var(--sh-1);
+  }
+  .tabela-cartao tbody tr:hover { background: var(--surface); }
+
+  .tabela-cartao tbody td {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-2) 0;
+    border-top: none;
+    border-bottom: 1px solid var(--line);
+    text-align: right;
+  }
+  .tabela-cartao tbody td:last-child { border-bottom: none; padding-bottom: 0; }
+
+  /* o rótulo da coluna vira o rótulo do campo dentro do cartão */
+  .tabela-cartao tbody td::before {
+    content: attr(data-rotulo);
+    flex: none; text-align: left;
+    font-size: var(--fs-xs); font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .tabela-cartao tbody td:empty { display: none; }
+
+  /* célula com botões ocupa a linha inteira */
+  .tabela-cartao tbody td[data-rotulo="Ações"],
+  .tabela-cartao tbody td[data-rotulo="Repor"] {
+    flex-wrap: wrap; justify-content: flex-start; padding-top: var(--s-3);
+  }
+
+  /* tabelas sem o padrão de cartão seguem rolando, com aviso visual */
   .table-wrap { -webkit-overflow-scrolling: touch; }
-  table.data { min-width: 560px; }
+  table.data:not(.tabela-cartao) { min-width: 560px; }
+
+  /* ── Alvos de toque ──────────────────────────────────────────────
+     Referência: 44px. Links de texto largos são perdoáveis com menos
+     altura, mas ainda precisam de área para o polegar. */
+  .panel__main a.xs,
+  .panel__main .link-underline,
+  .panel__main table.data a,
+  .panel__main .link-produto {
+    min-height: 40px; display: inline-flex; align-items: center;
+  }
+
+  /* o alvo real do checkbox é o label inteiro, não o quadradinho */
+  .panel__main .switch-row {
+    min-height: 44px; padding-block: var(--s-1);
+    cursor: pointer;
+  }
+  .panel__main input[type="checkbox"] { width: 24px; height: 24px; flex: none; }
+
+  /* dentro do cartão, a linha do checkbox ocupa a largura toda */
+  .tabela-cartao .switch-row { width: 100%; justify-content: flex-end; }
+
+  /* Cabeçalho das telas do painel: busca e ação empilham em vez de
+     disputar a mesma linha e acabar sobrepostas. */
+  .panel__main > .row--between { flex-direction: column; align-items: stretch; }
+  .panel__main > .row--between > form { width: 100%; }
+  .panel__main > .row--between > .btn { width: 100%; justify-content: center; }
+
+  /* campos apertados demais para digitar no celular */
+  .panel__main input[type="text"],
+  .panel__main input[type="number"] { min-width: 100px; }
+  .tabela-cartao input[type="text"],
+  .tabela-cartao input[type="number"] { width: 100% !important; max-width: 200px; }
 
   .newsletter { padding: var(--s-6); }
   .flash__inner { padding: var(--s-6); }

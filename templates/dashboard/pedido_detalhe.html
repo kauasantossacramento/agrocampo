@@ -137,7 +137,8 @@
           <div class="summary__row summary__row--green"><span>Estornado</span><span>R$ {{ pagamento.valor_estornado|floatformat:2 }}</span></div>
         {% endif %}
 
-        <a href="/admin/payments/pagamento/{{ pagamento.id }}/change/" class="btn btn--ghost btn--sm btn--block" style="margin-top:var(--s-4)">
+        <a href="{% url 'dashboard:auditoria' 'transacoes' %}?q={{ pedido.numero }}"
+           class="btn btn--ghost btn--sm btn--block" style="margin-top:var(--s-4)">
           Ver trilha de auditoria
         </a>
       {% else %}

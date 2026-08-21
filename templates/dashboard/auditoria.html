@@ -1,0 +1,57 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}{{ info.titulo }}{% endblock %}
+{% block painel_heading %}{{ info.titulo }}{% endblock %}
+
+{% block painel_content %}
+<nav class="abas" aria-label="Auditoria">
+  {% for chave, dados in abas.items %}
+    <a href="{% url 'dashboard:auditoria' chave %}"
+       class="aba {% if chave == tipo %}is-atual{% endif %}">{{ dados.titulo }}</a>
+  {% endfor %}
+</nav>
+
+<p class="small muted" style="margin-bottom:var(--s-5)">
+  {{ info.descricao }} Somente leitura — este é o histórico do que aconteceu.
+</p>
+
+<form method="get" class="input-icon" style="margin-bottom:var(--s-5);max-width:420px">
+  <svg width="17" height="17"><use href="#i-busca"></use></svg>
+  <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por pedido ou referência...">
+</form>
+
+<div class="table-wrap" data-reveal>
+  <table class="data tabela-cartao">
+    <thead>
+      <tr>{% for coluna in info.colunas %}<th>{{ coluna }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for linha in linhas %}
+        <tr>
+          {% for rotulo, valor in linha.celulas %}
+            <td data-rotulo="{{ rotulo }}">
+              {% if forloop.last %}
+                <span class="xs muted nowrap">{{ valor|date:"d/m/Y H:i" }}</span>
+              {% else %}
+                {{ valor }}
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="{{ info.colunas|length }}" class="center muted" style="padding:var(--s-12)">
+            Nada registrado ainda.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total > 200 %}
+  <p class="small muted" style="margin-top:var(--s-4)">
+    Mostrando os 200 mais recentes de {{ total }}.
+  </p>
+{% endif %}
+{% endblock %}

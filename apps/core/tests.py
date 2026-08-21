@@ -464,3 +464,109 @@ class PainelSemAdminDjangoTests(TestCase):
         config = SiteConfig.load()
         self.assertEqual(config.nome_loja, "AgroCampo Editado")
         self.assertEqual(config.chamada, "Nova chamada da capa")
+
+
+class TelasNativasDeConteudoTests(TestCase):
+    """Nada do lojista pode depender do admin do Django."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed", verbosity=0)
+        cls.lojista = User.objects.create_user(
+            email="lojista3@exemplo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.lojista)
+
+    def test_todas_as_secoes_de_conteudo_abrem(self):
+        from apps.dashboard.gestao import SECOES
+
+        for slug in SECOES:
+            with self.subTest(slug=slug):
+                resposta = self.client.get(reverse("dashboard:gestao", args=[slug]))
+                self.assertEqual(resposta.status_code, 200)
+                # tabela em modo cartão para o celular
+                self.assertIn("tabela-cartao", resposta.content.decode())
+
+    def test_todas_as_secoes_tem_formulario_no_modal(self):
+        from apps.dashboard.gestao import SECOES
+
+        for slug in SECOES:
+            with self.subTest(slug=slug):
+                html = self.client.get(
+                    reverse("dashboard:gestao_form_novo", args=[slug])
+                ).content.decode()
+                self.assertIn("data-wizard", html)
+                self.assertIn("data-wizard-salvar", html)
+
+    def test_cria_e_edita_um_banner_pelo_painel(self):
+        from apps.core.models import Banner
+
+        resposta = self.client.post(
+            reverse("dashboard:gestao_salvar_novo", args=["banners"]),
+            {"titulo": "Banner de teste", "subtitulo": "Sub", "selo": "Novo",
+             "cor_fundo": "#D62B20", "texto_botao": "Ver", "link": "/catalogo/",
+             "posicao": "hero", "ordem": "0", "publicado": "on"},
+        )
+        self.assertEqual(resposta.status_code, 200)
+        banner = Banner.objects.get(titulo="Banner de teste")
+
+        self.client.post(
+            reverse("dashboard:gestao_salvar", args=["banners", banner.pk]),
+            {"titulo": "Banner editado", "subtitulo": "Sub", "selo": "",
+             "cor_fundo": "#D62B20", "texto_botao": "Ver", "link": "/catalogo/",
+             "posicao": "hero", "ordem": "0", "publicado": "on"},
+        )
+        banner.refresh_from_db()
+        self.assertEqual(banner.titulo, "Banner editado")
+
+    def test_cria_cupom_pelo_painel(self):
+        from apps.orders.models import Cupom
+
+        self.client.post(
+            reverse("dashboard:gestao_salvar_novo", args=["cupons"]),
+            {"codigo": "teste10", "descricao": "Dez por cento", "tipo": "percentual",
+             "valor": "10", "valor_minimo": "50", "usos_maximos": "0", "ativo": "on"},
+        )
+        cupom = Cupom.objects.get(codigo="TESTE10")   # normalizado em maiúsculas
+        self.assertEqual(cupom.valor, 10)
+
+    def test_categoria_nao_pode_ser_pai_de_si_mesma(self):
+        from apps.catalog.models import Categoria
+        from apps.dashboard.gestao import CategoriaForm
+
+        categoria = Categoria.objects.filter(pai__isnull=True).first()
+        form = CategoriaForm(instance=categoria)
+        self.assertNotIn(categoria, form.fields["pai"].queryset)
+
+    def test_secao_inexistente_da_404(self):
+        self.assertEqual(
+            self.client.get(reverse("dashboard:gestao", args=["inventada"])).status_code,
+            404,
+        )
+
+    def test_auditoria_abre_em_todas_as_abas(self):
+        for tipo in ["pagamentos", "webhooks", "estornos", "transacoes"]:
+            with self.subTest(tipo=tipo):
+                resposta = self.client.get(reverse("dashboard:auditoria", args=[tipo]))
+                self.assertEqual(resposta.status_code, 200)
+
+    def test_painel_nao_manda_o_lojista_para_o_admin_do_django(self):
+        """Regressão: os atalhos eram links crus para /admin/."""
+        import re
+
+        rotas = [
+            reverse("dashboard:painel"),
+            reverse("dashboard:produtos"),
+            reverse("dashboard:estoque"),
+            reverse("dashboard:assinaturas"),
+            reverse("dashboard:configuracoes"),
+        ]
+        for rota in rotas:
+            with self.subTest(rota=rota):
+                html = self.client.get(rota).content.decode()
+                # o lojista não é superusuário, então nem o atalho técnico aparece
+                links = re.findall(r'href="(/admin/[^"]*)"', html)
+                self.assertFalse(links, f"{rota} ainda leva ao admin: {links}")

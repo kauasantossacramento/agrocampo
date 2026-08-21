@@ -1,0 +1,40 @@
+{% comment %}
+  Formulário genérico das seções de conteúdo, carregado no modal.
+  Reaproveita o mesmo JS do wizard de produto: um <form> lógico, um POST.
+{% endcomment %}
+<div class="wizard" data-wizard
+     data-acao="{% if obj %}{% url 'dashboard:gestao_salvar' secao_atual.slug obj.pk %}{% else %}{% url 'dashboard:gestao_salvar_novo' secao_atual.slug %}{% endif %}">
+
+  {% if form.non_field_errors %}
+    <div class="alert alert--error" style="margin-bottom:var(--s-4)">
+      <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+      <span>{{ form.non_field_errors|join:" " }}</span>
+    </div>
+  {% endif %}
+
+  <section class="wizard__tela is-atual" data-tela="1">
+    {% for campo in form %}
+      <div class="field" style="margin-bottom:var(--s-4)">
+        {% if campo.field.widget.input_type == 'checkbox' %}
+          <label class="switch-row">{{ campo }} {{ campo.label }}</label>
+        {% else %}
+          <label for="{{ campo.id_for_label }}">
+            {{ campo.label }}{% if campo.field.required %} <span style="color:var(--red)">*</span>{% endif %}
+          </label>
+          {{ campo }}
+        {% endif %}
+        {% if campo.help_text %}<span class="help">{{ campo.help_text }}</span>{% endif %}
+        {% if campo.errors %}<span class="error-text">{{ campo.errors|join:" " }}</span>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <footer class="wizard__rodape">
+    <span class="spacer"></span>
+    <button type="button" class="btn btn--ghost" data-wizard-cancelar>Cancelar</button>
+    <button type="button" class="btn btn--primary" data-wizard-salvar>
+      <svg width="15" height="15"><use href="#i-check"></use></svg>
+      {% if obj %}Salvar alterações{% else %}Cadastrar{% endif %}
+    </button>
+  </footer>
+</div>

@@ -495,3 +495,235 @@ def salvar_provedor(request, provedor_id):
             messages.error(request, f"{prefixo}{' '.join(erros)}")
 
     return redirect(f"{reverse('dashboard:configuracoes')}?aba=pagamentos")
+
+
+# ═══════════════════════════════════ conteúdo da loja (telas nativas)
+def _secao_ou_404(slug):
+    from django.http import Http404
+
+    from .gestao import SECOES
+
+    if slug not in SECOES:
+        raise Http404("Seção desconhecida.")
+    return SECOES[slug]
+
+
+@operador_requerido
+def gestao(request, slug):
+    """Listagem genérica de uma seção de conteúdo."""
+    from django.db.models import Q
+
+    from .gestao import SECOES
+
+    secao = _secao_ou_404(slug)
+    qs = secao.queryset()
+
+    busca = request.GET.get("q", "").strip()
+    if busca and secao.busca:
+        filtro = Q()
+        for campo in secao.busca:
+            filtro |= Q(**{f"{campo}__icontains": busca})
+        qs = qs.filter(filtro)
+
+    # pares (rótulo, valor): o template não faz aritmética de índice.
+    # Com `slice:forloop.counter0` os rótulos saíam deslocados uma coluna —
+    # slice:"0" devolve lista vazia.
+    linhas = [
+        {"obj": obj, "celulas": [(rotulo, funcao(obj)) for rotulo, funcao in secao.colunas]}
+        for obj in qs[:300]
+    ]
+
+    return render(
+        request,
+        "dashboard/gestao.html",
+        {
+            "secao_atual": secao,
+            "secoes": SECOES.values(),
+            "colunas": [c[0] for c in secao.colunas],
+            "linhas": linhas,
+            "total": qs.count(),
+            "busca": busca,
+            "secao": "conteudo",
+            "metricas": _metricas(),
+        },
+    )
+
+
+@operador_requerido
+def gestao_form(request, slug, pk=None):
+    """Fragmento do formulário, carregado no modal."""
+    secao = _secao_ou_404(slug)
+    obj = get_object_or_404(secao.model, pk=pk) if pk else None
+    return render(
+        request,
+        "dashboard/_gestao_form.html",
+        {"form": secao.form(instance=obj), "secao_atual": secao, "obj": obj},
+    )
+
+
+@operador_requerido
+@require_POST
+def gestao_salvar(request, slug, pk=None):
+    from django.template.loader import render_to_string
+
+    secao = _secao_ou_404(slug)
+    obj = get_object_or_404(secao.model, pk=pk) if pk else None
+    form = secao.form(request.POST, request.FILES, instance=obj)
+
+    if not form.is_valid():
+        return JsonResponse(
+            {
+                "ok": False,
+                "erros": {c: [str(e) for e in erros] for c, erros in form.errors.items()},
+                "html": render_to_string(
+                    "dashboard/_gestao_form.html",
+                    {"form": form, "secao_atual": secao, "obj": obj},
+                    request=request,
+                ),
+            },
+            status=400,
+        )
+
+    salvo = form.save()
+    return JsonResponse({"ok": True, "id": salvo.pk, "criado": pk is None})
+
+
+@operador_requerido
+@require_POST
+def gestao_excluir(request, slug, pk):
+    from django.db.models import ProtectedError
+
+    secao = _secao_ou_404(slug)
+    obj = get_object_or_404(secao.model, pk=pk)
+    rotulo = str(obj)
+
+    try:
+        obj.delete()
+        messages.success(request, f"{rotulo} removido.")
+    except ProtectedError:
+        # o registro está em uso; apagar quebraria histórico
+        messages.error(
+            request,
+            f"{rotulo} está em uso e não pode ser apagado. "
+            "Desmarque “no ar” para tirá-lo do site sem perder o histórico.",
+        )
+    return redirect("dashboard:gestao", slug=slug)
+
+
+# ═══════════════════════════════════════════ auditoria de pagamentos
+AUDITORIA = {
+    "pagamentos": {
+        "titulo": "Pagamentos",
+        "descricao": "Cada cobrança enviada ao adquirente.",
+        "colunas": ["Pedido", "Método", "Valor", "Status", "ID na Stone", "Quando"],
+    },
+    "webhooks": {
+        "titulo": "Eventos de webhook",
+        "descricao": "Notificações recebidas da Stone, na ordem em que chegaram.",
+        "colunas": ["Tipo", "Referência", "Assinatura", "Processado", "Quando"],
+    },
+    "estornos": {
+        "titulo": "Estornos",
+        "descricao": "Devoluções solicitadas e o desfecho de cada uma.",
+        "colunas": ["Pedido", "Valor", "Motivo", "Status", "Quando"],
+    },
+    "transacoes": {
+        "titulo": "Transações com a Stone",
+        "descricao": "Trilha bruta: cada chamada, com duração e resposta.",
+        "colunas": ["Pedido", "Operação", "Resultado", "HTTP", "Duração", "Quando"],
+    },
+}
+
+
+@operador_requerido
+def auditoria(request, tipo):
+    """Listagens somente leitura do rastro de pagamentos."""
+    from django.http import Http404
+
+    from apps.payments.models import (
+        Estorno,
+        EventoWebhook,
+        Pagamento,
+        TransacaoPagamento,
+    )
+
+    if tipo not in AUDITORIA:
+        raise Http404("Seção desconhecida.")
+
+    busca = request.GET.get("q", "").strip()
+
+    if tipo == "pagamentos":
+        qs = Pagamento.objects.select_related("pedido")
+        if busca:
+            qs = qs.filter(pedido__numero__icontains=busca) | qs.filter(
+                referencia_externa__icontains=busca
+            )
+        colunas = AUDITORIA[tipo]["colunas"]
+        linhas = [
+            {
+                "obj": p,
+                "celulas": list(zip(colunas, [
+                    p.pedido.numero, p.get_metodo_display(), f"R$ {p.valor:.2f}",
+                    p.get_status_display(), p.referencia_externa or "—", p.criado_em,
+                ])),
+            }
+            for p in qs[:200]
+        ]
+    elif tipo == "webhooks":
+        qs = EventoWebhook.objects.all()
+        if busca:
+            qs = qs.filter(referencia_externa__icontains=busca)
+        colunas = AUDITORIA[tipo]["colunas"]
+        linhas = [
+            {
+                "obj": e,
+                "celulas": list(zip(colunas, [
+                    e.tipo or "—", e.referencia_externa or "—",
+                    "válida" if e.assinatura_valida else "INVÁLIDA",
+                    "sim" if e.processado else "pendente", e.criado_em,
+                ])),
+            }
+            for e in qs[:200]
+        ]
+    elif tipo == "estornos":
+        qs = Estorno.objects.select_related("pagamento__pedido")
+        colunas = AUDITORIA[tipo]["colunas"]
+        linhas = [
+            {
+                "obj": x,
+                "celulas": list(zip(colunas, [
+                    x.pagamento.pedido.numero, f"R$ {x.valor:.2f}",
+                    x.get_motivo_display(), x.get_status_display(), x.criado_em,
+                ])),
+            }
+            for x in qs[:200]
+        ]
+    else:
+        qs = TransacaoPagamento.objects.select_related("pagamento__pedido")
+        colunas = AUDITORIA[tipo]["colunas"]
+        linhas = [
+            {
+                "obj": t,
+                "celulas": list(zip(colunas, [
+                    t.pagamento.pedido.numero, t.get_operacao_display(),
+                    "sucesso" if t.sucesso else "falha", t.http_status or "—",
+                    f"{t.duracao_ms} ms" if t.duracao_ms else "—", t.criado_em,
+                ])),
+            }
+            for t in qs[:200]
+        ]
+
+    return render(
+        request,
+        "dashboard/auditoria.html",
+        {
+            "tipo": tipo,
+            "info": AUDITORIA[tipo],
+            "abas": AUDITORIA,
+            "linhas": linhas,
+            "total": qs.count(),
+            "busca": busca,
+            "secao": "auditoria",
+            "metricas": _metricas(),
+        },
+    )
