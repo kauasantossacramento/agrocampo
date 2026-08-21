@@ -321,3 +321,113 @@ class BlogDesligavelTests(TestCase):
         config.blog_ativo = True
         config.save()
         self.assertEqual(self.client.get(reverse("blog:lista")).status_code, 200)
+
+
+class RegrasComerciaisEditaveisTests(BasePedido):
+    """As promessas da vitrine têm que sair da configuração — e ser cumpridas."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.core.models import SiteConfig
+
+        self.config = SiteConfig.load()
+
+    def test_valor_do_frete_vem_da_configuracao(self):
+        """Regressão: R$ 24,90 estava fixo no código, sem jeito de mudar."""
+        self.config.frete_valor = Decimal("35.00")
+        self.config.frete_gratis_acima_de = Decimal("1000.00")
+        self.config.save()
+
+        self.carrinho.adicionar(self.produto, 1)   # R$ 300, abaixo do mínimo
+        self.assertEqual(self.carrinho.frete, Decimal("35.00"))
+
+    def test_frete_gratis_acima_do_limite_configurado(self):
+        self.config.frete_valor = Decimal("35.00")
+        self.config.frete_gratis_acima_de = Decimal("200.00")
+        self.config.save()
+
+        self.carrinho.adicionar(self.produto, 1)   # R$ 300 > R$ 200
+        self.assertEqual(self.carrinho.frete, Decimal("0"))
+
+    def test_limite_zero_desliga_o_frete_gratis(self):
+        """Sem a guarda, um carrinho de R$ 0,01 já sairia com frete grátis."""
+        self.config.frete_valor = Decimal("35.00")
+        self.config.frete_gratis_acima_de = Decimal("0")
+        self.config.save()
+
+        self.carrinho.adicionar(self.produto, 1)
+        self.assertEqual(self.carrinho.frete, Decimal("35.00"))
+
+    def test_desconto_pix_prometido_e_realmente_abatido(self):
+        """Regressão: a vitrine anunciava 5% no Pix e cobrava o total cheio."""
+        from apps.payments.services import cobrar_pix
+
+        self.config.desconto_pix = 10
+        self.config.frete_gratis_acima_de = Decimal("100.00")
+        self.config.save()
+
+        pedido = self._pedido()
+        total_cheio = pedido.total
+
+        pagamento = cobrar_pix(pedido)
+        pedido.refresh_from_db()
+
+        self.assertEqual(pedido.desconto_pix, Decimal("30.00"))
+        self.assertEqual(pedido.total, total_cheio - Decimal("30.00"))
+        self.assertEqual(pagamento.valor, pedido.total)
+
+    def test_trocar_pix_por_cartao_desfaz_o_abatimento(self):
+        from apps.payments.services import cobrar_cartao, cobrar_pix
+
+        self.config.desconto_pix = 10
+        self.config.frete_gratis_acima_de = Decimal("100.00")
+        self.config.save()
+
+        pedido = self._pedido()
+        total_cheio = pedido.total
+
+        cobrar_pix(pedido)
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.desconto_pix, Decimal("30.00"))
+
+        cobrar_cartao(pedido, {
+            "numero": "4111111111111234", "nome": "JOAO",
+            "validade_mes": 12, "validade_ano": 2030, "cvv": "123",
+        })
+        pedido.refresh_from_db()
+
+        self.assertEqual(pedido.desconto_pix, Decimal("0"))
+        self.assertEqual(pedido.total, total_cheio)
+
+    def test_desconto_pix_zerado_nao_abate_nada(self):
+        from apps.payments.services import cobrar_pix
+
+        self.config.desconto_pix = 0
+        self.config.save()
+
+        pedido = self._pedido()
+        total_cheio = pedido.total
+        cobrar_pix(pedido)
+        pedido.refresh_from_db()
+
+        self.assertEqual(pedido.desconto_pix, Decimal("0"))
+        self.assertEqual(pedido.total, total_cheio)
+
+
+class DiferenciaisRemoviveisTests(TestCase):
+    def test_apagar_todos_remove_a_faixa_da_home(self):
+        """Regressão: havia quatro promessas fixas no {% empty %} do template.
+        Apagar tudo pelo admin fazia elas reaparecerem — o lojista não
+        conseguia remover uma promessa que não pudesse cumprir."""
+        from django.urls import reverse
+
+        from apps.core.models import Diferencial
+
+        Diferencial.objects.create(titulo="Entrega em toda a região", icone="caminhao")
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn("Entrega em toda a região", html)
+
+        Diferencial.objects.all().delete()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("Entregamos onde outros não chegam", html)
+        self.assertNotIn("Compra 100% garantida", html)

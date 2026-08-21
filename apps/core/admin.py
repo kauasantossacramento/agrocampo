@@ -83,17 +83,20 @@ class SiteConfigAdmin(admin.ModelAdmin):
             "Regras da loja",
             {
                 "description": (
-                    "O <b>desconto da assinatura</b> vale para o site inteiro. "
-                    "Produtos com percentual próprio (no cadastro do produto) "
-                    "ignoram este valor."
+                    "O <b>desconto da assinatura</b> vale para o site inteiro; "
+                    "produtos com percentual próprio ignoram este valor.<br>"
+                    "O <b>desconto no Pix</b> é abatido de verdade do total no "
+                    "checkout — deixe 0 se não for dar desconto, senão a loja "
+                    "promete na vitrine e cobra a menos.<br>"
+                    "O <b>parcelamento</b> não fica aqui: quem manda é o "
+                    "adquirente, em Pagamentos › Provedores."
                 ),
                 "fields": (
                     "ano_fundacao",
                     "blog_ativo",
-                    "frete_gratis_acima_de",
+                    ("frete_valor", "frete_gratis_acima_de"),
                     "desconto_assinatura_padrao",
                     "desconto_pix",
-                    "parcelas_maximas",
                 )
             },
         ),

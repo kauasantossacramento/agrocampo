@@ -59,6 +59,8 @@ def _aplicar_resultado(pagamento: Pagamento, resultado) -> Pagamento:
 @transaction.atomic
 def cobrar_cartao(pedido, dados_cartao: dict, parcelas=1, salvar_cartao=False) -> Pagamento:
     """Autoriza (e captura, se configurado) um pagamento com cartão."""
+    # se o cliente tinha escolhido Pix e voltou, o abatimento sai
+    pedido.limpar_desconto_pix()
     provedor = ProvedorPagamento.ativo_padrao()
     pagamento = _novo_pagamento(pedido, Pagamento.Metodo.CARTAO, provedor, parcelas)
     cartao = DadosCartao(**dados_cartao)
@@ -84,7 +86,13 @@ def cobrar_cartao(pedido, dados_cartao: dict, parcelas=1, salvar_cartao=False) -
 
 @transaction.atomic
 def cobrar_pix(pedido) -> Pagamento:
-    """Gera o QR Code. O pedido só avança quando o webhook confirmar."""
+    """Gera o QR Code. O pedido só avança quando o webhook confirmar.
+
+    O desconto de Pix é aplicado aqui, antes de calcular o valor cobrado —
+    prometer o abatimento na vitrine e cobrar o total cheio seria propaganda
+    enganosa.
+    """
+    pedido.aplicar_desconto_pix()
     provedor = ProvedorPagamento.ativo_padrao()
     pagamento = _novo_pagamento(pedido, Pagamento.Metodo.PIX, provedor)
     gateway = get_gateway(provedor)
@@ -101,6 +109,8 @@ def cobrar_pix(pedido) -> Pagamento:
 
 @transaction.atomic
 def cobrar_boleto(pedido) -> Pagamento:
+    # se o cliente tinha escolhido Pix e voltou, o abatimento sai
+    pedido.limpar_desconto_pix()
     provedor = ProvedorPagamento.ativo_padrao()
     pagamento = _novo_pagamento(pedido, Pagamento.Metodo.BOLETO, provedor)
     try:

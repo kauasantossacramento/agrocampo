@@ -1,4 +1,6 @@
 """Modelos-base reutilizaveis e conteudo institucional da loja."""
+from decimal import Decimal
+
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -168,14 +170,31 @@ class SiteConfig(TimeStampedModel):
         help_text="Desmarque para esconder o blog do menu, do rodapé e da home. "
                   "As URLs passam a responder 404.",
     )
+    frete_valor = models.DecimalField(
+        "valor do frete",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("24.90"),
+        help_text="Cobrado quando o pedido não atinge o mínimo do frete grátis.",
+    )
     frete_gratis_acima_de = models.DecimalField(
-        "frete grátis acima de", max_digits=10, decimal_places=2, default=199
+        "frete grátis acima de",
+        max_digits=10,
+        decimal_places=2,
+        default=199,
+        help_text="Deixe 0 para nunca dar frete grátis.",
     )
     desconto_assinatura_padrao = models.PositiveIntegerField(
         "desconto padrão da assinatura (%)", default=10
     )
-    desconto_pix = models.PositiveIntegerField("desconto no Pix (%)", default=5)
-    parcelas_maximas = models.PositiveIntegerField("máximo de parcelas sem juros", default=3)
+    desconto_pix = models.PositiveIntegerField(
+        "desconto no Pix (%)",
+        default=0,
+        help_text=(
+            "Abatido do total quando o cliente escolhe Pix. Só prometa o que "
+            "for cumprir: o valor aparece no checkout e é cobrado a menos."
+        ),
+    )
 
     class Meta:
         verbose_name = "configuração da loja"

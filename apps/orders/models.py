@@ -89,6 +89,10 @@ class Pedido(TimeStampedModel):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     desconto_assinatura = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    desconto_pix = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Abatido quando o cliente fecha em Pix. Zerado se trocar de método.",
+    )
     frete = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
@@ -146,7 +150,13 @@ class Pedido(TimeStampedModel):
         self.desconto_assinatura = sum(
             ((i.preco_cheio - i.preco_unitario) * i.quantidade for i in itens), Decimal("0")
         )
-        self.total = self.subtotal - self.desconto_assinatura - self.desconto + self.frete
+        self.total = (
+            self.subtotal
+            - self.desconto_assinatura
+            - self.desconto
+            - self.desconto_pix
+            + self.frete
+        )
         if salvar:
             self.save(
                 update_fields=[
@@ -154,6 +164,31 @@ class Pedido(TimeStampedModel):
                 ]
             )
         return self.total
+
+    def aplicar_desconto_pix(self):
+        """Abate o percentual de Pix da loja e devolve o valor abatido.
+
+        Fica no pedido, nao no carrinho: o metodo de pagamento so e escolhido
+        no checkout, e trocar de metodo tem que desfazer o abatimento.
+        """
+        from apps.core.models import SiteConfig
+
+        percentual = SiteConfig.load().desconto_pix
+        if not percentual:
+            return Decimal("0")
+
+        base = self.subtotal - self.desconto_assinatura - self.desconto
+        self.desconto_pix = (base * Decimal(percentual) / 100).quantize(Decimal("0.01"))
+        self.save(update_fields=["desconto_pix", "atualizado_em"])
+        self.recalcular()
+        return self.desconto_pix
+
+    def limpar_desconto_pix(self):
+        """Desfaz o abatimento quando o cliente muda para cartao ou boleto."""
+        if self.desconto_pix:
+            self.desconto_pix = Decimal("0")
+            self.save(update_fields=["desconto_pix", "atualizado_em"])
+            self.recalcular()
 
     @property
     def quantidade_itens(self):

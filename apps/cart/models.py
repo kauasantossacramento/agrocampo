@@ -62,9 +62,13 @@ class Carrinho(TimeStampedModel):
 
         config = SiteConfig.load()
         base = self.subtotal - self.desconto_assinatura - self.desconto_cupom
-        if base >= config.frete_gratis_acima_de or self.vazio:
+        if self.vazio:
             return Decimal("0")
-        return Decimal("24.90")
+        # limite 0 desliga o frete gratis; sem isso um carrinho de R$ 0,01
+        # ja sairia com frete gratis
+        if config.frete_gratis_acima_de and base >= config.frete_gratis_acima_de:
+            return Decimal("0")
+        return config.frete_valor
 
     @property
     def frete_gratis(self) -> bool:

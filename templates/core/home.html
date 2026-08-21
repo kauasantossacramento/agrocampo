@@ -50,7 +50,13 @@
   </div>
 </section>
 
-{# ================================================== FAIXA DE GARANTIAS #}
+{% comment %}
+  FAIXA DE GARANTIAS — sem texto fixo de reserva. Antes havia um fallback no
+  {% empty %} com quatro promessas escritas no template: apagar tudo pelo
+  admin fazia elas voltarem, e o lojista não conseguia remover uma promessa
+  que não pudesse cumprir.
+{% endcomment %}
+{% if diferenciais %}
 <section class="trust">
   <div class="wrap">
     <div class="trust__grid">
@@ -59,15 +65,11 @@
           <span class="trust__icon"><svg width="20" height="20"><use href="#i-{{ d.icone }}"></use></svg></span>
           <span>{{ d.titulo }}{% if d.descricao %}<span class="trust__desc">{{ d.descricao }}</span>{% endif %}</span>
         </div>
-      {% empty %}
-        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-caminhao"></use></svg></span><span>Frete para toda zona rural<span class="trust__desc">Entregamos onde outros não chegam</span></span></div>
-        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-raio"></use></svg></span><span>Pix aprovado na hora<span class="trust__desc">{{ site.desconto_pix }}% de desconto à vista</span></span></div>
-        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-refresh"></use></svg></span><span>Assinatura com {{ site.desconto_assinatura_padrao }}% OFF<span class="trust__desc">Nunca falta o essencial</span></span></div>
-        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-escudo"></use></svg></span><span>Compra 100% garantida<span class="trust__desc">Ambiente seguro e criptografado</span></span></div>
       {% endfor %}
     </div>
   </div>
 </section>
+{% endif %}
 
 {# ================================================= ATALHOS DE CATEGORIA #}
 {% if categorias_destaque %}

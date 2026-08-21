@@ -114,8 +114,10 @@
         </form>
 
         <div class="row" style="gap:var(--s-4);flex-wrap:wrap;font-size:var(--fs-xs);color:var(--muted)">
-          <span class="row" style="gap:6px"><svg width="15" height="15" style="color:var(--green)"><use href="#i-raio"></use></svg>Pix com {{ site.desconto_pix }}% OFF</span>
-          <span class="row" style="gap:6px"><svg width="15" height="15" style="color:var(--blue)"><use href="#i-cartao"></use></svg>Até {{ site.parcelas_maximas }}x sem juros</span>
+          {% if site.desconto_pix %}
+            <span class="row" style="gap:6px"><svg width="15" height="15" style="color:var(--green)"><use href="#i-raio"></use></svg>Pix com {{ site.desconto_pix }}% OFF</span>
+          {% endif %}
+          <span class="row" style="gap:6px"><svg width="15" height="15" style="color:var(--blue)"><use href="#i-cartao"></use></svg>Até {{ provedor_pagamento.parcelas_sem_juros }}x sem juros</span>
           <span class="row" style="gap:6px"><svg width="15" height="15" style="color:var(--red)"><use href="#i-escudo"></use></svg>Compra garantida</span>
         </div>
 
