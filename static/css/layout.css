@@ -191,13 +191,29 @@
   .hero h1, .hero p { margin-inline: auto; }
   .hero__cta { justify-content: center; }
 
+  /* A figura fica em pé SOBRE a faixa escura, sem ser cortada por ela.
+     `height:100%` com `width:auto` esticava a imagem além da largura da
+     tela e o corpo saía fatiado na linha de baixo. Limitando os dois
+     eixos, ela encolhe até caber e apoia o pé exatamente na faixa. */
   .hero__art {
-    min-height: 0; height: 270px;
-    order: 0;                 /* depois do texto, na ordem natural */
-    margin-bottom: calc(-1 * var(--s-2));
+    min-height: 0;
+    height: auto; aspect-ratio: 16 / 11;
+    max-height: 300px;
+    order: 0;
+    margin-bottom: 0;
   }
-  .hero__figure { height: 100%; bottom: 0; filter: drop-shadow(0 10px 20px rgba(0,0,0,.22)); }
-  .hero__blob { width: 78%; height: 74%; bottom: 0; }
+  .hero__figure {
+    height: auto; width: auto;
+    max-height: 100%; max-width: 92%;
+    bottom: 0;
+    filter: drop-shadow(0 -2px 18px rgba(0, 0, 0, .28));
+  }
+  .hero__blob { width: 74%; height: 70%; bottom: 0; }
+
+  /* a faixa escura do rodapé do banner: a linha em que a figura se apoia */
+  .hero__dots {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, .22) 100%);
+  }
   .hero__dots { position: static; transform: none; justify-content: center;
                 padding-bottom: var(--s-5); }
 }
