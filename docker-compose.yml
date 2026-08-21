@@ -1,0 +1,157 @@
+# AgroCampo — stack isolado.
+#
+# Roda como uma "VPS dentro do servidor": rede interna própria, volumes
+# próprios e teto de CPU/memória por serviço. A única ponte com o mundo é
+# a rede externa do Traefik, e mesmo assim só o nginx a enxerga.
+#
+#   docker compose up -d --build
+#
+# O roteamento do domínio NÃO é feito por labels: o Traefik deste host usa
+# apenas o provider `file`. A rota vive num arquivo próprio dentro de
+# traefik/dynamic/, que o Traefik lê sozinho (watch: true).
+
+name: agrocampo
+
+services:
+  # ------------------------------------------------------------- banco
+  db:
+    image: postgres:16-alpine
+    container_name: agrocampo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agrocampo}
+      POSTGRES_USER: ${POSTGRES_USER:-agrocampo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      # pt_BR não existe na imagem alpine; C.UTF-8 evita erro de initdb
+      LANG: C.UTF-8
+    volumes:
+      - dados_db:/var/lib/postgresql/data
+    networks:
+      - interna
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agrocampo} -d ${POSTGRES_DB:-agrocampo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1G }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # --------------------------------------------------------- aplicação
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agrocampo/web:latest
+    container_name: agrocampo-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?defina DJANGO_SECRET_KEY no .env}
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?defina DJANGO_ALLOWED_HOSTS no .env}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_LOG_LEVEL: ${DJANGO_LOG_LEVEL:-INFO}
+      # o TLS termina no Traefik; o redirect fica com ele, não com o Django
+      DJANGO_SECURE_SSL_REDIRECT: "False"
+      DATABASE_URL: postgres://${POSTGRES_USER:-agrocampo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agrocampo}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-AgroCampo <nao-responda@agrocampo.online>}
+      DJANGO_EMAIL_BACKEND: ${DJANGO_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      AGROCAMPO_SEED: ${AGROCAMPO_SEED:-0}
+      AGROCAMPO_ADMIN_EMAIL: ${AGROCAMPO_ADMIN_EMAIL:-}
+      AGROCAMPO_ADMIN_SENHA: ${AGROCAMPO_ADMIN_SENHA:-}
+      STONE_ENVIRONMENT: ${STONE_ENVIRONMENT:-sandbox}
+      STONE_API_KEY: ${STONE_API_KEY:-}
+      STONE_MERCHANT_ID: ${STONE_MERCHANT_ID:-}
+      STONE_WEBHOOK_SECRET: ${STONE_WEBHOOK_SECRET:-}
+      STONE_PIX_KEY: ${STONE_PIX_KEY:-}
+    volumes:
+      - media:/app/media
+      - estaticos:/app/staticfiles
+    networks:
+      - interna
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2G }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # ------------------------------------------------- borda (static/media)
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: agrocampo-nginx
+    restart: unless-stopped
+    depends_on:
+      - web
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - media:/var/www/media:ro
+      - estaticos:/var/www/static:ro
+    networks:
+      - interna        # fala com o gunicorn
+      - traefik        # recebe do Traefik
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # ------------------------------------- assinaturas recorrentes (diário)
+  cron:
+    image: agrocampo/web:latest
+    container_name: agrocampo-cron
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_started
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DATABASE_URL: postgres://${POSTGRES_USER:-agrocampo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agrocampo}
+    volumes:
+      - media:/app/media
+    networks:
+      - interna
+    # o entrypoint faria migrate de novo; aqui só queremos o laço do cron
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "[cron] ativo — processa assinaturas todo dia às 06:00 (America/Sao_Paulo)"
+        while true; do
+          agora=$$(TZ=America/Sao_Paulo date +%H%M)
+          if [ "$$agora" = "0600" ]; then
+            python manage.py processar_assinaturas || echo "[cron] falhou"
+            sleep 3600
+          fi
+          sleep 30
+        done
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  dados_db:
+  media:
+  estaticos:
+
+networks:
+  interna:
+    name: agrocampo_interna
+    driver: bridge
+  traefik:
+    # rede já existente do Traefik — declarada como externa para o compose
+    # nunca tentar criá-la nem alterá-la
+    name: nuvem_net
+    external: true

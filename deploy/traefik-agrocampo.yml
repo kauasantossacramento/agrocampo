@@ -1,0 +1,25 @@
+# Rota do AgroCampo para o Traefik do host.
+#
+# Copie este arquivo para o diretório dinâmico do Traefik:
+#   /opt/nuvem-center/docker/traefik/dynamic/agrocampo.yml
+#
+# É um arquivo NOVO: nenhum arquivo existente é alterado, e o Traefik
+# carrega a rota sozinho (providers.file.watch = true), sem restart.
+http:
+  routers:
+    agrocampo:
+      rule: "Host(`agrocampo.online`) || Host(`www.agrocampo.online`)"
+      entryPoints:
+        - websecure
+      service: agrocampo
+      middlewares:
+        - compressao@file
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    agrocampo:
+      loadBalancer:
+        servers:
+          - url: "http://agrocampo-nginx:80"
+        passHostHeader: true
