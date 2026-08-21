@@ -5,12 +5,17 @@
   <div class="card card--pad auth__card anim-fade-up" style="width:min(520px,100%)">
     <h1 style="font-size:var(--fs-xl)">Criar conta</h1>
     <p class="small muted" style="margin-top:var(--s-2)">
-      Leva menos de um minuto — e já libera o desconto da assinatura.
+      {% if 'carrinho' in destino or 'pagamento' in destino %}
+        Leva menos de um minuto e você volta direto para o seu pedido.
+      {% else %}
+        Leva menos de um minuto — e já libera o desconto da assinatura.
+      {% endif %}
     </p>
     <span class="rule" style="margin-block:var(--s-4)"></span>
 
     <form method="post" class="stack">
       {% csrf_token %}
+      <input type="hidden" name="next" value="{{ destino }}">
       {% if form.non_field_errors %}
         <div class="alert alert--error">
           <svg width="16" height="16"><use href="#i-alerta"></use></svg>
@@ -64,7 +69,7 @@
     </form>
 
     <p class="small center muted" style="margin-top:var(--s-5)">
-      Já tem conta? <a href="{% url 'accounts:entrar' %}" class="strong" style="color:var(--red)">Entrar</a>
+      Já tem conta? <a href="{% url 'accounts:entrar' %}?next={{ destino|urlencode }}" class="strong" style="color:var(--red)">Entrar</a>
     </p>
   </div>
 </div>

@@ -468,6 +468,58 @@
     });
   }
 
+  /* ------------------------------------------- convite de instalar o app
+     O navegador dispara `beforeinstallprompt` só quando o site é instalável
+     E ainda não foi instalado — então o convite nunca aparece para quem já
+     tem o app. O atraso evita interromper quem acabou de chegar. */
+  function iniciarConvitePwa() {
+    const caixa = $('#pwa-convite');
+    if (!caixa || !window.AGROCAMPO_PWA) return;
+
+    const CHAVE = 'agrocampo_pwa_dispensado';
+    const dispensadoEm = Number(localStorage.getItem(CHAVE) || 0);
+    const SETE_DIAS = 7 * 24 * 60 * 60 * 1000;
+    if (dispensadoEm && Date.now() - dispensadoEm < SETE_DIAS) return;
+
+    // já rodando como app instalado: não faz sentido convidar
+    if (window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone) return;
+
+    let evento = null;
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      evento = e;
+      setTimeout(function () {
+        if (!evento) return;
+        caixa.hidden = false;
+        caixa.classList.add('is-visivel');
+      }, (window.AGROCAMPO_PWA.atrasoSegundos || 30) * 1000);
+    });
+
+    $('[data-pwa-instalar]', caixa).addEventListener('click', async function () {
+      if (!evento) return;
+      caixa.classList.remove('is-visivel');
+      evento.prompt();
+      const escolha = await evento.userChoice;
+      evento = null;
+      caixa.hidden = true;
+      if (escolha.outcome === 'accepted') toast('App instalado. Bom proveito!', 'success');
+      else localStorage.setItem(CHAVE, String(Date.now()));
+    });
+
+    $('[data-pwa-dispensar]', caixa).addEventListener('click', function () {
+      caixa.classList.remove('is-visivel');
+      setTimeout(function () { caixa.hidden = true; }, 300);
+      localStorage.setItem(CHAVE, String(Date.now()));
+    });
+
+    window.addEventListener('appinstalled', function () {
+      caixa.hidden = true;
+      localStorage.removeItem(CHAVE);
+    });
+  }
+
   /* ------------------------------------------------------------------ boot */
   function iniciar() {
     iniciarReveal();
@@ -488,6 +540,7 @@
     iniciarBuscaCep();
     iniciarBarraFrete();
     iniciarMensagens();
+    iniciarConvitePwa();
   }
 
   if (document.readyState === 'loading') {

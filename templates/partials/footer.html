@@ -33,7 +33,7 @@
           {% for p in paginas_rodape %}
             <a href="{{ p.get_absolute_url }}">{{ p.nome }}</a>
           {% endfor %}
-          <a href="{% url 'blog:lista' %}">Blog</a>
+          {% if site.blog_ativo %}<a href="{% url 'blog:lista' %}">Blog</a>{% endif %}
         </div>
       </div>
 
@@ -62,7 +62,14 @@
         {% if site.endereco_completo %} · {{ site.endereco_completo }}{% endif %}
         {% if site.telefone %} · {{ site.telefone }}{% endif %}
       </span>
-      <span>{{ site.anos_de_mercado }} anos cuidando de quem cuida do campo.</span>
+      <span class="footer__assinatura">
+        Desenvolvido com
+        <svg class="footer__coracao" width="15" height="15" viewBox="0 0 24 24" aria-label="amor" role="img">
+          <path fill="#2F6FB0" d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/>
+        </svg>
+        por <strong>KS TEC</strong> ·
+        <a href="https://kstec.online" target="_blank" rel="noopener">Conheça a KS TEC</a>
+      </span>
     </div>
   </div>
 </footer>

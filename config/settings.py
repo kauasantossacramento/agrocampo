@@ -91,6 +91,12 @@ DATABASES = {
     "default": env.db_url("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 }
 
+# Conexoes persistentes com verificacao de saude. Sem isso, um restart do
+# Postgres derruba a aplicacao com 500 ate o proximo deploy: o Django
+# reaproveita a conexao morta em vez de abrir outra.
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DJANGO_CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+
 AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [

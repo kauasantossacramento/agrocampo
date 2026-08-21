@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Sem permissão — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div class="empty card" style="max-width:520px;margin-inline:auto">
+    <div class="empty__icon">🔒</div>
+    <p class="empty__title">Esta área é da equipe da loja</p>
+    <p class="small">
+      Você está conectado como <strong>{{ user.email }}</strong>, que é uma conta de cliente.
+      O painel do lojista exige uma conta de operador.
+    </p>
+    <div class="row" style="justify-content:center;gap:var(--s-3);margin-top:var(--s-6);flex-wrap:wrap">
+      <a href="{% url 'orders:lista' %}" class="btn btn--primary">Ver meus pedidos</a>
+      <a href="{% url 'core:home' %}" class="btn btn--ghost">Voltar à loja</a>
+      <a href="{% url 'accounts:sair' %}" class="btn btn--ghost">Entrar com outra conta</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

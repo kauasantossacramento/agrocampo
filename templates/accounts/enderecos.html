@@ -39,6 +39,7 @@
     <aside>
       <form method="post" class="card card--pad stack">
         {% csrf_token %}
+        <input type="hidden" name="next" value="{{ destino }}">
         <h3 style="font-size:var(--fs-base)">Novo endereço</h3>
         <div class="field"><label>Apelido</label>{{ form.apelido }}</div>
         <div class="field"><label>Destinatário</label>{{ form.destinatario }}</div>

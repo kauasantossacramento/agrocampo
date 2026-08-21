@@ -37,9 +37,28 @@ class Categoria(TimeStampedModel, SluggedModel):
         related_name="filhas",
         verbose_name="categoria pai",
     )
+    class Icone(models.TextChoices):
+        RACAO = "racao", "Ração e alimentação"
+        AVE = "ave", "Aves e pássaros"
+        RURAL = "rural", "Rural e fazenda"
+        SAUDE = "saude", "Saúde animal"
+        ACESSORIO = "acessorio", "Acessórios"
+        JARDIM = "jardim", "Casa e jardim"
+        CAO = "cao", "Cães"
+        GATO = "gato", "Gatos"
+        PEIXE = "peixe", "Peixes"
+        SEMENTE = "semente", "Sementes"
+        PATA = "pata", "Genérico (pata)"
+
     descricao = models.TextField(blank=True)
+    # Emoji renderiza diferente em cada sistema — e some em alguns Android.
+    # O ícone virou uma chave para um <symbol> SVG do tema.
     icone = models.CharField(
-        max_length=10, blank=True, help_text="Emoji exibido nos atalhos da home."
+        "ícone",
+        max_length=20,
+        blank=True,
+        choices=Icone.choices,
+        help_text="Ícone vetorial exibido no menu e nos atalhos da home.",
     )
     imagem = models.ImageField(upload_to="categorias/", blank=True)
     ordem = models.PositiveIntegerField(default=0)
@@ -184,10 +203,16 @@ class Produto(TimeStampedModel, SluggedModel):
     )
 
     permite_assinatura = models.BooleanField("disponível para assinatura", default=False)
-    desconto_assinatura = models.PositiveIntegerField(
+    desconto_assinatura_proprio = models.PositiveIntegerField(
         "desconto da assinatura (%)",
-        default=10,
+        null=True,
+        blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(80)],
+        help_text=(
+            "Deixe vazio para seguir o percentual global da loja "
+            "(Configuração da loja › desconto padrão da assinatura). "
+            "Preencha só quando este produto precisar de um desconto diferente."
+        ),
     )
 
     unidade = models.CharField(max_length=5, choices=Unidade.choices, default=Unidade.UN)
@@ -235,6 +260,24 @@ class Produto(TimeStampedModel, SluggedModel):
         return self.preco_promocional if self.promocao_vigente else self.preco
 
     @property
+    def desconto_assinatura(self) -> int:
+        """Percentual efetivo: o do produto, ou o global da loja.
+
+        Deixar o campo do produto vazio é o caso comum — assim o lojista
+        muda o desconto do site inteiro num lugar só.
+        """
+        if self.desconto_assinatura_proprio is not None:
+            return self.desconto_assinatura_proprio
+
+        from apps.core.models import SiteConfig
+
+        return SiteConfig.load().desconto_assinatura_padrao
+
+    @property
+    def desconto_assinatura_e_global(self) -> bool:
+        return self.desconto_assinatura_proprio is None
+
+    @property
     def preco_assinatura(self) -> Decimal:
         """Preço por ciclo de assinatura."""
         if not self.permite_assinatura:
@@ -277,6 +320,25 @@ class Produto(TimeStampedModel, SluggedModel):
     @property
     def lista_beneficios(self):
         return [linha.strip() for linha in self.beneficios.splitlines() if linha.strip()]
+
+    def foi_comprado_por(self, usuario) -> bool:
+        """True se o usuário tem um pedido entregue/enviado com este produto.
+
+        Só quem recebeu pode avaliar: sem isso a vitrine vira mural aberto.
+        """
+        if not usuario or not usuario.is_authenticated:
+            return False
+        from apps.orders.models import Pedido
+
+        return self.itens_pedido.filter(
+            pedido__usuario=usuario,
+            pedido__status__in=[
+                Pedido.Status.APROVADO,
+                Pedido.Status.EM_SEPARACAO,
+                Pedido.Status.ENVIADO,
+                Pedido.Status.ENTREGUE,
+            ],
+        ).exists()
 
     def similares(self, limite=4):
         """Produtos da mesma categoria — usados na recusa por falta de estoque."""
@@ -360,6 +422,11 @@ class Avaliacao(TimeStampedModel):
     titulo = models.CharField(max_length=120, blank=True)
     comentario = models.TextField(blank=True)
     aprovada = models.BooleanField(default=True)
+    compra_verificada = models.BooleanField(
+        "compra verificada",
+        default=True,
+        help_text="Marcado quando a avaliação veio de quem comprou o produto.",
+    )
 
     class Meta:
         ordering = ["-criado_em"]

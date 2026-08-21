@@ -34,7 +34,10 @@
           <a href="{% url 'catalog:catalogo' %}" class="filters__link {% if not categoria_atual %}is-active{% endif %}">Todos os produtos</a>
           {% for c in categorias %}
             <a href="{{ c.get_absolute_url }}" class="filters__link {% if categoria_atual.id == c.id %}is-active{% endif %}">
-              <span>{% if c.icone %}{{ c.icone }} {% endif %}{{ c.nome }}</span>
+              <span class="row" style="gap:var(--s-2)">
+                <svg width="16" height="16" style="flex:none" aria-hidden="true"><use href="#c-{{ c.icone|default:'pata' }}"></use></svg>
+                {{ c.nome }}
+              </span>
             </a>
             {% for filha in c.filhas.all %}
               <a href="{{ filha.get_absolute_url }}" class="filters__link {% if categoria_atual.id == filha.id %}is-active{% endif %}" style="padding-left:var(--s-6);font-size:var(--fs-xs)">{{ filha.nome }}</a>

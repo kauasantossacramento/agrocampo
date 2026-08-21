@@ -4,11 +4,18 @@
 <div class="wrap auth">
   <div class="card card--pad auth__card anim-fade-up">
     <h1 style="font-size:var(--fs-xl)">Bem-vindo de volta</h1>
-    <p class="small muted" style="margin-top:var(--s-2)">Entre para acompanhar seus pedidos e assinaturas.</p>
+    <p class="small muted" style="margin-top:var(--s-2)">
+      {% if 'carrinho' in destino or 'pagamento' in destino %}
+        Entre para concluir sua compra — seu carrinho está guardado.
+      {% else %}
+        Entre para acompanhar seus pedidos e assinaturas.
+      {% endif %}
+    </p>
     <span class="rule" style="margin-block:var(--s-4)"></span>
 
     <form method="post" class="stack">
       {% csrf_token %}
+      <input type="hidden" name="next" value="{{ destino }}">
       <div class="field">
         <label for="id_username">E-mail</label>
         <input type="email" name="username" id="id_username" class="campo"
@@ -24,7 +31,7 @@
 
     <p class="small center muted" style="margin-top:var(--s-5)">
       Ainda não tem conta?
-      <a href="{% url 'accounts:cadastrar' %}" class="strong" style="color:var(--red)">Criar conta grátis</a>
+      <a href="{% url 'accounts:cadastrar' %}?next={{ destino|urlencode }}" class="strong" style="color:var(--red)">Criar conta grátis</a>
     </p>
   </div>
 </div>

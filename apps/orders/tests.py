@@ -37,7 +37,7 @@ class BasePedido(TestCase):
         self.produto = Produto.objects.create(
             sku="P-1", nome="Ração Golden 15kg", categoria=categoria,
             preco=Decimal("300.00"), estoque=5,
-            permite_assinatura=True, desconto_assinatura=10,
+            permite_assinatura=True, desconto_assinatura_proprio=10,
         )
         self.carrinho = Carrinho.objects.create(usuario=self.cliente)
 
@@ -185,3 +185,139 @@ class CarrinhoTests(BasePedido):
         self.assertEqual(self.carrinho.itens.count(), 1)
         self.assertEqual(self.carrinho.itens.first().quantidade, 3)
         self.assertFalse(Carrinho.objects.filter(pk=anonimo.pk).exists())
+
+
+class DescontoAssinaturaGlobalTests(BasePedido):
+    """O percentual vem da configuração da loja; o produto só sobrescreve."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.core.models import SiteConfig
+
+        self.config = SiteConfig.load()
+
+    def test_produto_sem_percentual_proprio_segue_o_global(self):
+        self.produto.desconto_assinatura_proprio = None
+        self.produto.save()
+
+        self.config.desconto_assinatura_padrao = 25
+        self.config.save()
+
+        self.produto.refresh_from_db()
+        self.assertEqual(self.produto.desconto_assinatura, 25)
+        self.assertEqual(self.produto.preco_assinatura, Decimal("225.00"))
+        self.assertTrue(self.produto.desconto_assinatura_e_global)
+
+    def test_percentual_proprio_do_produto_vence_o_global(self):
+        self.produto.desconto_assinatura_proprio = 5
+        self.produto.save()
+
+        self.config.desconto_assinatura_padrao = 25
+        self.config.save()
+
+        self.assertEqual(self.produto.desconto_assinatura, 5)
+        self.assertEqual(self.produto.preco_assinatura, Decimal("285.00"))
+        self.assertFalse(self.produto.desconto_assinatura_e_global)
+
+    def test_mudar_o_global_muda_a_loja_toda_de_uma_vez(self):
+        outro = Produto.objects.create(
+            sku="P-2", nome="Outro assinável", categoria=self.produto.categoria,
+            preco=Decimal("100.00"), estoque=5, permite_assinatura=True,
+        )
+        self.produto.desconto_assinatura_proprio = None
+        self.produto.save()
+
+        self.config.desconto_assinatura_padrao = 20
+        self.config.save()
+
+        self.produto.refresh_from_db()
+        outro.refresh_from_db()
+        self.assertEqual(self.produto.preco_assinatura, Decimal("240.00"))
+        self.assertEqual(outro.preco_assinatura, Decimal("80.00"))
+
+
+class AvaliacaoSomenteDeCompradorTests(BasePedido):
+    def _rota(self):
+        from django.urls import reverse
+
+        return reverse("catalog:avaliar", args=[self.produto.slug])
+
+    def test_quem_nunca_comprou_nao_avalia(self):
+        from apps.catalog.models import Avaliacao
+
+        self.client.force_login(self.cliente)
+        self.client.post(self._rota(), {"nota": 5, "comentario": "ótimo"})
+
+        self.assertFalse(Avaliacao.objects.filter(produto=self.produto).exists())
+        self.assertFalse(self.produto.foi_comprado_por(self.cliente))
+
+    def test_pedido_so_pago_ainda_nao_libera(self):
+        """Pagou mas o lojista não aprovou: o produto pode nem ser entregue."""
+        pedido = self._pedido()
+        pedido.mudar_status(Pedido.Status.PAGO)
+        self.assertFalse(self.produto.foi_comprado_por(self.cliente))
+
+    def test_comprador_com_pedido_aprovado_avalia(self):
+        from apps.catalog.models import Avaliacao
+
+        pedido = self._pedido()
+        pedido.mudar_status(Pedido.Status.PAGO)
+        pedido.mudar_status(Pedido.Status.AGUARDANDO_APROVACAO)
+        aprovar_pedido(pedido, self.lojista)
+
+        self.assertTrue(self.produto.foi_comprado_por(self.cliente))
+
+        self.client.force_login(self.cliente)
+        self.client.post(self._rota(), {"nota": 5, "comentario": "chegou rápido"})
+
+        avaliacao = Avaliacao.objects.get(produto=self.produto, autor=self.cliente)
+        self.assertEqual(avaliacao.nota, 5)
+        self.assertTrue(avaliacao.compra_verificada)
+
+
+class AnosDeMercadoTests(TestCase):
+    def test_calculado_a_partir_da_fundacao(self):
+        from django.utils import timezone
+
+        from apps.core.models import SiteConfig
+
+        config = SiteConfig.load()
+        config.ano_fundacao = 2012
+        config.save()
+
+        esperado = timezone.localdate().year - 2012
+        self.assertEqual(config.anos_de_mercado, esperado)
+
+    def test_fundacao_no_futuro_nao_vira_numero_negativo(self):
+        from apps.core.models import SiteConfig
+
+        config = SiteConfig.load()
+        config.ano_fundacao = 2999
+        config.save()
+        self.assertEqual(config.anos_de_mercado, 0)
+
+
+class BlogDesligavelTests(TestCase):
+    def test_desligado_o_blog_responde_404(self):
+        from django.urls import reverse
+
+        from apps.core.models import SiteConfig
+
+        config = SiteConfig.load()
+        config.blog_ativo = False
+        config.save()
+
+        self.assertEqual(self.client.get(reverse("blog:lista")).status_code, 404)
+        # e some do menu
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn(reverse("blog:lista"), html)
+
+    def test_ligado_o_blog_responde(self):
+        from django.urls import reverse
+
+        from apps.core.models import SiteConfig
+
+        config = SiteConfig.load()
+        config.blog_ativo = True
+        config.save()
+        self.assertEqual(self.client.get(reverse("blog:lista")).status_code, 200)

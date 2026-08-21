@@ -1,0 +1,27 @@
+{% load static %}
+{% if site.pwa_convite_ativo %}
+<div class="pwa-convite" id="pwa-convite" hidden role="dialog" aria-label="Instalar aplicativo">
+  {% comment %}
+    `.url` levanta ValueError quando o campo está vazio — o filtro `default`
+    não salva, porque a exceção acontece antes dele. Testar o campo, não a URL.
+  {% endcomment %}
+  {% if site.favicon %}
+    <img src="{{ site.favicon.url }}" alt="" class="pwa-convite__icone">
+  {% else %}
+    <img src="{% static 'img/logo-agrocampo-compacto.png' %}" alt="" class="pwa-convite__icone">
+  {% endif %}
+  <div class="pwa-convite__texto">
+    <strong>Instalar o app</strong>
+    <span>{{ site.pwa_convite_texto }}</span>
+  </div>
+  <div class="pwa-convite__acoes">
+    <button type="button" class="btn btn--primary btn--sm" data-pwa-instalar>Instalar</button>
+    <button type="button" class="icon-btn" data-pwa-dispensar aria-label="Agora não">
+      <svg width="18" height="18"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+</div>
+<script>
+  window.AGROCAMPO_PWA = { atrasoSegundos: {{ site.pwa_convite_segundos }} };
+</script>
+{% endif %}

@@ -120,7 +120,7 @@
         {% endfor %}
         <li class="nav__item"><a href="{% url 'catalog:especies' %}" class="nav__link">Por espécie</a></li>
         <li class="nav__item"><a href="{% url 'catalog:marcas' %}" class="nav__link">Marcas</a></li>
-        <li class="nav__item"><a href="{% url 'blog:lista' %}" class="nav__link">Blog</a></li>
+        {% if site.blog_ativo %}<li class="nav__item"><a href="{% url 'blog:lista' %}" class="nav__link">Blog</a></li>{% endif %}
         <li class="nav__item">
           <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="nav__link nav__link--accent">
             <svg width="14" height="14"><use href="#i-refresh"></use></svg>Assinatura −{{ site.desconto_assinatura_padrao }}%
@@ -147,14 +147,17 @@
     <div class="stack" style="gap:var(--s-1)">
       {% for categoria in menu_categorias %}
         <a href="{{ categoria.get_absolute_url }}" class="filters__link">
-          <span>{% if categoria.icone %}{{ categoria.icone }} {% endif %}{{ categoria.nome }}</span>
+          <span class="row" style="gap:var(--s-2)">
+            <svg width="17" height="17" style="flex:none;color:var(--red)" aria-hidden="true"><use href="#c-{{ categoria.icone|default:'pata' }}"></use></svg>
+            {{ categoria.nome }}
+          </span>
           <svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
       {% endfor %}
       <hr class="divider">
       <a href="{% url 'catalog:especies' %}" class="filters__link">Por espécie</a>
       <a href="{% url 'catalog:marcas' %}" class="filters__link">Marcas</a>
-      <a href="{% url 'blog:lista' %}" class="filters__link">Blog</a>
+      {% if site.blog_ativo %}<a href="{% url 'blog:lista' %}" class="filters__link">Blog</a>{% endif %}
       <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="filters__link" style="color:var(--red);font-weight:700">Assinatura −{{ site.desconto_assinatura_padrao }}%</a>
     </div>
   </div>

@@ -21,7 +21,9 @@
           {% if principal %}
             <img src="{{ principal.imagem.url }}" alt="{{ produto.nome }}" data-gallery-main>
           {% else %}
-            <span class="product__placeholder" style="border-radius:var(--r-xl)">{{ produto.categoria.icone|default:"🐾" }}</span>
+            <span class="product__placeholder" style="border-radius:var(--r-xl)">
+            <svg width="90" height="90" aria-hidden="true"><use href="#c-{{ produto.categoria.icone|default:'pata' }}"></use></svg>
+          </span>
           {% endif %}
         {% endwith %}
         {% if produto.promocao_vigente %}
@@ -171,7 +173,15 @@
       </div>
     </div>
 
-    {% if user.is_authenticated and not ja_avaliou %}
+    {% if user.is_authenticated and not ja_avaliou and not pode_avaliar %}
+      <div class="alert alert--info" style="margin-bottom:var(--s-5)">
+        <svg width="16" height="16"><use href="#i-info"></use></svg>
+        <span>Avaliações são de quem comprou. Assim que seu pedido deste produto
+          for aprovado, o espaço para avaliar aparece aqui.</span>
+      </div>
+    {% endif %}
+
+    {% if user.is_authenticated and not ja_avaliou and pode_avaliar %}
       <form method="post" action="{% url 'catalog:avaliar' produto.slug %}" class="card card--pad" style="margin-bottom:var(--s-5)">
         {% csrf_token %}
         <div class="grid grid--2" style="gap:var(--s-4)">
@@ -205,6 +215,11 @@
             <div>
               <span class="product__stars">{% for _ in "12345"|make_list %}{% if forloop.counter <= a.nota %}★{% else %}☆{% endif %}{% endfor %}</span>
               {% if a.titulo %}<strong style="margin-left:var(--s-2)">{{ a.titulo }}</strong>{% endif %}
+              {% if a.compra_verificada %}
+                <span class="badge badge--green" style="margin-left:var(--s-2)">
+                  <svg width="10" height="10"><use href="#i-check"></use></svg>compra verificada
+                </span>
+              {% endif %}
             </div>
             <span class="xs muted">{{ a.criado_em|date:"d/m/Y" }}</span>
           </div>

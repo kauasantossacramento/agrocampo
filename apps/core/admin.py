@@ -49,12 +49,47 @@ class SiteConfigAdmin(admin.ModelAdmin):
             },
         ),
         ("Redes sociais", {"fields": ("instagram", "facebook", "youtube")}),
+        (
+            "Aplicativo (PWA)",
+            {
+                "description": "Convite para instalar o app, exibido a quem ainda não instalou.",
+                "fields": ("pwa_convite_ativo", "pwa_convite_segundos", "pwa_convite_texto"),
+            },
+        ),
+        (
+            "Firebase — notificações push",
+            {
+                "classes": ("collapse",),
+                "description": (
+                    "Console do Firebase › Configurações do projeto. Enquanto estiver "
+                    "vazio o push fica desligado e a loja segue com as notificações "
+                    "internas. O <b>JSON da conta de serviço</b> é segredo do servidor "
+                    "e nunca vai para o navegador."
+                ),
+                "fields": (
+                    "firebase_api_key",
+                    "firebase_auth_domain",
+                    "firebase_project_id",
+                    "firebase_storage_bucket",
+                    "firebase_messaging_sender_id",
+                    "firebase_app_id",
+                    "firebase_vapid_key",
+                    "firebase_service_account",
+                ),
+            },
+        ),
         ("Rodapé", {"fields": ("rodape_sobre",)}),
         (
             "Regras da loja",
             {
+                "description": (
+                    "O <b>desconto da assinatura</b> vale para o site inteiro. "
+                    "Produtos com percentual próprio (no cadastro do produto) "
+                    "ignoram este valor."
+                ),
                 "fields": (
-                    "anos_de_mercado",
+                    "ano_fundacao",
+                    "blog_ativo",
                     "frete_gratis_acima_de",
                     "desconto_assinatura_padrao",
                     "desconto_pix",

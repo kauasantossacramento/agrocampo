@@ -82,7 +82,9 @@
   <div class="grid grid--6" data-stagger>
     {% for c in categorias_destaque %}
       <a href="{{ c.get_absolute_url }}" class="cat-tile">
-        <span class="cat-tile__icon">{{ c.icone|default:"🐾" }}</span>
+        <span class="cat-tile__icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#c-{{ c.icone|default:'pata' }}"></use></svg>
+        </span>
         <span>{{ c.nome }}</span>
       </a>
     {% endfor %}
@@ -239,7 +241,7 @@
 {% endif %}
 
 {# ============================================================== BLOG #}
-{% if posts %}
+{% if posts and site.blog_ativo %}
 <section class="section section--tight wrap">
   <div class="section-head" data-reveal>
     <div class="section-head__title">

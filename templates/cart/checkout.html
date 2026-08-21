@@ -28,12 +28,12 @@
         {% empty %}
           <div class="alert alert--warning">
             <svg width="16" height="16"><use href="#i-alerta"></use></svg>
-            <span>Você ainda não tem um endereço cadastrado. <a href="{% url 'accounts:enderecos' %}">Cadastre agora</a> para continuar.</span>
+            <span>Você ainda não tem um endereço cadastrado. <a href="{% url 'accounts:enderecos' %}?next={{ request.path|urlencode }}">Cadastre agora</a> para continuar.</span>
           </div>
         {% endfor %}
       </div>
 
-      <a href="{% url 'accounts:enderecos' %}" class="btn btn--ghost btn--sm" style="margin-top:var(--s-4)">+ Adicionar endereço</a>
+      <a href="{% url 'accounts:enderecos' %}?next={{ request.path|urlencode }}" class="btn btn--ghost btn--sm" style="margin-top:var(--s-4)">+ Adicionar endereço</a>
 
       <div class="field" style="margin-top:var(--s-6)">
         <label for="observacoes">Observações para a entrega <span class="muted">(opcional)</span></label>

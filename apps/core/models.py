@@ -116,7 +116,58 @@ class SiteConfig(TimeStampedModel):
         help_text="Se vazio, usa a descrição da loja.",
     )
 
-    anos_de_mercado = models.PositiveIntegerField(default=30)
+    ano_fundacao = models.PositiveIntegerField(
+        "ano de fundação",
+        default=2012,
+        help_text="Conforme o CNPJ. O site calcula os anos de mercado a partir daqui.",
+    )
+    # ------------------------------------------------------------- PWA
+    pwa_convite_ativo = models.BooleanField(
+        "convidar a instalar o app",
+        default=True,
+        help_text="Mostra o convite de instalação para quem ainda não instalou.",
+    )
+    pwa_convite_segundos = models.PositiveIntegerField(
+        "esperar antes de convidar (segundos)",
+        default=30,
+        help_text="Tempo de navegação antes de o convite aparecer.",
+    )
+    pwa_convite_texto = models.CharField(
+        max_length=160,
+        blank=True,
+        default="Instale o app da AgroCampo e compre em dois toques.",
+    )
+
+    # --------------------------------------------- Firebase (notificações push)
+    # Espaços reservados: enquanto vazios, o push fica desligado e o site
+    # opera normalmente com as notificações in-app.
+    firebase_api_key = models.CharField("Firebase · apiKey", max_length=200, blank=True)
+    firebase_auth_domain = models.CharField("Firebase · authDomain", max_length=200, blank=True)
+    firebase_project_id = models.CharField("Firebase · projectId", max_length=120, blank=True)
+    firebase_storage_bucket = models.CharField("Firebase · storageBucket", max_length=200, blank=True)
+    firebase_messaging_sender_id = models.CharField(
+        "Firebase · messagingSenderId", max_length=80, blank=True
+    )
+    firebase_app_id = models.CharField("Firebase · appId", max_length=200, blank=True)
+    firebase_vapid_key = models.CharField(
+        "Firebase · chave VAPID (par de chaves da Web Push)",
+        max_length=250,
+        blank=True,
+        help_text="Console do Firebase › Cloud Messaging › Certificados push da Web.",
+    )
+    firebase_service_account = models.TextField(
+        "Firebase · JSON da conta de serviço",
+        blank=True,
+        help_text="Credencial do Admin SDK, usada pelo servidor para disparar o push. "
+                  "Guardada só no banco e nunca exposta ao navegador.",
+    )
+
+    blog_ativo = models.BooleanField(
+        "blog ativo",
+        default=True,
+        help_text="Desmarque para esconder o blog do menu, do rodapé e da home. "
+                  "As URLs passam a responder 404.",
+    )
     frete_gratis_acima_de = models.DecimalField(
         "frete grátis acima de", max_digits=10, decimal_places=2, default=199
     )
@@ -146,6 +197,37 @@ class SiteConfig(TimeStampedModel):
     def endereco_completo(self):
         partes = [p for p in (self.endereco, self.cidade_uf, self.cep) if p]
         return " · ".join(partes)
+
+    @property
+    def anos_de_mercado(self):
+        """Calculado, nunca digitado: um número fixo envelhece errado."""
+        from django.utils import timezone
+
+        return max(0, timezone.localdate().year - self.ano_fundacao)
+
+    @property
+    def firebase_configurado(self):
+        """True quando dá para inicializar o SDK no navegador."""
+        return bool(
+            self.firebase_api_key
+            and self.firebase_project_id
+            and self.firebase_messaging_sender_id
+            and self.firebase_app_id
+        )
+
+    @property
+    def firebase_web_config(self):
+        """Config que vai para o cliente. A conta de serviço nunca entra aqui."""
+        if not self.firebase_configurado:
+            return None
+        return {
+            "apiKey": self.firebase_api_key,
+            "authDomain": self.firebase_auth_domain,
+            "projectId": self.firebase_project_id,
+            "storageBucket": self.firebase_storage_bucket,
+            "messagingSenderId": self.firebase_messaging_sender_id,
+            "appId": self.firebase_app_id,
+        }
 
     @property
     def whatsapp_url(self):

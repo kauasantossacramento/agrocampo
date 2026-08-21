@@ -77,7 +77,7 @@ class ProdutoAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "preco", "preco_promocional", "promocao_ate", "preco_custo",
-                    ("permite_assinatura", "desconto_assinatura"),
+                    ("permite_assinatura", "desconto_assinatura_proprio"),
                 )
             },
         ),

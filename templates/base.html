@@ -33,6 +33,8 @@
 
   <div class="overlay"></div>
 
+  {% include 'partials/pwa_convite.html' %}
+
   {# mensagens do Django viram toasts via JS #}
   {% for message in messages %}
     <span hidden data-django-message="{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}">{{ message }}</span>
@@ -43,7 +45,10 @@
     // registra o service worker do PWA (silencioso se o navegador nao suportar)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register("{% static 'sw.js' %}", { scope: '/' }).catch(function () {});
+        // o SW e servido de /static/, entao so pode controlar /static/ —
+        // pedir scope '/' faz o navegador recusar o registro. O escopo mais
+        // amplo exige o header Service-Worker-Allowed, servido pelo /sw.js.
+        navigator.serviceWorker.register('/sw.js').catch(function () {});
       });
     }
   </script>

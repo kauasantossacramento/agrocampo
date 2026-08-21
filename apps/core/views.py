@@ -8,10 +8,11 @@ from django.views.decorators.http import require_POST
 from apps.blog.models import Post
 from apps.catalog.models import Categoria, Especie, Marca, Produto
 
-from .models import AssinanteNewsletter, Banner, Diferencial, Pagina
+from .models import AssinanteNewsletter, Banner, Diferencial, Pagina, SiteConfig
 
 
 def home(request):
+    config = SiteConfig.load()
     produtos = Produto.objects.vitrine()
     agora = timezone.now()
 
@@ -36,7 +37,7 @@ def home(request):
             "oferta_relampago": oferta_relampago,
             "especies": Especie.objects.publicados().filter(destaque_home=True)[:14],
             "marcas": Marca.objects.publicados().filter(destaque=True)[:18],
-            "posts": Post.objects.visiveis()[:3],
+            "posts": Post.objects.visiveis()[:3] if config.blog_ativo else [],
         },
     )
 
@@ -65,6 +66,20 @@ def newsletter(request):
 
     (messages.success if ok else messages.error)(request, mensagem)
     return redirect(request.META.get("HTTP_REFERER", "core:home"))
+
+
+def service_worker(request):
+    """Serve o SW a partir da raiz.
+
+    Um service worker so controla URLs abaixo do proprio caminho. Servido de
+    /static/sw.js ele nao poderia controlar a loja inteira, e o navegador
+    recusava o registro.
+    """
+    from django.conf import settings
+    from django.http import FileResponse
+
+    caminho = settings.BASE_DIR / "static" / "sw.js"
+    return FileResponse(open(caminho, "rb"), content_type="application/javascript")
 
 
 def offline(request):

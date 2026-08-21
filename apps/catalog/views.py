@@ -136,6 +136,7 @@ def detalhe_produto(request, slug):
         request.user.is_authenticated
         and produto.avaliacoes.filter(autor=request.user).exists()
     )
+    pode_avaliar = produto.foi_comprado_por(request.user)
     return render(
         request,
         "catalog/produto.html",
@@ -143,6 +144,7 @@ def detalhe_produto(request, slug):
             "produto": produto,
             "avaliacoes": avaliacoes,
             "ja_avaliou": ja_avaliou,
+            "pode_avaliar": pode_avaliar,
             "relacionados": produto.similares(4),
             "frequencias": [(30, "30 dias"), (60, "60 dias"), (90, "90 dias")],
         },
@@ -178,6 +180,17 @@ def especies(request):
 @login_required
 def avaliar(request, slug):
     produto = get_object_or_404(Produto, slug=slug)
+
+    # A checagem vive aqui, no servidor: esconder o formulário no template
+    # não impede um POST direto.
+    if not produto.foi_comprado_por(request.user):
+        messages.error(
+            request,
+            "Só quem comprou este produto pode avaliá-lo. "
+            "A avaliação libera assim que o pedido for aprovado.",
+        )
+        return redirect(produto.get_absolute_url())
+
     nota = int(request.POST.get("nota", 5))
     Avaliacao.objects.update_or_create(
         produto=produto,
@@ -186,6 +199,7 @@ def avaliar(request, slug):
             "nota": max(1, min(5, nota)),
             "titulo": request.POST.get("titulo", "")[:120],
             "comentario": request.POST.get("comentario", ""),
+            "compra_verificada": True,
         },
     )
     messages.success(request, "Obrigado pela avaliação!")

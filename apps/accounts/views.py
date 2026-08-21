@@ -4,18 +4,21 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.cart.services import mesclar_apos_login
 from apps.catalog.models import ListaDesejos
 
 from .forms import CadastroForm, EnderecoForm, PerfilForm
+from .redirects import destino_seguro
 from .models import Endereco
 
 
 def entrar(request):
+    destino = destino_seguro(request)
     if request.user.is_authenticated:
-        return redirect("core:home")
+        return redirect(destino)
 
     form = AuthenticationForm(request, data=request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -23,25 +26,33 @@ def entrar(request):
         mesclar_apos_login(request, usuario)
         login(request, usuario)
         messages.success(request, f"Bem-vindo de volta, {usuario.primeiro_nome}!")
-        return redirect(request.GET.get("next") or "core:home")
+        return redirect(destino)
 
     if request.method == "POST":
         messages.error(request, "E-mail ou senha incorretos.")
-    return render(request, "accounts/entrar.html", {"form": form})
+    return render(request, "accounts/entrar.html", {"form": form, "destino": destino})
 
 
 def cadastrar(request):
+    destino = destino_seguro(request)
     if request.user.is_authenticated:
-        return redirect("core:home")
+        return redirect(destino)
 
     form = CadastroForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         usuario = form.save()
         mesclar_apos_login(request, usuario)
         login(request, usuario, backend="apps.accounts.backends.EmailOrUsernameBackend")
-        messages.success(request, "Conta criada! Bem-vindo à AgroCampo.")
-        return redirect("core:home")
-    return render(request, "accounts/cadastrar.html", {"form": form})
+        # quem criou conta no meio da compra volta para o checkout, nao para a home
+        voltando_para_compra = "carrinho" in destino or "pagamento" in destino
+        messages.success(
+            request,
+            "Conta criada! Vamos concluir seu pedido."
+            if voltando_para_compra
+            else "Conta criada! Bem-vindo à AgroCampo.",
+        )
+        return redirect(destino)
+    return render(request, "accounts/cadastrar.html", {"form": form, "destino": destino})
 
 
 def sair(request):
@@ -70,19 +81,29 @@ def perfil(request):
 
 @login_required
 def enderecos(request):
+    destino = destino_seguro(request, padrao="accounts:enderecos")
     form = EnderecoForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         endereco = form.save(commit=False)
         endereco.usuario = request.user
-        if not request.user.enderecos.exists():
+        primeiro = not request.user.enderecos.exists()
+        if primeiro:
             endereco.padrao = True
         endereco.save()
+        # quem veio do checkout so para cadastrar endereco volta direto para la
+        if destino != reverse("accounts:enderecos"):
+            messages.success(request, "Endereço salvo. Vamos continuar seu pedido.")
+            return redirect(destino)
         messages.success(request, "Endereço salvo.")
         return redirect("accounts:enderecos")
     return render(
         request,
         "accounts/enderecos.html",
-        {"form": form, "enderecos": request.user.enderecos.all()},
+        {
+            "form": form,
+            "enderecos": request.user.enderecos.all(),
+            "destino": destino,
+        },
     )
 
 

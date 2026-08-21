@@ -205,9 +205,23 @@ class PaginasAutenticadasTests(TestCase):
                 )
 
     def test_painel_bloqueado_para_cliente(self):
+        """Cliente logado recebe 403 com explicação, não um rebote para o login.
+
+        Antes o decorator devolvia todo mundo para `accounts:entrar` — quem já
+        estava autenticado via a tela de login de novo e parecia que a página
+        simplesmente não carregava.
+        """
         self.client.force_login(self.cliente)
         resposta = self.client.get(reverse("dashboard:painel"))
+        self.assertEqual(resposta.status_code, 403)
+        self.assertContains(resposta, "conta de operador", status_code=403)
+
+    def test_painel_manda_anonimo_para_o_login_com_retorno(self):
+        self.client.logout()
+        resposta = self.client.get(reverse("dashboard:painel"))
         self.assertEqual(resposta.status_code, 302)
+        self.assertIn(reverse("accounts:entrar"), resposta.url)
+        self.assertIn("next=", resposta.url)
 
     def test_fluxo_completo_pix_ate_aprovacao(self):
         from apps.payments.services import cobrar_pix
@@ -228,3 +242,68 @@ class PaginasAutenticadasTests(TestCase):
         self.client.post(reverse("dashboard:aprovar", args=[self.pedido.numero]))
         self.pedido.refresh_from_db()
         self.assertEqual(self.pedido.status, Pedido.Status.EM_SEPARACAO)
+
+
+class RetornoAoCheckoutTests(TestCase):
+    """Quem cria conta ou cadastra endereço no meio da compra volta para lá."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed", verbosity=0)
+        cls.produto = Produto.objects.filter(publicado=True).first()
+
+    def test_checkout_manda_anonimo_para_o_login_com_retorno(self):
+        self.client.post(reverse("cart:adicionar", args=[self.produto.slug]))
+        resposta = self.client.get(reverse("cart:checkout"))
+        self.assertEqual(resposta.status_code, 302)
+        self.assertIn("next=", resposta.url)
+        self.assertIn("checkout", resposta.url)
+
+    def test_cadastro_devolve_para_o_checkout(self):
+        checkout = reverse("cart:checkout")
+        resposta = self.client.post(
+            f"{reverse('accounts:cadastrar')}?next={checkout}",
+            {
+                "first_name": "Novo", "last_name": "Cliente",
+                "email": "novo.cliente@exemplo.com", "telefone": "", "cpf": "",
+                "password1": "senha-forte-987", "password2": "senha-forte-987",
+                "next": checkout,
+            },
+        )
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(resposta.url, checkout)
+
+    def test_endereco_novo_devolve_para_o_checkout(self):
+        usuario = User.objects.create_user(
+            email="comprador@exemplo.com", password="senha-forte-123"
+        )
+        self.client.force_login(usuario)
+        checkout = reverse("cart:checkout")
+
+        resposta = self.client.post(
+            reverse("accounts:enderecos"),
+            {
+                "apelido": "Casa", "destinatario": "Comprador", "cep": "17300-000",
+                "logradouro": "Rua A", "numero": "10", "complemento": "",
+                "bairro": "Centro", "cidade": "Dois Córregos", "uf": "SP",
+                "referencia": "", "next": checkout,
+            },
+        )
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(resposta.url, checkout)
+        self.assertTrue(usuario.enderecos.exists())
+
+    def test_next_para_outro_dominio_e_ignorado(self):
+        """Sem validação, `?next=https://site-falso/` faria da nossa tela de
+        login um trampolim de phishing."""
+        usuario = User.objects.create_user(
+            email="alvo@exemplo.com", password="senha-forte-123"
+        )
+        resposta = self.client.post(
+            f"{reverse('accounts:entrar')}?next=https://site-falso.example/",
+            {"username": usuario.email, "password": "senha-forte-123",
+             "next": "https://site-falso.example/"},
+        )
+        self.assertEqual(resposta.status_code, 302)
+        self.assertNotIn("site-falso", resposta.url)
+        self.assertEqual(resposta.url, reverse("core:home"))

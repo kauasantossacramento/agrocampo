@@ -104,7 +104,9 @@
             R$ {% widthratio carrinho.total provedor.parcelas_sem_juros 1 %}</strong> sem juros no cartão
           </p>
 
-          <a href="{% url 'cart:checkout' %}" class="btn btn--primary btn--block btn--lg">Finalizar compra</a>
+          <a href="{% url 'cart:checkout' %}" class="btn btn--primary btn--block btn--lg">
+            {% if user.is_authenticated %}Finalizar compra{% else %}Entrar e finalizar{% endif %}
+          </a>
           <a href="{% url 'catalog:catalogo' %}" class="btn btn--ghost btn--block" style="margin-top:var(--s-2)">Continuar comprando</a>
 
           <div class="alert alert--info" style="margin-top:var(--s-5)">

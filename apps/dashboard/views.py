@@ -1,10 +1,12 @@
 """Painel do lojista: fila de aprovação, métricas, estoque e assinaturas."""
 from datetime import timedelta
+from functools import wraps
+from urllib.parse import quote
 
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Avg, Count, F, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -22,9 +24,24 @@ from apps.orders.services import (
 from apps.payments.models import Pagamento, ProvedorPagamento
 from apps.subscriptions.models import Assinatura
 
-operador_requerido = user_passes_test(
-    lambda u: u.is_authenticated and u.e_operador, login_url="accounts:entrar"
-)
+def operador_requerido(view):
+    """Exige um operador da loja.
+
+    Anonimo vai para o login. Ja autenticado sem permissao recebe um 403
+    explicito — antes ele era devolvido para a tela de login que acabara de
+    passar, o que parecia a pagina simplesmente nao carregar.
+    """
+
+    @wraps(view)
+    def _wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            destino = f"{reverse('accounts:entrar')}?next={quote(request.get_full_path())}"
+            return redirect(destino)
+        if not request.user.e_operador:
+            return render(request, "dashboard/sem_permissao.html", status=403)
+        return view(request, *args, **kwargs)
+
+    return _wrapper
 
 
 def _metricas():

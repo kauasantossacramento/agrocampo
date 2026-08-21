@@ -69,6 +69,16 @@ pre, code { overflow-x: auto; max-width: 100%; }
 
   .hero__cta .btn { flex: 1 1 auto; justify-content: center; }
   .section-head { align-items: flex-start; }
+
+  /* Os pontos do carrossel ficavam por baixo da figura do banner.
+     Aqui eles saem de cima da arte e viram uma faixa propria, abaixo. */
+  .hero__dots {
+    position: static; transform: none;
+    justify-content: center; padding-block: var(--s-4);
+    order: 3; width: 100%;
+  }
+  .hero .wrap { display: flex; flex-direction: column; }
+  .hero__inner { order: 1; }
 }
 
 /* ========================================================= ≤ 620px */

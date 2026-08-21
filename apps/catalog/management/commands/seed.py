@@ -23,12 +23,12 @@ from apps.payments.models import ProvedorPagamento
 SEED_DIR = Path(settings.MEDIA_ROOT) / "seed"
 
 CATEGORIAS = [
-    ("Ração & Alimentação", "🐕", ["Cães", "Gatos", "Extrusados", "Farinhadas"]),
-    ("Aves & Pássaros", "🐦", ["Sementes", "Misturas", "Alimentação manual", "Gaiolas"]),
-    ("Rural & Fazenda", "🚜", ["Sal mineral", "Cercas e currais", "Ferramentas"]),
-    ("Saúde Animal", "💊", ["Vermífugos", "Suplementos", "Antiparasitários", "Desinfetantes"]),
-    ("Acessórios", "🦴", ["Comedouros", "Bebedouros", "Higiene", "Brinquedos"]),
-    ("Casa e Jardim", "🌱", ["Sementes de horta", "Adubos"]),
+    ("Ração & Alimentação", "racao", ["Cães", "Gatos", "Extrusados", "Farinhadas"]),
+    ("Aves & Pássaros", "ave", ["Sementes", "Misturas", "Alimentação manual", "Gaiolas"]),
+    ("Rural & Fazenda", "rural", ["Sal mineral", "Cercas e currais", "Ferramentas"]),
+    ("Saúde Animal", "saude", ["Vermífugos", "Suplementos", "Antiparasitários", "Desinfetantes"]),
+    ("Acessórios", "acessorio", ["Comedouros", "Bebedouros", "Higiene", "Brinquedos"]),
+    ("Casa e Jardim", "jardim", ["Sementes de horta", "Adubos"]),
 ]
 
 ESPECIES = [
@@ -114,9 +114,9 @@ DIFERENCIAIS = [
 ]
 
 PAGINAS = [
-    ("Quem somos", 1, "Somos uma veterinária de bairro que virou referência regional. "
-     "Há três décadas atendemos criadores, pecuaristas e famílias — com o mesmo cuidado "
-     "no atendimento de um saco de ração e no de uma consulta."),
+    ("Quem somos", 1, "<mark>Texto de exemplo — substitua pela história real da loja.</mark> "
+     "Descreva aqui quando a AgroCampo começou, quem toca o negócio e o que "
+     "diferencia o atendimento de vocês."),
     ("Entregas e prazos", 2, "Entregamos em toda a região, inclusive na zona rural. "
      "Pedidos aprovados até as 14h saem no mesmo dia. Para endereços rurais, "
      "combinamos o ponto de entrega por WhatsApp antes de sair."),
@@ -191,11 +191,11 @@ class Command(BaseCommand):
     def _config(self):
         config = SiteConfig.load()
         config.nome_loja = "Veterinária AgroCampo"
-        config.telefone = "(14) 99720-2800"
-        config.whatsapp = "5514997202800"
-        config.email_contato = "contato@agrocampo.com.br"
-        config.endereco = "Av. do Comércio, 1200 — Centro"
-        config.anos_de_mercado = 30
+        config.ano_fundacao = 2012          # conforme o CNPJ
+        # Contato NAO e semeado de proposito. O telefone que estava aqui era
+        # o do site que serviu de referencia (Terra dos Passaros) — publicar
+        # isso mandaria cliente da AgroCampo para um terceiro.
+        # O lojista preenche em: Admin > Configuracao da loja.
         config.save()
         self.stdout.write("  configuração da loja")
 
@@ -228,11 +228,16 @@ class Command(BaseCommand):
     def _categorias(self):
         mapa = {}
         for ordem, (nome, icone, filhas) in enumerate(CATEGORIAS):
-            pai, _ = Categoria.objects.get_or_create(
+            pai, criado = Categoria.objects.get_or_create(
                 nome=nome,
                 pai=None,
                 defaults={"icone": icone, "ordem": ordem, "destaque_home": True},
             )
+            # `defaults` só vale na criação; sem isto, uma categoria antiga
+            # ficaria com o emoji de antes da troca para SVG.
+            if not criado and pai.icone != icone:
+                pai.icone = icone
+                pai.save(update_fields=["icone"])
             mapa[nome] = pai
             for i, filha in enumerate(filhas):
                 Categoria.objects.get_or_create(
@@ -301,7 +306,7 @@ class Command(BaseCommand):
                     "estoque": estoque,
                     "estoque_minimo": 5,
                     "permite_assinatura": assinavel,
-                    "desconto_assinatura": 10,
+                    "desconto_assinatura_proprio": None,  # segue o percentual global
                     "destaque": destaque,
                     "lancamento": lancamento,
                 },
@@ -332,9 +337,9 @@ class Command(BaseCommand):
             ("Assine e economize 10% em toda entrega.",
              "Escolha a frequência, receba em casa e pause quando quiser. Sem multa, sem fidelidade.",
              "Assinatura AgroCampo", "/catalogo/?assinatura=1"),
-            ("30 anos cuidando de quem cuida do campo.",
-             "Somos uma empresa familiar brasileira. Produtos testados, marcas de confiança e atendimento de verdade.",
-             "Desde 1996", "/pagina/quem-somos/"),
+            ("Assinatura, entrega e atendimento de gente que entende do campo.",
+             "Produtos de marcas conhecidas, com quem sabe indicar o que serve para cada animal.",
+             "Nossa loja", "/pagina/quem-somos/"),
         ]
         for ordem, (titulo, subtitulo, selo, link) in enumerate(dados):
             Banner.objects.get_or_create(

@@ -233,7 +233,12 @@
   transform: translateY(-5px); background: var(--surface);
   border-color: rgba(214,43,32,.24); box-shadow: var(--sh-3); color: var(--red);
 }
-.cat-tile__icon { font-size: 1.9rem; line-height: 1; transition: transform .3s var(--ease-spring); }
+.cat-tile__icon {
+  width: 40px; height: 40px; line-height: 1; color: var(--red);
+  display: grid; place-items: center;
+  transition: transform .3s var(--ease-spring);
+}
+.cat-tile__icon svg { width: 100%; height: 100%; }
 .cat-tile:hover .cat-tile__icon { transform: scale(1.16) translateY(-2px); }
 
 /* ============================================================ navegação por espécie */
@@ -340,6 +345,11 @@
   display: flex; justify-content: space-between; gap: var(--s-4);
   font-size: var(--fs-xs); flex-wrap: wrap;
 }
+.footer__assinatura { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.footer__assinatura strong { color: #fff; }
+.footer__assinatura a { display: inline; padding: 0; }
+.footer__coracao { flex: none; transition: transform .3s var(--ease-spring); }
+.footer__assinatura:hover .footer__coracao { transform: scale(1.25); }
 @media (max-width: 900px) { .footer__grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px) { .footer__grid { grid-template-columns: 1fr; } }
 
@@ -467,3 +477,28 @@
 /* ============================================================ autenticação */
 .auth { display: grid; place-items: center; min-height: calc(100vh - var(--header-h)); padding-block: var(--s-12); }
 .auth__card { width: min(440px, 100%); }
+
+
+/* ====================================================== convite de instalar */
+.pwa-convite {
+  position: fixed; z-index: 1100;
+  left: var(--s-6); bottom: var(--s-6); width: min(400px, calc(100vw - 2rem));
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-4);
+  opacity: 0; transform: translateY(16px);
+  transition: opacity .32s var(--ease-out), transform .32s var(--ease-out);
+}
+.pwa-convite.is-visivel { opacity: 1; transform: none; }
+.pwa-convite__icone { width: 42px; height: 42px; flex: none; border-radius: var(--r-md); object-fit: contain; }
+.pwa-convite__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pwa-convite__texto strong { font-size: var(--fs-sm); color: var(--ink); }
+.pwa-convite__texto span { font-size: var(--fs-xs); color: var(--muted); line-height: 1.45; }
+.pwa-convite__acoes { display: flex; align-items: center; gap: var(--s-1); flex: none; }
+
+@media (max-width: 620px) {
+  .pwa-convite { left: var(--s-3); right: var(--s-3); bottom: var(--s-3); width: auto; }
+}
