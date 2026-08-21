@@ -22,7 +22,7 @@
             <img src="{{ principal.imagem.url }}" alt="{{ produto.nome }}" data-gallery-main>
           {% else %}
             <span class="product__placeholder" style="border-radius:var(--r-xl)">
-            <svg width="90" height="90" aria-hidden="true"><use href="#c-{{ produto.categoria.icone|default:'pata' }}"></use></svg>
+            <svg width="90" height="90" aria-hidden="true"><use href="#c-{{ produto.categoria.icone_svg }}"></use></svg>
           </span>
           {% endif %}
         {% endwith %}

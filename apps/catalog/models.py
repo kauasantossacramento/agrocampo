@@ -80,6 +80,16 @@ class Categoria(TimeStampedModel, SluggedModel):
         return reverse("catalog:categoria", args=[self.slug])
 
     @property
+    def icone_svg(self):
+        """Chave do <symbol> a usar, sempre válida.
+
+        Os templates montam `href="#c-{{ ... }}"`. Um valor fora das opções
+        (emoji de uma base antiga, campo vazio) geraria uma referência para um
+        símbolo inexistente — e o ícone some sem nenhum erro visível.
+        """
+        return self.icone if self.icone in self.Icone.values else "pata"
+
+    @property
     def ramo_ids(self):
         """IDs desta categoria e de todas as descendentes."""
         ids = [self.pk]

@@ -21,7 +21,7 @@
         <img src="{{ imagem.imagem.url }}" alt="{{ produto.nome }}" loading="lazy">
       {% else %}
         <span class="product__placeholder">
-          <svg width="46" height="46" aria-hidden="true"><use href="#c-{{ produto.categoria.icone|default:'pata' }}"></use></svg>
+          <svg width="46" height="46" aria-hidden="true"><use href="#c-{{ produto.categoria.icone_svg }}"></use></svg>
         </span>
       {% endif %}
     {% endwith %}

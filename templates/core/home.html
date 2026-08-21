@@ -85,7 +85,7 @@
     {% for c in categorias_destaque %}
       <a href="{{ c.get_absolute_url }}" class="cat-tile">
         <span class="cat-tile__icon">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#c-{{ c.icone|default:'pata' }}"></use></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#c-{{ c.icone_svg }}"></use></svg>
         </span>
         <span>{{ c.nome }}</span>
       </a>

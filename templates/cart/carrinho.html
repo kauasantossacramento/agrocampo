@@ -35,12 +35,19 @@
               {% endif %}
 
               <div class="row" style="margin-top:var(--s-3);gap:var(--s-3)">
+                {% comment %}
+                  Os botões usam `ajuste`, não `quantidade`. Com os três campos
+                  chamados `quantidade`, o navegador enviava o valor do botão E
+                  o do input, e `request.POST.get()` ficava com o último da
+                  ordem do documento — o "−", que vem antes do input, nunca
+                  surtia efeito.
+                {% endcomment %}
                 <form method="post" action="{% url 'cart:atualizar' item.id %}" class="qty">
                   {% csrf_token %}
-                  <button type="submit" name="quantidade" value="{{ item.quantidade|add:-1 }}" aria-label="Diminuir">−</button>
+                  <button type="submit" name="ajuste" value="-1" aria-label="Diminuir a quantidade">−</button>
                   <input type="number" name="quantidade" value="{{ item.quantidade }}" min="1" max="{{ item.produto.estoque }}"
                          onchange="this.form.submit()" aria-label="Quantidade">
-                  <button type="submit" name="quantidade" value="{{ item.quantidade|add:1 }}" aria-label="Aumentar">+</button>
+                  <button type="submit" name="ajuste" value="1" aria-label="Aumentar a quantidade">+</button>
                 </form>
                 <form method="post" action="{% url 'cart:remover' item.id %}">
                   {% csrf_token %}

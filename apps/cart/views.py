@@ -63,7 +63,21 @@ def adicionar(request, slug):
 def atualizar(request, item_id):
     carrinho = obter_carrinho(request)
     item = get_object_or_404(ItemCarrinho, pk=item_id, carrinho=carrinho)
-    quantidade = int(request.POST.get("quantidade", 1))
+
+    # `ajuste` (-1/+1) vem dos botões; `quantidade` vem de quem digitou.
+    # O ajuste parte do valor no banco, não do campo enviado — assim dois
+    # cliques rápidos não se anulam por causa de um valor desatualizado.
+    ajuste = request.POST.get("ajuste")
+    if ajuste is not None:
+        try:
+            quantidade = item.quantidade + int(ajuste)
+        except ValueError:
+            quantidade = item.quantidade
+    else:
+        try:
+            quantidade = int(request.POST.get("quantidade", 1))
+        except ValueError:
+            return _resposta(request, carrinho, "Quantidade inválida.", ok=False)
 
     if quantidade <= 0:
         item.delete()

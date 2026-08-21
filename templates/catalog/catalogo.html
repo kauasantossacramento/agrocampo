@@ -35,7 +35,7 @@
           {% for c in categorias %}
             <a href="{{ c.get_absolute_url }}" class="filters__link {% if categoria_atual.id == c.id %}is-active{% endif %}">
               <span class="row" style="gap:var(--s-2)">
-                <svg width="16" height="16" style="flex:none" aria-hidden="true"><use href="#c-{{ c.icone|default:'pata' }}"></use></svg>
+                <svg width="16" height="16" style="flex:none" aria-hidden="true"><use href="#c-{{ c.icone_svg }}"></use></svg>
                 {{ c.nome }}
               </span>
             </a>

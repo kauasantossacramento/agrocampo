@@ -431,3 +431,106 @@ class DiferenciaisRemoviveisTests(TestCase):
         html = self.client.get(reverse("core:home")).content.decode()
         self.assertNotIn("Entregamos onde outros não chegam", html)
         self.assertNotIn("Compra 100% garantida", html)
+
+
+class QuantidadeNoCarrinhoTests(BasePedido):
+    """Regressão: os três campos do seletor chamavam-se `quantidade`.
+
+    O navegador enviava o valor do botão E o do input; `POST.get()` devolve o
+    último da ordem do documento. Como o "−" vem antes do input, ele nunca
+    surtia efeito — só o "+" funcionava.
+    """
+
+    def _rota(self, item):
+        from django.urls import reverse
+
+        return reverse("cart:atualizar", args=[item.id])
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.cliente)
+        # o carrinho da sessão do client precisa ser o mesmo do usuário
+        self.item = self.carrinho.adicionar(self.produto, 3)
+
+    def test_botao_de_diminuir_reduz_uma_unidade(self):
+        self.client.post(self._rota(self.item), {"ajuste": "-1", "quantidade": "3"})
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantidade, 2)
+
+    def test_botao_de_aumentar_soma_uma_unidade(self):
+        self.client.post(self._rota(self.item), {"ajuste": "1", "quantidade": "3"})
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantidade, 4)
+
+    def test_diminuir_ate_zero_remove_o_item(self):
+        self.item.quantidade = 1
+        self.item.save(update_fields=["quantidade"])
+
+        self.client.post(self._rota(self.item), {"ajuste": "-1", "quantidade": "1"})
+        self.assertFalse(
+            self.carrinho.itens.filter(pk=self.item.pk).exists(),
+            "chegar a zero tem que tirar o item do carrinho",
+        )
+
+    def test_digitar_a_quantidade_continua_funcionando(self):
+        self.client.post(self._rota(self.item), {"quantidade": "5"})
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantidade, 5)
+
+    def test_ajuste_parte_do_banco_e_nao_do_campo_enviado(self):
+        """Dois cliques seguidos não podem se anular por valor desatualizado."""
+        self.client.post(self._rota(self.item), {"ajuste": "-1", "quantidade": "3"})
+        self.client.post(self._rota(self.item), {"ajuste": "-1", "quantidade": "3"})
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantidade, 1)
+
+    def test_nao_passa_do_estoque(self):
+        self.item.quantidade = self.produto.estoque
+        self.item.save(update_fields=["quantidade"])
+
+        self.client.post(self._rota(self.item), {"ajuste": "1"})
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantidade, self.produto.estoque)
+
+
+class IconeDeCategoriaTests(TestCase):
+    """Regressão: a migration trocou o significado do campo mas não os dados.
+
+    Bases já existentes ficaram com `🐕` gravado; o template montava
+    `href="#c-🐕"`, o símbolo não existia e o ícone sumia sem erro nenhum.
+    """
+
+    def test_emoji_antigo_nao_gera_referencia_quebrada(self):
+        from apps.catalog.models import Categoria
+
+        categoria = Categoria.objects.create(nome="Herdada", icone="🐕")
+        self.assertEqual(categoria.icone_svg, "pata")
+
+    def test_icone_vazio_cai_no_generico(self):
+        from apps.catalog.models import Categoria
+
+        categoria = Categoria.objects.create(nome="Sem ícone", icone="")
+        self.assertEqual(categoria.icone_svg, "pata")
+
+    def test_chave_valida_e_preservada(self):
+        from apps.catalog.models import Categoria
+
+        categoria = Categoria.objects.create(nome="Ração", icone="racao")
+        self.assertEqual(categoria.icone_svg, "racao")
+
+    def test_home_so_referencia_simbolos_que_existem(self):
+        """Cada href="#c-x" da home precisa ter um <symbol id="c-x">."""
+        import re
+
+        from django.core.management import call_command
+        from django.urls import reverse
+
+        call_command("seed", verbosity=0)
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        usados = set(re.findall(r'href="#(c-[^"]+)"', html))
+        definidos = set(re.findall(r'<symbol id="(c-[^"]+)"', html))
+
+        self.assertTrue(usados, "a home deveria usar ícones de categoria")
+        faltando = usados - definidos
+        self.assertFalse(faltando, f"ícones referenciados sem <symbol>: {faltando}")
