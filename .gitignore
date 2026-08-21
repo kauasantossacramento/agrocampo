@@ -1,0 +1,31 @@
+# ---- ambiente ----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ---- segredos e dados locais ----
+.env
+.env.bak.*
+db.sqlite3
+CREDENCIAIS.txt
+
+# ---- gerados no build/deploy ----
+/staticfiles/
+
+# ---- mídia ----
+# `media/seed/` é fonte: as fotos que o comando `seed` usa para montar o
+# catálogo de demonstração — por isso vai versionada.
+# O resto de media/ é conteúdo gerado (baixar_imagens) ou enviado pelo
+# lojista; fica fora do git para o `git pull` do deploy nunca conflitar
+# com um upload feito em produção.
+/media/*
+!/media/seed/
+
+# ---- sistema operacional / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

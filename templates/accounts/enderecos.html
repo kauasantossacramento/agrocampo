@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Endereços — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section" style="max-width:940px">
+  <h1 style="margin-bottom:var(--s-6)">Endereços de entrega</h1>
+
+  <div class="checkout-grid">
+    <div class="stack" data-stagger>
+      {% for e in enderecos %}
+        <div class="card card--pad">
+          <div class="row row--between">
+            <strong>
+              {{ e.apelido }}{% if e.padrao %} <span class="badge badge--green">Padrão</span>{% endif %}
+            </strong>
+            <div class="row" style="gap:var(--s-3)">
+              {% if not e.padrao %}
+                <form method="post" action="{% url 'accounts:endereco_padrao' e.id %}">{% csrf_token %}
+                  <button type="submit" class="xs strong link-underline">Tornar padrão</button>
+                </form>
+              {% endif %}
+              <form method="post" action="{% url 'accounts:remover_endereco' e.id %}">{% csrf_token %}
+                <button type="submit" class="xs muted link-underline">Remover</button>
+              </form>
+            </div>
+          </div>
+          <p class="small muted" style="margin:var(--s-2) 0 0">{{ e.destinatario }} · {{ e.linha_unica }}</p>
+          {% if e.zona_rural %}<span class="badge badge--amber" style="margin-top:var(--s-2)">Zona rural</span>{% endif %}
+          {% if e.referencia %}<p class="xs muted" style="margin:var(--s-2) 0 0">Referência: {{ e.referencia }}</p>{% endif %}
+        </div>
+      {% empty %}
+        <div class="empty card">
+          <div class="empty__icon">📍</div>
+          <p class="empty__title">Nenhum endereço ainda</p>
+          <p class="small">Cadastre ao lado para poder finalizar suas compras.</p>
+        </div>
+      {% endfor %}
+    </div>
+
+    <aside>
+      <form method="post" class="card card--pad stack">
+        {% csrf_token %}
+        <h3 style="font-size:var(--fs-base)">Novo endereço</h3>
+        <div class="field"><label>Apelido</label>{{ form.apelido }}</div>
+        <div class="field"><label>Destinatário</label>{{ form.destinatario }}</div>
+        <div class="field">
+          <label>CEP</label>
+          <input type="text" name="cep" class="campo" data-mask="cep" data-cep-lookup placeholder="00000-000" required>
+          <span class="help">Preenchemos o resto automaticamente.</span>
+        </div>
+        <div class="field"><label>Logradouro</label>{{ form.logradouro }}</div>
+        <div class="grid grid--2" style="gap:var(--s-3)">
+          <div class="field"><label>Número</label>{{ form.numero }}</div>
+          <div class="field"><label>Complemento</label>{{ form.complemento }}</div>
+        </div>
+        <div class="field"><label>Bairro</label>{{ form.bairro }}</div>
+        <div class="grid grid--2" style="gap:var(--s-3)">
+          <div class="field"><label>Cidade</label>{{ form.cidade }}</div>
+          <div class="field"><label>UF</label>{{ form.uf }}</div>
+        </div>
+        <div class="field"><label>Ponto de referência</label>{{ form.referencia }}</div>
+        <label class="switch-row">{{ form.zona_rural }} É zona rural</label>
+        <label class="switch-row">{{ form.padrao }} Usar como endereço padrão</label>
+        <button type="submit" class="btn btn--primary btn--block">Salvar endereço</button>
+      </form>
+    </aside>
+  </div>
+</div>
+{% endblock %}

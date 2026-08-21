@@ -1,0 +1,73 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Métricas{% endblock %}
+{% block painel_heading %}Métricas{% endblock %}
+
+{% block painel_content %}
+{% include 'dashboard/_stats.html' %}
+
+<div class="grid grid--2" style="margin-top:var(--s-6);align-items:start" data-stagger>
+
+  <div class="card card--pad">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Pedidos por status</h3>
+    {% for linha in por_status %}
+      <div style="margin-bottom:var(--s-4)">
+        <div class="row row--between small" style="margin-bottom:var(--s-2)">
+          <span>{{ linha.status }}</span>
+          <span class="strong">{{ linha.quantidade }} · R$ {{ linha.total|default:0|floatformat:0 }}</span>
+        </div>
+        <div class="bar-track">
+          {% widthratio linha.quantidade por_status.0.quantidade 100 as largura %}
+          <div class="bar-fill" style="width:{{ largura }}%"></div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="small muted" style="margin:0">Nenhum pedido registrado ainda.</p>
+    {% endfor %}
+  </div>
+
+  <div class="card card--pad">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Pagamentos aprovados por método</h3>
+    {% for linha in por_metodo %}
+      <div class="row row--between small" style="padding-block:var(--s-3);border-bottom:1px solid var(--line)">
+        <span class="strong">{{ linha.metodo|capfirst }}</span>
+        <span>{{ linha.quantidade }} transação{{ linha.quantidade|pluralize:"ões" }} · R$ {{ linha.total|floatformat:2 }}</span>
+      </div>
+    {% empty %}
+      <p class="small muted" style="margin:0">Nenhum pagamento aprovado ainda.</p>
+    {% endfor %}
+
+    <hr class="divider">
+    <div class="summary__row">
+      <span>Receita nos últimos 30 dias</span>
+      <span class="strong">R$ {{ receita_30d|floatformat:2 }}</span>
+    </div>
+  </div>
+
+  <div class="card card--pad" style="grid-column:1/-1">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Produtos mais vendidos</h3>
+    <div class="table-wrap" style="border:none">
+      <table class="data">
+        <thead><tr><th>#</th><th>Produto</th><th>Categoria</th><th>Unidades vendidas</th><th>Estoque</th></tr></thead>
+        <tbody>
+          {% for p in mais_vendidos %}
+            <tr>
+              <td class="strong">{{ forloop.counter }}</td>
+              <td><a href="{{ p.get_absolute_url }}" style="font-weight:600;color:var(--ink)">{{ p.nome|truncatechars:48 }}</a></td>
+              <td class="small">{{ p.categoria.nome }}</td>
+              <td class="strong">{{ p.vendas }}</td>
+              <td>
+                <span style="color:{% if p.estoque <= 0 %}var(--red){% elif p.estoque_baixo %}var(--amber){% else %}var(--green){% endif %}">
+                  {{ p.estoque }}
+                </span>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="muted center" style="padding:var(--s-10)">Nenhuma venda registrada ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

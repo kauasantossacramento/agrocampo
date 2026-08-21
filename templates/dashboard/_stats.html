@@ -1,0 +1,28 @@
+{# Faixa de métricas reutilizada em todas as telas do painel. #}
+<div class="grid grid--5" data-stagger>
+  <div class="stat">
+    <p class="stat__label">Vendas hoje</p>
+    <p class="stat__value">R$ {{ metricas.vendas_hoje|floatformat:0 }}</p>
+    <p class="stat__foot">{{ metricas.pedidos_hoje }} pedido{{ metricas.pedidos_hoje|pluralize }} pago{{ metricas.pedidos_hoje|pluralize }}</p>
+  </div>
+  <div class="stat">
+    <p class="stat__label">Aguardando aprovação</p>
+    <p class="stat__value stat__value--amber">{{ metricas.pendentes }}</p>
+    <p class="stat__foot">precisam da sua conferência</p>
+  </div>
+  <div class="stat">
+    <p class="stat__label">Ticket médio</p>
+    <p class="stat__value">R$ {{ metricas.ticket_medio|floatformat:0 }}</p>
+    <p class="stat__foot">média histórica</p>
+  </div>
+  <div class="stat">
+    <p class="stat__label">Assinaturas ativas</p>
+    <p class="stat__value stat__value--green">{{ metricas.assinaturas_ativas }}</p>
+    <p class="stat__foot">receita recorrente</p>
+  </div>
+  <div class="stat">
+    <p class="stat__label">Estoque crítico</p>
+    <p class="stat__value {% if metricas.estoque_critico %}stat__value--red{% endif %}">{{ metricas.estoque_critico }}</p>
+    <p class="stat__foot">produtos no mínimo</p>
+  </div>
+</div>

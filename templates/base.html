@@ -1,0 +1,52 @@
+{% load static humanize %}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#D62B20">
+  <title>{% block title %}{{ site.nome_loja }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ site.descricao }}{% endblock %}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+  <link rel="stylesheet" href="{% static 'css/motion.css' %}">
+  <link rel="stylesheet" href="{% static 'css/layout.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <link rel="icon" href="{% static 'img/logo-agrocampo-compacto.png' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% include 'partials/icons.html' %}
+
+  {% block header %}{% include 'partials/header.html' %}{% endblock %}
+
+  <main id="conteudo">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block footer %}{% include 'partials/footer.html' %}{% endblock %}
+
+  <div class="overlay"></div>
+
+  {# mensagens do Django viram toasts via JS #}
+  {% for message in messages %}
+    <span hidden data-django-message="{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}">{{ message }}</span>
+  {% endfor %}
+
+  <script src="{% static 'js/app.js' %}" defer></script>
+  <script>
+    // registra o service worker do PWA (silencioso se o navegador nao suportar)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register("{% static 'sw.js' %}", { scope: '/' }).catch(function () {});
+      });
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

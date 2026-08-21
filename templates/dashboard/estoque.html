@@ -1,0 +1,49 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Estoque{% endblock %}
+{% block painel_heading %}Estoque{% endblock %}
+
+{% block painel_content %}
+<div class="row" style="gap:var(--s-2);margin-bottom:var(--s-5)">
+  <a href="{% url 'dashboard:estoque' %}" class="chip {% if request.GET.critico != '1' %}is-active{% endif %}">Todos os produtos</a>
+  <a href="{% url 'dashboard:estoque' %}?critico=1" class="chip {% if request.GET.critico == '1' %}is-active{% endif %}">
+    Estoque crítico
+    {% if metricas.estoque_critico %}<span class="badge badge--sale">{{ metricas.estoque_critico }}</span>{% endif %}
+  </a>
+</div>
+
+<div class="table-wrap" data-reveal>
+  <table class="data">
+    <thead>
+      <tr><th>Produto</th><th>SKU</th><th>Categoria</th><th>Estoque</th><th>Mínimo</th><th>Vendas</th><th>Repor</th></tr>
+    </thead>
+    <tbody>
+      {% for p in produtos %}
+        <tr>
+          <td>
+            <a href="{{ p.get_absolute_url }}" style="font-weight:600;color:var(--ink)">{{ p.nome|truncatechars:44 }}</a>
+          </td>
+          <td class="xs muted">{{ p.sku }}</td>
+          <td class="small">{{ p.categoria.nome }}</td>
+          <td>
+            <strong style="color:{% if p.estoque <= 0 %}var(--red){% elif p.estoque_baixo %}var(--amber){% else %}var(--green){% endif %}">
+              {{ p.estoque }}
+            </strong>
+          </td>
+          <td class="small muted">{{ p.estoque_minimo }}</td>
+          <td class="small">{{ p.vendas }}</td>
+          <td>
+            <form method="post" action="{% url 'dashboard:repor_estoque' p.id %}" class="row" style="gap:var(--s-2)">
+              {% csrf_token %}
+              <input type="number" name="quantidade" min="1" value="10" style="width:76px;padding:.4rem .5rem" aria-label="Quantidade a repor">
+              <button type="submit" class="btn btn--ghost btn--sm nowrap">+ Repor</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="muted center" style="padding:var(--s-12)">Nenhum produto encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

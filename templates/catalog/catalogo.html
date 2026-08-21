@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} — {{ site.nome_loja }}{% endblock %}
+
+{% block content %}
+<div class="wrap section">
+
+  <nav class="small muted" style="margin-bottom:var(--s-5)" aria-label="Você está em">
+    <a href="{% url 'core:home' %}">Início</a> ›
+    <a href="{% url 'catalog:catalogo' %}">Catálogo</a>
+    {% if categoria_atual %} › <span class="strong">{{ categoria_atual.nome }}</span>{% endif %}
+    {% if marca_atual %} › <span class="strong">{{ marca_atual.nome }}</span>{% endif %}
+    {% if especie_atual %} › <span class="strong">{{ especie_atual.nome }}</span>{% endif %}
+  </nav>
+
+  <div class="catalog">
+
+    {% comment %}
+      FILTROS — no mobile viram um acordeão fechado; sem isso o usuário
+      rolaria a árvore inteira de categorias antes do primeiro produto.
+    {% endcomment %}
+    <aside class="filters accordion" aria-label="Filtros" data-accordion>
+      <button type="button" class="btn btn--ghost btn--block filters__toggle" data-accordion-trigger>
+        <svg width="15" height="15"><use href="#i-config"></use></svg>
+        Filtrar produtos
+        <svg width="14" height="14" class="accordion__icon"><use href="#i-seta-baixo"></use></svg>
+      </button>
+
+      <form method="get" id="form-filtros" class="accordion__panel filters__panel">
+        {% if busca %}<input type="hidden" name="q" value="{{ busca }}">{% endif %}
+
+        <div class="filters__group">
+          <p class="filters__title">Categorias</p>
+          <a href="{% url 'catalog:catalogo' %}" class="filters__link {% if not categoria_atual %}is-active{% endif %}">Todos os produtos</a>
+          {% for c in categorias %}
+            <a href="{{ c.get_absolute_url }}" class="filters__link {% if categoria_atual.id == c.id %}is-active{% endif %}">
+              <span>{% if c.icone %}{{ c.icone }} {% endif %}{{ c.nome }}</span>
+            </a>
+            {% for filha in c.filhas.all %}
+              <a href="{{ filha.get_absolute_url }}" class="filters__link {% if categoria_atual.id == filha.id %}is-active{% endif %}" style="padding-left:var(--s-6);font-size:var(--fs-xs)">{{ filha.nome }}</a>
+            {% endfor %}
+          {% endfor %}
+        </div>
+
+        <div class="filters__group">
+          <p class="filters__title">Faixa de preço</p>
+          <div class="row" style="gap:var(--s-2)">
+            <input type="number" name="preco_min" min="0" step="0.01" placeholder="Mín" value="{{ preco_min|default_if_none:'' }}" aria-label="Preço mínimo">
+            <span class="muted">—</span>
+            <input type="number" name="preco_max" min="0" step="0.01" placeholder="Máx" value="{{ preco_max|default_if_none:'' }}" aria-label="Preço máximo">
+          </div>
+          <p class="help" style="margin-top:var(--s-2)">
+            Catálogo de R$ {{ faixa.minimo|floatformat:2 }} a R$ {{ faixa.maximo|floatformat:2 }}
+          </p>
+        </div>
+
+        <div class="filters__group">
+          <p class="filters__title">Marcas</p>
+          <div class="stack" style="gap:var(--s-2);max-height:230px;overflow-y:auto">
+            {% for m in marcas %}
+              <label class="switch-row">
+                <input type="checkbox" name="marca" value="{{ m.slug }}" {% if m.slug in marcas_selecionadas %}checked{% endif %}>
+                {{ m.nome }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="filters__group">
+          <p class="filters__title">Compra</p>
+          <div class="stack" style="gap:var(--s-2)">
+            <label class="switch-row"><input type="checkbox" name="assinatura" value="1" {% if request.GET.assinatura == '1' %}checked{% endif %}> Disponível para assinatura</label>
+            <label class="switch-row"><input type="checkbox" name="promocao" value="1" {% if request.GET.promocao == '1' %}checked{% endif %}> Somente promoções</label>
+            <label class="switch-row"><input type="checkbox" name="disponivel" value="1" {% if request.GET.disponivel == '1' %}checked{% endif %}> Somente em estoque</label>
+          </div>
+        </div>
+
+        <div class="filters__group">
+          <button type="submit" class="btn btn--primary btn--block btn--sm">Aplicar filtros</button>
+          <a href="{% if categoria_atual %}{{ categoria_atual.get_absolute_url }}{% else %}{% url 'catalog:catalogo' %}{% endif %}"
+             class="btn btn--ghost btn--block btn--sm" style="margin-top:var(--s-2)">Limpar</a>
+        </div>
+      </form>
+    </aside>
+
+    {# ------------------------------------------------------ RESULTADOS #}
+    <div>
+      <div class="input-icon" style="margin-bottom:var(--s-5)">
+        <svg width="17" height="17"><use href="#i-busca"></use></svg>
+        <form method="get" action="{% url 'catalog:busca' %}">
+          <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome, categoria ou marca..." aria-label="Buscar no catálogo">
+        </form>
+      </div>
+
+      <div class="section-head" style="margin-bottom:var(--s-5)">
+        <div class="section-head__title">
+          <h1 style="font-size:var(--fs-xl)">{{ titulo }}</h1>
+          <p>{{ total }} produto{{ total|pluralize }}{% if busca %} para “{{ busca }}”{% endif %}</p>
+        </div>
+        <form method="get" id="form-ordem">
+          {% for chave, valores in request.GET.lists %}{% if chave != 'ordem' and chave != 'pagina' %}{% for v in valores %}<input type="hidden" name="{{ chave }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+          <select name="ordem" onchange="this.form.submit()" aria-label="Ordenar por" style="width:auto">
+            <option value="relevancia" {% if ordem == 'relevancia' %}selected{% endif %}>Mais relevantes</option>
+            <option value="menor-preco" {% if ordem == 'menor-preco' %}selected{% endif %}>Menor preço</option>
+            <option value="maior-preco" {% if ordem == 'maior-preco' %}selected{% endif %}>Maior preço</option>
+            <option value="mais-vendidos" {% if ordem == 'mais-vendidos' %}selected{% endif %}>Mais vendidos</option>
+            <option value="novidades" {% if ordem == 'novidades' %}selected{% endif %}>Novidades</option>
+            <option value="avaliacao" {% if ordem == 'avaliacao' %}selected{% endif %}>Melhor avaliados</option>
+          </select>
+        </form>
+      </div>
+
+      {% if produtos %}
+        <div class="grid grid--4" data-stagger>
+          {% for produto in produtos %}{% include 'partials/product_card.html' %}{% endfor %}
+        </div>
+
+        {% if pagina.has_other_pages %}
+          <nav class="pager" aria-label="Paginação">
+            {% if pagina.has_previous %}
+              <a href="?{{ querystring }}&pagina={{ pagina.previous_page_number }}" aria-label="Página anterior">
+                <svg width="15" height="15"><use href="#i-seta-esq"></use></svg>
+              </a>
+            {% endif %}
+            {% for numero in pagina.paginator.page_range %}
+              {% if numero == pagina.number %}
+                <span class="is-current">{{ numero }}</span>
+              {% elif numero > pagina.number|add:-3 and numero < pagina.number|add:3 %}
+                <a href="?{{ querystring }}&pagina={{ numero }}">{{ numero }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if pagina.has_next %}
+              <a href="?{{ querystring }}&pagina={{ pagina.next_page_number }}" aria-label="Próxima página">
+                <svg width="15" height="15"><use href="#i-seta-dir"></use></svg>
+              </a>
+            {% endif %}
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="empty card">
+          <div class="empty__icon">🔍</div>
+          <p class="empty__title">Nenhum produto encontrado</p>
+          <p class="small">Tente outro termo de busca, ajuste os filtros ou navegue por outra categoria.</p>
+          <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver todo o catálogo</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

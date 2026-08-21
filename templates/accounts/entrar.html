@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Entrar — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap auth">
+  <div class="card card--pad auth__card anim-fade-up">
+    <h1 style="font-size:var(--fs-xl)">Bem-vindo de volta</h1>
+    <p class="small muted" style="margin-top:var(--s-2)">Entre para acompanhar seus pedidos e assinaturas.</p>
+    <span class="rule" style="margin-block:var(--s-4)"></span>
+
+    <form method="post" class="stack">
+      {% csrf_token %}
+      <div class="field">
+        <label for="id_username">E-mail</label>
+        <input type="email" name="username" id="id_username" class="campo"
+               placeholder="seu@email.com.br" required autofocus autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="id_password">Senha</label>
+        <input type="password" name="password" id="id_password" class="campo"
+               placeholder="Sua senha" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn--primary btn--block btn--lg">Entrar</button>
+    </form>
+
+    <p class="small center muted" style="margin-top:var(--s-5)">
+      Ainda não tem conta?
+      <a href="{% url 'accounts:cadastrar' %}" class="strong" style="color:var(--red)">Criar conta grátis</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

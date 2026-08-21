@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Sem conexão — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div class="empty card" style="max-width:520px;margin-inline:auto">
+    <div class="empty__icon">📡</div>
+    <p class="empty__title">Você está sem conexão</p>
+    <p class="small">Assim que a internet voltar, seu carrinho e seus pedidos continuam exatamente como você deixou.</p>
+    <button onclick="location.reload()" class="btn btn--primary" style="margin-top:var(--s-5)">Tentar de novo</button>
+  </div>
+</div>
+{% endblock %}

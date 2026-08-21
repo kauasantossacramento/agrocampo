@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{{ pagina.nome }} — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div style="max-width:760px;margin-inline:auto" data-reveal>
+    <h1>{{ pagina.nome }}</h1>
+    {% if pagina.resumo %}<p class="lead" style="margin-top:var(--s-3)">{{ pagina.resumo }}</p>{% endif %}
+    <span class="rule" style="margin-block:var(--s-5)"></span>
+    <div class="card card--pad" style="line-height:1.75;color:var(--ink-3)">{{ pagina.conteudo|safe }}</div>
+  </div>
+</div>
+{% endblock %}

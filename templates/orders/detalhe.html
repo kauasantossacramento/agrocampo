@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block title %}Pedido {{ pedido.numero }} — {{ site.nome_loja }}{% endblock %}
+
+{% block content %}
+<div class="wrap section" style="max-width:860px">
+
+  <a href="{% url 'orders:lista' %}" class="small muted link-underline">← Meus pedidos</a>
+
+  <div class="section-head" style="margin-top:var(--s-4)">
+    <div class="section-head__title">
+      <h1 style="font-size:var(--fs-2xl)">Pedido {{ pedido.numero }}</h1>
+      <p>Feito em {{ pedido.criado_em|date:"d/m/Y \à\s H:i" }}</p>
+    </div>
+    <span class="badge
+      {% if pedido.status == 'aprovado' or pedido.status == 'entregue' %}badge--green
+      {% elif pedido.status == 'recusado' or pedido.status == 'cancelado' %}badge--red
+      {% elif pedido.status == 'enviado' %}badge--teal
+      {% elif pedido.status == 'em_separacao' %}badge--blue
+      {% else %}badge--amber{% endif %}" style="font-size:var(--fs-sm);padding:.4rem .8rem">
+      {{ pedido.get_status_display }}
+    </span>
+  </div>
+
+  {# ================================================= PEDIDO RECUSADO #}
+  {% if pedido.status == 'recusado' %}
+    <div class="card card--pad" data-reveal>
+      <div style="width:54px;height:54px;border-radius:50%;background:var(--red-wash);color:var(--red);display:grid;place-items:center;margin-bottom:var(--s-4)">
+        <svg width="26" height="26"><use href="#i-x"></use></svg>
+      </div>
+      <h2 style="font-size:var(--fs-xl)">Sentimos muito, seu pedido não pôde ser confirmado</h2>
+      <p class="lead" style="margin-top:var(--s-3)">
+        Motivo: <strong>{{ pedido.motivo_recusa }}</strong>
+      </p>
+      <p class="small muted">
+        Pedimos desculpas pelo transtorno. Separamos alternativas parecidas, ou você pode solicitar o estorno integral.
+      </p>
+
+      {% if similares %}
+        <h3 style="font-size:var(--fs-base);margin-block:var(--s-6) var(--s-4)">Produtos semelhantes disponíveis</h3>
+        <div class="grid grid--3" data-stagger>
+          {% for produto in similares %}{% include 'partials/product_card.html' %}{% endfor %}
+        </div>
+      {% endif %}
+
+      <hr class="divider">
+
+      {% if estorno and estorno.status == 'concluido' %}
+        <div class="alert alert--success">
+          <svg width="17" height="17" class="check-anim"><use href="#i-check"></use></svg>
+          <span>
+            <strong>Estorno solicitado!</strong><br>
+            R$ {{ estorno.valor|floatformat:2 }} retornam ao seu meio de pagamento em até 5 dias úteis.
+          </span>
+        </div>
+      {% elif pedido.pode_ser_estornado %}
+        <form method="post" action="{% url 'orders:estorno' pedido.numero %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--ghost" style="color:var(--red);border-color:var(--red)">
+            Não quero, solicitar estorno
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+  {# ================================================= PEDIDO APROVADO #}
+  {% elif pedido.status == 'aprovado' or pedido.status == 'em_separacao' %}
+    <div class="card card--pad center" data-reveal="scale">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;margin:0 auto var(--s-4)">
+        <svg width="30" height="30" class="check-anim"><use href="#i-check"></use></svg>
+      </div>
+      <h2 style="font-size:var(--fs-xl)">Pedido aprovado!</h2>
+      <p class="lead" style="max-width:440px;margin:var(--s-3) auto var(--s-5)">
+        Seu pagamento foi confirmado e o lojista validou a disponibilidade dos produtos.
+        Seu pedido já está sendo preparado para envio.
+      </p>
+      <div class="alert alert--warning" style="text-align:left;max-width:440px;margin-inline:auto">
+        <svg width="16" height="16"><use href="#i-sino"></use></svg>
+        <span>Você será avisado assim que o pedido sair para entrega.</span>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ==================================================== LINHA DO TEMPO #}
+  <div class="card card--pad" style="margin-top:var(--s-6)" data-reveal>
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-6)">Acompanhamento</h3>
+    <div class="timeline">
+      {% for evento in eventos %}
+        <div class="timeline__item {% if forloop.last %}{% if pedido.status == 'recusado' or pedido.status == 'cancelado' %}is-error{% elif pedido.status == 'aguardando_aprovacao' or pedido.status == 'aguardando_pagamento' %}is-current{% else %}is-done{% endif %}{% else %}is-done{% endif %}">
+          <span class="timeline__dot">
+            {% if forloop.last and pedido.status == 'recusado' %}✕
+            {% elif forloop.last and pedido.status == 'aguardando_aprovacao' %}⏳
+            {% else %}<svg width="13" height="13"><use href="#i-check"></use></svg>{% endif %}
+          </span>
+          <div>
+            <div class="timeline__title">{{ evento.titulo }}</div>
+            {% if evento.descricao %}<div class="timeline__meta">{{ evento.descricao }}</div>{% endif %}
+            <div class="timeline__meta">{{ evento.criado_em|date:"d/m/Y \à\s H:i" }}</div>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if pedido.status == 'aguardando_aprovacao' %}
+        <div class="timeline__item is-pending">
+          <span class="timeline__dot">3</span>
+          <div><div class="timeline__title">Pedido aprovado e em separação</div></div>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if pedido.status == 'aguardando_aprovacao' %}
+      <div class="alert alert--warning" style="margin-top:var(--s-6)">
+        <svg width="16" height="16"><use href="#i-sino"></use></svg>
+        <span>Você será notificado assim que o lojista confirmar a disponibilidade dos itens.</span>
+      </div>
+    {% endif %}
+
+    {% if pedido.codigo_rastreio %}
+      <div class="alert alert--info" style="margin-top:var(--s-4)">
+        <svg width="16" height="16"><use href="#i-caminhao"></use></svg>
+        <span>Código de rastreio: <strong>{{ pedido.codigo_rastreio }}</strong></span>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ============================================================= ITENS #}
+  <div class="card card--pad" style="margin-top:var(--s-6)" data-reveal>
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Itens do pedido</h3>
+    {% for item in pedido.itens.all %}
+      <div class="cart-line" style="border-bottom:{% if forloop.last %}none{% else %}1px solid var(--line){% endif %}">
+        <a href="{{ item.produto.get_absolute_url }}" class="cart-line__media">
+          {% with imagem=item.produto.imagem_principal %}
+            {% if imagem %}<img src="{{ imagem.imagem.url }}" alt="{{ item.nome_produto }}" loading="lazy">{% endif %}
+          {% endwith %}
+        </a>
+        <div style="flex:1">
+          <a href="{{ item.produto.get_absolute_url }}" style="font-weight:600;color:var(--ink)">{{ item.nome_produto }}</a>
+          <p class="xs muted" style="margin:var(--s-2) 0 0">Qtd: {{ item.quantidade }} · {{ item.rotulo_frequencia }}</p>
+        </div>
+        <div class="display" style="font-size:var(--fs-md);color:var(--ink)">R$ {{ item.total|floatformat:2 }}</div>
+      </div>
+    {% endfor %}
+
+    <hr class="divider">
+    <div class="summary__row"><span>Subtotal</span><span>R$ {{ pedido.subtotal|floatformat:2 }}</span></div>
+    {% if pedido.desconto_assinatura %}<div class="summary__row summary__row--green"><span>Desconto assinatura</span><span>−R$ {{ pedido.desconto_assinatura|floatformat:2 }}</span></div>{% endif %}
+    {% if pedido.desconto %}<div class="summary__row summary__row--green"><span>Cupom {{ pedido.cupom }}</span><span>−R$ {{ pedido.desconto|floatformat:2 }}</span></div>{% endif %}
+    <div class="summary__row"><span>Frete</span><span>{% if pedido.frete %}R$ {{ pedido.frete|floatformat:2 }}{% else %}Grátis{% endif %}</span></div>
+    <div class="summary__total"><span>Total</span><span>R$ {{ pedido.total|floatformat:2 }}</span></div>
+  </div>
+
+  {# ================================================ ENTREGA E PAGAMENTO #}
+  <div class="grid grid--2" style="margin-top:var(--s-6)" data-stagger>
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Entrega</h3>
+      <p class="small" style="margin:0;color:var(--ink-3)">{{ pedido.endereco_texto|default:"—" }}</p>
+      {% if pedido.observacoes %}
+        <p class="xs muted" style="margin:var(--s-3) 0 0">Observações: {{ pedido.observacoes }}</p>
+      {% endif %}
+    </div>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Pagamento</h3>
+      {% if pagamento %}
+        <div class="summary__row"><span>Método</span><span>{{ pagamento.get_metodo_display }}</span></div>
+        <div class="summary__row"><span>Status</span><span>{{ pagamento.get_status_display }}</span></div>
+        {% if pagamento.parcelas > 1 %}<div class="summary__row"><span>Parcelas</span><span>{{ pagamento.parcelas }}x</span></div>{% endif %}
+        {% if pagamento.ultimos_digitos %}<div class="summary__row"><span>Cartão</span><span>{{ pagamento.bandeira }} •••• {{ pagamento.ultimos_digitos }}</span></div>{% endif %}
+        {% if pagamento.referencia_externa %}<div class="summary__row"><span>ID Stone</span><span class="xs">{{ pagamento.referencia_externa }}</span></div>{% endif %}
+        {% if pagamento.valor_estornado %}<div class="summary__row summary__row--green"><span>Estornado</span><span>R$ {{ pagamento.valor_estornado|floatformat:2 }}</span></div>{% endif %}
+      {% else %}
+        <p class="small muted" style="margin:0">Nenhum pagamento registrado ainda.</p>
+        <a href="{% url 'payments:checkout' pedido.numero %}" class="btn btn--primary btn--sm" style="margin-top:var(--s-3)">Pagar agora</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ============================================================ AÇÕES #}
+  {% if pedido.status == 'aguardando_pagamento' or pedido.pode_ser_estornado and pedido.status != 'recusado' %}
+    <div class="row" style="margin-top:var(--s-6);gap:var(--s-3);flex-wrap:wrap">
+      {% if pedido.status == 'aguardando_pagamento' %}
+        <a href="{% url 'payments:checkout' pedido.numero %}" class="btn btn--primary">Finalizar pagamento</a>
+        <form method="post" action="{% url 'orders:cancelar' pedido.numero %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--ghost">Cancelar pedido</button>
+        </form>
+      {% elif pedido.pode_ser_estornado %}
+        <form method="post" action="{% url 'orders:estorno' pedido.numero %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--ghost">Solicitar estorno</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Entrega — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div class="row" style="gap:var(--s-3);margin-bottom:var(--s-6)">
+    <span class="badge badge--red">1. Entrega</span>
+    <span class="badge badge--gray">2. Pagamento</span>
+    <span class="badge badge--gray">3. Confirmação</span>
+  </div>
+
+  <h1 style="margin-bottom:var(--s-6)">Onde entregamos?</h1>
+
+  <form method="post" class="checkout-grid">
+    {% csrf_token %}
+
+    <div data-reveal="left">
+      <div class="stack" data-option-group>
+        {% for e in enderecos %}
+          <label class="option {% if e.padrao %}is-selected{% endif %}">
+            <input type="radio" name="endereco" value="{{ e.id }}" {% if e.padrao %}checked{% endif %} required>
+            <span>
+              <span class="option__title">{{ e.apelido }} — {{ e.destinatario }}</span>
+              <span class="option__desc">{{ e.linha_unica }}</span>
+              {% if e.zona_rural %}<span class="badge badge--amber" style="margin-top:6px">Zona rural</span>{% endif %}
+              {% if e.referencia %}<span class="option__desc">Referência: {{ e.referencia }}</span>{% endif %}
+            </span>
+          </label>
+        {% empty %}
+          <div class="alert alert--warning">
+            <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+            <span>Você ainda não tem um endereço cadastrado. <a href="{% url 'accounts:enderecos' %}">Cadastre agora</a> para continuar.</span>
+          </div>
+        {% endfor %}
+      </div>
+
+      <a href="{% url 'accounts:enderecos' %}" class="btn btn--ghost btn--sm" style="margin-top:var(--s-4)">+ Adicionar endereço</a>
+
+      <div class="field" style="margin-top:var(--s-6)">
+        <label for="observacoes">Observações para a entrega <span class="muted">(opcional)</span></label>
+        <textarea name="observacoes" id="observacoes" placeholder="Ex.: portão azul, entregar no galpão dos fundos, ligar antes de chegar..."></textarea>
+      </div>
+    </div>
+
+    <aside data-reveal="right">
+      <div class="card card--pad summary">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Resumo</h3>
+        {% for item in carrinho.linhas %}
+          <div class="summary__row">
+            <span>{{ item.quantidade }}× {{ item.produto.nome|truncatechars:30 }}</span>
+            <span class="nowrap">R$ {{ item.total|floatformat:2 }}</span>
+          </div>
+        {% endfor %}
+        <hr class="divider" style="margin-block:var(--s-3)">
+        <div class="summary__row"><span>Subtotal</span><span>R$ {{ carrinho.subtotal|floatformat:2 }}</span></div>
+        {% if carrinho.desconto_assinatura %}<div class="summary__row summary__row--green"><span>Desconto assinatura</span><span>−R$ {{ carrinho.desconto_assinatura|floatformat:2 }}</span></div>{% endif %}
+        {% if carrinho.desconto_cupom %}<div class="summary__row summary__row--green"><span>Cupom</span><span>−R$ {{ carrinho.desconto_cupom|floatformat:2 }}</span></div>{% endif %}
+        <div class="summary__row"><span>Frete</span><span>{% if carrinho.frete_gratis %}Grátis{% else %}R$ {{ carrinho.frete|floatformat:2 }}{% endif %}</span></div>
+        <div class="summary__total"><span>Total</span><span>R$ {{ carrinho.total|floatformat:2 }}</span></div>
+        <button type="submit" class="btn btn--primary btn--block btn--lg" style="margin-top:var(--s-5)" {% if not enderecos %}disabled{% endif %}>
+          Ir para o pagamento
+        </button>
+      </div>
+    </aside>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Notificações — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section" style="max-width:760px">
+  <div class="section-head">
+    <div class="section-head__title"><h1>Notificações</h1><span class="rule"></span></div>
+    <form method="post" action="{% url 'notifications:marcar_todas' %}">{% csrf_token %}
+      <button type="submit" class="btn btn--ghost btn--sm">Marcar todas como lidas</button>
+    </form>
+  </div>
+
+  <div class="stack" data-stagger>
+    {% for n in itens %}
+      <div class="card card--pad {% if not n.lida %}is-unread{% endif %}"
+           style="border-left:3px solid {% if n.nivel == 'sucesso' %}var(--green){% elif n.nivel == 'erro' %}var(--red){% elif n.nivel == 'alerta' %}var(--amber){% else %}var(--blue){% endif %}">
+        <div class="row row--between">
+          <strong>{{ n.titulo }}</strong>
+          <span class="xs muted">{{ n.criado_em|timesince }} atrás</span>
+        </div>
+        {% if n.mensagem %}<p class="small muted" style="margin:var(--s-2) 0 0">{{ n.mensagem }}</p>{% endif %}
+        {% if n.link %}<a href="{{ n.link }}" class="small strong link-underline" style="display:inline-block;margin-top:var(--s-3)">Ver detalhes →</a>{% endif %}
+      </div>
+    {% empty %}
+      <div class="empty card">
+        <div class="empty__icon">🔔</div>
+        <p class="empty__title">Nenhuma notificação</p>
+        <p class="small">Avisos sobre pagamentos, pedidos e assinaturas aparecem aqui.</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Criar conta — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap auth">
+  <div class="card card--pad auth__card anim-fade-up" style="width:min(520px,100%)">
+    <h1 style="font-size:var(--fs-xl)">Criar conta</h1>
+    <p class="small muted" style="margin-top:var(--s-2)">
+      Leva menos de um minuto — e já libera o desconto da assinatura.
+    </p>
+    <span class="rule" style="margin-block:var(--s-4)"></span>
+
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert--error">
+          <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+          <span>{{ form.non_field_errors|join:" " }}</span>
+        </div>
+      {% endif %}
+
+      <div class="grid grid--2" style="gap:var(--s-4)">
+        <div class="field">
+          <label for="{{ form.first_name.id_for_label }}">Nome</label>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}<span class="error-text">{{ form.first_name.errors|join:" " }}</span>{% endif %}
+        </div>
+        <div class="field">
+          <label for="{{ form.last_name.id_for_label }}">Sobrenome</label>
+          {{ form.last_name }}
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="{{ form.email.id_for_label }}">E-mail</label>
+        {{ form.email }}
+        {% if form.email.errors %}<span class="error-text">{{ form.email.errors|join:" " }}</span>{% endif %}
+      </div>
+
+      <div class="grid grid--2" style="gap:var(--s-4)">
+        <div class="field">
+          <label for="{{ form.telefone.id_for_label }}">Celular / WhatsApp</label>
+          <input type="tel" name="telefone" id="{{ form.telefone.id_for_label }}" class="campo"
+                 data-mask="telefone" placeholder="(00) 00000-0000">
+        </div>
+        <div class="field">
+          <label for="{{ form.cpf.id_for_label }}">CPF</label>
+          <input type="text" name="cpf" id="{{ form.cpf.id_for_label }}" class="campo"
+                 data-mask="cpf" placeholder="000.000.000-00">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="{{ form.password1.id_for_label }}">Senha</label>
+        {{ form.password1 }}
+        {% if form.password1.errors %}<span class="error-text">{{ form.password1.errors|join:" " }}</span>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.password2.id_for_label }}">Confirme a senha</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}<span class="error-text">{{ form.password2.errors|join:" " }}</span>{% endif %}
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--block btn--lg">Criar minha conta</button>
+    </form>
+
+    <p class="small center muted" style="margin-top:var(--s-5)">
+      Já tem conta? <a href="{% url 'accounts:entrar' %}" class="strong" style="color:var(--red)">Entrar</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

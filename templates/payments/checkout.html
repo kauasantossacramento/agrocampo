@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Pagamento — pedido {{ pedido.numero }}{% endblock %}
+
+{% block content %}
+<div class="wrap section">
+  <div class="row" style="gap:var(--s-3);margin-bottom:var(--s-6)">
+    <span class="badge badge--green">1. Entrega ✓</span>
+    <span class="badge badge--red">2. Pagamento</span>
+    <span class="badge badge--gray">3. Confirmação</span>
+  </div>
+
+  <h1 style="margin-bottom:var(--s-2)">Como você quer pagar?</h1>
+  <p class="small muted" style="margin-bottom:var(--s-6)">
+    Pedido {{ pedido.numero }} · processado com segurança pela <strong>Stone</strong>
+    {% if provedor.ambiente == 'sandbox' %}<span class="badge badge--amber" style="margin-left:var(--s-2)">Ambiente {{ provedor.get_ambiente_display }}</span>{% endif %}
+  </p>
+
+  <form method="post" class="checkout-grid">
+    {% csrf_token %}
+
+    <div data-reveal="left">
+      <div class="stack" data-option-group>
+
+        {% if 'pix' in metodos %}
+          <label class="option is-selected">
+            <input type="radio" name="metodo" value="pix" checked data-metodo="pix">
+            <span style="flex:1">
+              <span class="option__title row" style="gap:var(--s-2)">
+                <svg width="17" height="17" style="color:var(--green)"><use href="#i-raio"></use></svg>
+                Pix
+                <span class="badge badge--green">−{{ site.desconto_pix }}% à vista</span>
+              </span>
+              <span class="option__desc">Aprovação na hora. O QR Code aparece na próxima tela e vale por {{ provedor.pix_expira_em_minutos }} minutos.</span>
+            </span>
+          </label>
+        {% endif %}
+
+        {% if 'cartao' in metodos %}
+          <label class="option">
+            <input type="radio" name="metodo" value="cartao" data-metodo="cartao">
+            <span style="flex:1">
+              <span class="option__title row" style="gap:var(--s-2)">
+                <svg width="17" height="17" style="color:var(--blue)"><use href="#i-cartao"></use></svg>
+                Cartão de crédito
+              </span>
+              <span class="option__desc">Em até {{ provedor.parcelas_sem_juros }}x sem juros.</span>
+            </span>
+          </label>
+
+          <div id="campos-cartao" hidden>
+            <div class="card card--pad">
+              <div class="field">
+                <label for="cartao_numero">Número do cartão</label>
+                <input type="text" name="cartao_numero" id="cartao_numero" data-mask="cartao"
+                       placeholder="0000 0000 0000 0000" inputmode="numeric" autocomplete="cc-number">
+              </div>
+              <div class="field" style="margin-top:var(--s-4)">
+                <label for="cartao_nome">Nome impresso no cartão</label>
+                <input type="text" name="cartao_nome" id="cartao_nome" placeholder="Como aparece no cartão" autocomplete="cc-name">
+              </div>
+              <div class="grid grid--3" style="margin-top:var(--s-4);gap:var(--s-3)">
+                <div class="field">
+                  <label for="cartao_validade">Validade</label>
+                  <input type="text" name="cartao_validade" id="cartao_validade" data-mask="validade"
+                         placeholder="MM/AA" inputmode="numeric" autocomplete="cc-exp">
+                </div>
+                <div class="field">
+                  <label for="cartao_cvv">CVV</label>
+                  <input type="text" name="cartao_cvv" id="cartao_cvv" data-mask="cvv"
+                         placeholder="000" inputmode="numeric" autocomplete="cc-csc">
+                </div>
+                <div class="field">
+                  <label for="cartao_cpf">CPF do titular</label>
+                  <input type="text" name="cartao_cpf" id="cartao_cpf" data-mask="cpf" placeholder="000.000.000-00">
+                </div>
+              </div>
+
+              <div class="field" style="margin-top:var(--s-4)">
+                <label for="parcelas">Parcelamento</label>
+                <select name="parcelas" id="parcelas">
+                  {% for opcao in parcelas %}
+                    <option value="{{ opcao.parcelas }}">
+                      {{ opcao.parcelas }}x de R$ {{ opcao.valor|floatformat:2 }}{% if opcao.sem_juros %} sem juros{% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              {% if pedido.tem_recorrencia %}
+                <div class="alert alert--info" style="margin-top:var(--s-4)">
+                  <svg width="16" height="16"><use href="#i-refresh"></use></svg>
+                  <span>Este pedido tem itens de assinatura. O cartão será salvo com segurança na Stone (tokenizado) para as próximas cobranças — os dados completos nunca ficam na nossa loja.</span>
+                </div>
+              {% else %}
+                <label class="switch-row" style="margin-top:var(--s-4)">
+                  <input type="checkbox" name="salvar_cartao" value="1"> Salvar este cartão para as próximas compras
+                </label>
+              {% endif %}
+
+              {% if provedor.driver == 'simulado' %}
+                <div class="alert alert--warning" style="margin-top:var(--s-4)">
+                  <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+                  <span><strong>Modo simulado.</strong> As credenciais da Stone ainda não foram cadastradas.
+                  Cartão terminado em <code>0000</code> é recusado; qualquer outro é aprovado.</span>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if 'boleto' in metodos %}
+          <label class="option">
+            <input type="radio" name="metodo" value="boleto" data-metodo="boleto">
+            <span style="flex:1">
+              <span class="option__title">Boleto bancário</span>
+              <span class="option__desc">Compensa em até 3 dias úteis. O pedido é separado só após a confirmação.</span>
+            </span>
+          </label>
+        {% endif %}
+      </div>
+    </div>
+
+    <aside data-reveal="right">
+      <div class="card card--pad summary">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Resumo do pedido</h3>
+        {% for item in pedido.itens.all %}
+          <div class="summary__row">
+            <span>{{ item.quantidade }}× {{ item.nome_produto|truncatechars:28 }}</span>
+            <span class="nowrap">R$ {{ item.total|floatformat:2 }}</span>
+          </div>
+        {% endfor %}
+        <hr class="divider" style="margin-block:var(--s-3)">
+        <div class="summary__row"><span>Subtotal</span><span>R$ {{ pedido.subtotal|floatformat:2 }}</span></div>
+        {% if pedido.desconto_assinatura %}<div class="summary__row summary__row--green"><span>Desconto assinatura</span><span>−R$ {{ pedido.desconto_assinatura|floatformat:2 }}</span></div>{% endif %}
+        {% if pedido.desconto %}<div class="summary__row summary__row--green"><span>Cupom</span><span>−R$ {{ pedido.desconto|floatformat:2 }}</span></div>{% endif %}
+        <div class="summary__row"><span>Frete</span><span>{% if pedido.frete %}R$ {{ pedido.frete|floatformat:2 }}{% else %}Grátis{% endif %}</span></div>
+        <div class="summary__total"><span>Total</span><span>R$ {{ pedido.total|floatformat:2 }}</span></div>
+
+        <p class="xs muted" style="margin-block:var(--s-3)">
+          <strong>Entrega em:</strong> {{ pedido.endereco_texto }}
+        </p>
+
+        <button type="submit" class="btn btn--primary btn--block btn--lg">
+          <svg width="17" height="17"><use href="#i-escudo"></use></svg>Pagar R$ {{ pedido.total|floatformat:2 }}
+        </button>
+
+        <p class="xs muted center" style="margin-top:var(--s-3)">
+          Ambiente criptografado. Não armazenamos os dados do seu cartão.
+        </p>
+      </div>
+    </aside>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // mostra os campos do cartão apenas quando o método está selecionado
+  (function () {
+    var campos = document.getElementById('campos-cartao');
+    if (!campos) return;
+    function sincronizar() {
+      var escolhido = document.querySelector('[name="metodo"]:checked');
+      campos.hidden = !escolhido || escolhido.value !== 'cartao';
+    }
+    document.querySelectorAll('[name="metodo"]').forEach(function (r) {
+      r.addEventListener('change', sincronizar);
+    });
+    sincronizar();
+  })();
+</script>
+{% endblock %}

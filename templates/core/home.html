@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ site.nome_loja }} — tudo para o campo e para os animais{% endblock %}
+
+{% block content %}
+
+{% comment %}
+  HERO — cada banner traz o próprio texto e a própria imagem de capa. Sem
+  imagem no banner, cai na capa padrão da loja; sem nenhuma, na figura do tema.
+{% endcomment %}
+<section class="hero" data-hero>
+  <div class="wrap">
+    {% for banner in banners %}
+      <div class="hero__inner" data-hero-slide {% if not forloop.first %}hidden{% endif %}
+           {% if banner.cor_fundo %}style="--hero-bg:{{ banner.cor_fundo }}"{% endif %}>
+        <div class="hero__content">
+          {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}
+          <h1>{{ banner.titulo }}</h1>
+          <p>{{ banner.subtitulo }}</p>
+          <div class="hero__cta">
+            <a href="{{ banner.link|default:'/catalogo/' }}" class="btn btn--accent btn--lg">{{ banner.texto_botao|default:"Ver catálogo" }}</a>
+            <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="btn btn--outline-light btn--lg">Assine e economize</a>
+          </div>
+        </div>
+        {% include 'partials/hero_art.html' with imagem=banner.imagem %}
+      </div>
+    {% empty %}
+      <div class="hero__inner" data-hero-slide>
+        <div class="hero__content">
+          <span class="hero__badge">{{ site.topbar_mensagem|default:"Frete facilitado para zona rural" }}</span>
+          <h1>{{ site.chamada }}</h1>
+          <p>{{ site.descricao }}</p>
+          <div class="hero__cta">
+            <a href="{% url 'catalog:catalogo' %}" class="btn btn--accent btn--lg">Ver catálogo</a>
+            <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="btn btn--outline-light btn--lg">Assine e economize</a>
+          </div>
+        </div>
+        {% include 'partials/hero_art.html' %}
+      </div>
+    {% endfor %}
+
+    {% if banners|length > 1 %}
+      <div class="hero__dots">
+        {% for banner in banners %}
+          <button data-hero-dot class="hero__dot {% if forloop.first %}is-active{% endif %}" aria-label="Slide {{ forloop.counter }}"></button>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{# ================================================== FAIXA DE GARANTIAS #}
+<section class="trust">
+  <div class="wrap">
+    <div class="trust__grid">
+      {% for d in diferenciais %}
+        <div class="trust__item" data-reveal="fade">
+          <span class="trust__icon"><svg width="20" height="20"><use href="#i-{{ d.icone }}"></use></svg></span>
+          <span>{{ d.titulo }}{% if d.descricao %}<span class="trust__desc">{{ d.descricao }}</span>{% endif %}</span>
+        </div>
+      {% empty %}
+        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-caminhao"></use></svg></span><span>Frete para toda zona rural<span class="trust__desc">Entregamos onde outros não chegam</span></span></div>
+        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-raio"></use></svg></span><span>Pix aprovado na hora<span class="trust__desc">{{ site.desconto_pix }}% de desconto à vista</span></span></div>
+        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-refresh"></use></svg></span><span>Assinatura com {{ site.desconto_assinatura_padrao }}% OFF<span class="trust__desc">Nunca falta o essencial</span></span></div>
+        <div class="trust__item"><span class="trust__icon"><svg width="20" height="20"><use href="#i-escudo"></use></svg></span><span>Compra 100% garantida<span class="trust__desc">Ambiente seguro e criptografado</span></span></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ================================================= ATALHOS DE CATEGORIA #}
+{% if categorias_destaque %}
+<section class="section wrap">
+  <div class="section-head" data-reveal>
+    <div class="section-head__title">
+      <h2>Compre por categoria</h2>
+      <span class="rule"></span>
+    </div>
+    <a href="{% url 'catalog:catalogo' %}" class="small strong link-underline">Ver tudo →</a>
+  </div>
+  <div class="grid grid--6" data-stagger>
+    {% for c in categorias_destaque %}
+      <a href="{{ c.get_absolute_url }}" class="cat-tile">
+        <span class="cat-tile__icon">{{ c.icone|default:"🐾" }}</span>
+        <span>{{ c.nome }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ===================================================== MAIS VENDIDOS #}
+{% if mais_vendidos %}
+<section class="section section--tight wrap">
+  <div class="section-head" data-reveal>
+    <div class="section-head__title">
+      <h2>Mais vendidos</h2>
+      <p>O que sai todo dia da nossa loja</p>
+      <span class="rule"></span>
+    </div>
+    <a href="{% url 'catalog:catalogo' %}?ordem=mais-vendidos" class="small strong link-underline">Ver tudo →</a>
+  </div>
+  <div class="grid grid--4" data-stagger>
+    {% for produto in mais_vendidos %}{% include 'partials/product_card.html' %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ================================================== OFERTA RELÂMPAGO #}
+{% if oferta_relampago %}
+<section class="section section--tight wrap">
+  <div class="flash" data-reveal="scale">
+    <div class="flash__inner">
+      <div>
+        <span class="badge badge--sale" style="margin-bottom:var(--s-3)">OFERTA POR TEMPO LIMITADO</span>
+        <h2>{{ oferta_relampago.nome }}</h2>
+        <p>Aproveite antes que acabe — de <s>R$ {{ oferta_relampago.preco|floatformat:2 }}</s>
+           por <strong style="color:var(--yellow);font-size:var(--fs-xl)">R$ {{ oferta_relampago.preco_atual|floatformat:2 }}</strong></p>
+        <div class="countdown" data-countdown="{{ oferta_relampago.promocao_ate|date:'c' }}"></div>
+        <a href="{{ oferta_relampago.get_absolute_url }}" class="btn btn--accent" style="margin-top:var(--s-5)">Aproveitar oferta</a>
+      </div>
+      <div>
+        {% with imagem=oferta_relampago.imagem_principal %}
+          {% if imagem %}
+            <img src="{{ imagem.imagem.url }}" alt="{{ oferta_relampago.nome }}"
+                 style="border-radius:var(--r-lg);background:#fff;padding:var(--s-4)" loading="lazy">
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ================================================= PROMOÇÕES (carrossel) #}
+{% if ofertas %}
+<section class="section section--tight wrap">
+  <div class="section-head" data-reveal>
+    <div class="section-head__title">
+      <h2>Promoções da semana</h2>
+      <span class="rule"></span>
+    </div>
+    <div class="row">
+      <button class="btn btn--ghost btn--sm" data-carousel-prev aria-label="Anterior"><svg width="15" height="15"><use href="#i-seta-esq"></use></svg></button>
+      <button class="btn btn--ghost btn--sm" data-carousel-next aria-label="Próximo"><svg width="15" height="15"><use href="#i-seta-dir"></use></svg></button>
+    </div>
+  </div>
+  <div class="carousel" data-carousel>
+    <div class="carousel__track" data-carousel-track>
+      {% for produto in ofertas %}
+        <div style="width:250px">{% include 'partials/product_card.html' %}</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ================================================= NAVEGAR POR ESPÉCIE #}
+{% if especies %}
+<section class="section section--tight wrap">
+  <div class="section-head section-head--center" data-reveal>
+    <h2>Encontre pelo seu animal</h2>
+    <p>Selecionamos o que cada espécie precisa</p>
+    <span class="rule"></span>
+  </div>
+  <div class="carousel" data-carousel>
+    <div class="carousel__track" data-carousel-track style="gap:var(--s-6)">
+      {% for e in especies %}
+        <a href="{{ e.get_absolute_url }}" class="species-tile">
+          <span class="species-tile__circle">
+            {% if e.imagem %}<img src="{{ e.imagem.url }}" alt="{{ e.nome }}" loading="lazy">{% else %}{{ e.icone|default:"🐦" }}{% endif %}
+          </span>
+          <span>{{ e.nome }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ======================================================= ASSINATURA #}
+{% if assinaveis %}
+<section class="section section--tight wrap">
+  <div class="card card--pad" data-reveal style="background:linear-gradient(135deg,var(--cream-warm),#FFE9D4);border:none">
+    <div class="section-head">
+      <div class="section-head__title">
+        <span class="eyebrow">Assinatura AgroCampo</span>
+        <h2>Nunca deixe faltar o essencial</h2>
+        <p>Escolha a frequência, economize {{ site.desconto_assinatura_padrao }}% e receba em casa. Pause ou cancele quando quiser.</p>
+        <span class="rule"></span>
+      </div>
+      <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="btn btn--dark">Ver produtos assináveis</a>
+    </div>
+    <div class="grid grid--4" data-stagger>
+      {% for produto in assinaveis %}{% include 'partials/product_card.html' %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ======================================================= LANÇAMENTOS #}
+{% if lancamentos %}
+<section class="section section--tight wrap">
+  <div class="section-head" data-reveal>
+    <div class="section-head__title">
+      <h2>Lançamentos do mês</h2>
+      <span class="rule"></span>
+    </div>
+    <a href="{% url 'catalog:catalogo' %}?ordem=novidades" class="small strong link-underline">Ver tudo →</a>
+  </div>
+  <div class="grid grid--4" data-stagger>
+    {% for produto in lancamentos %}{% include 'partials/product_card.html' %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ============================================================ MARCAS #}
+{% if marcas %}
+<section class="section section--tight wrap">
+  <div class="section-head section-head--center" data-reveal>
+    <h2>Marcas que trabalhamos</h2>
+    <p>Selecionamos as melhores marcas do mercado para o seu pet e para sua fazenda</p>
+    <span class="rule"></span>
+  </div>
+  <div class="card marquee" style="padding-block:var(--s-4)">
+    <div class="marquee__track">
+      {% for _ in "12"|make_list %}
+        {% for m in marcas %}
+          <a href="{{ m.get_absolute_url }}" class="brand-chip" aria-label="{{ m.nome }}">
+            {% if m.logo %}<img src="{{ m.logo.url }}" alt="{{ m.nome }}" loading="lazy">
+            {% else %}<span class="brand-chip__text">{{ m.nome }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ============================================================== BLOG #}
+{% if posts %}
+<section class="section section--tight wrap">
+  <div class="section-head" data-reveal>
+    <div class="section-head__title">
+      <h2>Do nosso blog</h2>
+      <p>Cuidados, manejo e saúde animal</p>
+      <span class="rule"></span>
+    </div>
+    <a href="{% url 'blog:lista' %}" class="small strong link-underline">Ver todos →</a>
+  </div>
+  <div class="grid grid--3" data-stagger>
+    {% for post in posts %}
+      <a href="{{ post.get_absolute_url }}" class="card card--hover post-card" style="color:inherit;overflow:hidden">
+        <div class="post-card__media">
+          {% if post.capa %}<img src="{{ post.capa.url }}" alt="{{ post.titulo }}" loading="lazy">{% endif %}
+        </div>
+        <div style="padding:var(--s-5)">
+          {% if post.categoria %}<span class="badge" style="background:{{ post.categoria.cor }};color:#fff">{{ post.categoria.nome }}</span>{% endif %}
+          <h3 class="post-card__title" style="margin-block:var(--s-2)">{{ post.titulo }}</h3>
+          <p class="small muted" style="margin:0">{{ post.resumo|truncatewords:18 }}</p>
+          <p class="xs muted" style="margin:var(--s-3) 0 0">{{ post.tempo_leitura }} min de leitura</p>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ======================================================= NEWSLETTER #}
+<section class="section wrap">
+  <div class="newsletter" data-reveal="scale">
+    <span class="eyebrow">Fique por dentro</span>
+    <h2 style="margin-top:var(--s-2)">Ofertas e novidades no seu e-mail</h2>
+    <p class="lead" style="max-width:520px;margin-inline:auto">Receba promoções, dicas de manejo e avisos de reposição de estoque.</p>
+    <form class="newsletter__form" method="post" action="{% url 'core:newsletter' %}">
+      {% csrf_token %}
+      <input type="email" name="email" placeholder="seu@email.com.br" required aria-label="Seu e-mail">
+      <button type="submit" class="btn btn--primary">Cadastrar</button>
+    </form>
+  </div>
+</section>
+
+{% endblock %}

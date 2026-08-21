@@ -1,0 +1,28 @@
+{% load static %}
+{% comment %}
+  Arte do banner. Recebe `imagem` (do banner). Cai para a capa da loja e,
+  em último caso, para a figura embutida no tema.
+{% endcomment %}
+<div class="hero__art" aria-hidden="true">
+  <svg class="hero__blob" viewBox="0 0 515.25 513" preserveAspectRatio="xMidYMid meet">
+    <path fill="#FFC72C" d="M 203.49 417.86 L 204.66 417.96 C 222.72 419.79 245.46 415.54 272.87 405.21 C 329.38 382.08 368.4 363.41 389.93 349.2 C 441.25 317.25 469.12 284.25 473.52 250.2 C 475.37 239.93 474.24 228.77 470.14 216.75 C 465.98 207.42 460.68 200.86 454.25 197.07 C 447.59 192.72 440.3 189.38 432.4 187.02 C 429.12 185.57 408.77 180.61 371.33 172.16 C 356.98 167.93 347.3 164.3 342.32 161.27 C 335.52 157.46 329.43 152.74 324.04 147.08 C 322.85 146.76 313.52 134.56 296.04 110.48 C 288.71 102.25 284.11 97.7 282.21 96.83 C 277.84 92 267.82 88.7 252.17 86.92 C 215.93 83.58 180.68 95.38 146.44 122.33 C 101.89 161.75 77.98 198.39 74.71 232.24 C 68.31 280.47 75.7 320.9 96.89 353.54 C 122.1 386.79 157.63 408.23 203.49 417.86 "/>
+  </svg>
+
+  <svg class="hero__paw anim-float" style="top:9%;left:7%;width:54px;height:54px;transform:rotate(-15deg)" viewBox="0 0 64 64" fill="#FFE382">
+    <circle cx="32" cy="40" r="14"/><circle cx="14" cy="20" r="7"/><circle cx="32" cy="8" r="7"/><circle cx="50" cy="20" r="7"/>
+  </svg>
+  <svg class="hero__paw anim-float delay-3" style="top:62%;left:5%;width:38px;height:38px;transform:rotate(20deg)" viewBox="0 0 64 64" fill="#FFE382">
+    <circle cx="32" cy="40" r="14"/><circle cx="14" cy="20" r="7"/><circle cx="32" cy="8" r="7"/><circle cx="50" cy="20" r="7"/>
+  </svg>
+  <svg class="hero__paw anim-float delay-2" style="top:6%;right:12%;width:44px;height:44px;transform:rotate(30deg)" viewBox="0 0 64 64" fill="#FFE382">
+    <circle cx="32" cy="40" r="14"/><circle cx="14" cy="20" r="7"/><circle cx="32" cy="8" r="7"/><circle cx="50" cy="20" r="7"/>
+  </svg>
+
+  {% if imagem %}
+    <img class="hero__figure" src="{{ imagem.url }}" alt="">
+  {% elif site.imagem_capa %}
+    <img class="hero__figure" src="{{ site.imagem_capa.url }}" alt="">
+  {% else %}
+    <img class="hero__figure" src="{% static 'img/hero-figura.png' %}" alt="">
+  {% endif %}
+</div>

@@ -1,0 +1,54 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Assinaturas{% endblock %}
+{% block painel_heading %}Assinaturas{% endblock %}
+
+{% block painel_content %}
+{% include 'dashboard/_stats.html' %}
+
+<div class="table-wrap" style="margin-top:var(--s-6)" data-reveal>
+  <table class="data">
+    <thead>
+      <tr><th>Cliente</th><th>Produto</th><th>Qtd</th><th>Frequência</th><th>Próxima entrega</th><th>Valor/ciclo</th><th>Status</th><th>Ciclos</th></tr>
+    </thead>
+    <tbody>
+      {% for a in assinaturas %}
+        <tr>
+          <td>
+            <div style="font-weight:600;color:var(--ink)">{{ a.usuario.get_full_name|default:a.usuario.email }}</div>
+            <div class="xs muted">{{ a.usuario.email }}</div>
+          </td>
+          <td class="small">{{ a.produto.nome|truncatechars:34 }}</td>
+          <td class="strong">{{ a.quantidade }}</td>
+          <td class="small">{{ a.frequencia_dias }} dias</td>
+          <td class="small {% if a.vencida %}strong{% endif %}"
+              style="{% if a.vencida %}color:var(--amber){% endif %}">
+            {{ a.proxima_entrega|date:"d/m/Y" }}
+          </td>
+          <td class="strong nowrap">R$ {{ a.total_por_ciclo|floatformat:2 }}</td>
+          <td>
+            <span class="badge
+              {% if a.status == 'ativa' %}badge--green
+              {% elif a.status == 'pausada' %}badge--amber
+              {% elif a.status == 'inadimplente' %}badge--red
+              {% else %}badge--gray{% endif %}">{{ a.get_status_display }}</span>
+          </td>
+          <td class="small">{{ a.ciclos.count }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="muted center" style="padding:var(--s-12)">Nenhuma assinatura ativa ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="alert alert--info" style="margin-top:var(--s-5)">
+  <svg width="16" height="16"><use href="#i-info"></use></svg>
+  <span>
+    O processamento dos ciclos vencidos roda pelo comando
+    <code>python manage.py processar_assinaturas</code> — agende-o diariamente no cron/Task Scheduler.
+    Você também pode disparar um ciclo específico pelo
+    <a href="/admin/subscriptions/assinatura/">admin</a>.
+  </span>
+</div>
+{% endblock %}

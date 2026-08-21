@@ -1,0 +1,9 @@
+# Normaliza fim de linha: o repo guarda LF, o Windows trabalha com CRLF.
+# Scripts de deploy precisam de LF mesmo no checkout, senão o shell do
+# servidor falha com "bad interpreter: /usr/bin/env bash^M".
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.svg text eol=lf

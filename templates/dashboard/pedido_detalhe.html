@@ -1,0 +1,149 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Pedido {{ pedido.numero }}{% endblock %}
+{% block painel_heading %}Pedido {{ pedido.numero }}{% endblock %}
+
+{% block painel_content %}
+<a href="{% url 'dashboard:painel' %}" class="small muted link-underline">← Voltar aos pedidos</a>
+
+<div class="grid" style="grid-template-columns:1.5fr 1fr;gap:var(--s-5);margin-top:var(--s-5);align-items:start">
+
+  <div class="stack" data-reveal="left">
+    <div class="card card--pad">
+      <div class="row row--between" style="margin-bottom:var(--s-4)">
+        <div>
+          <strong class="display" style="font-size:var(--fs-lg)">{{ pedido.nome_cliente }}</strong>
+          <p class="xs muted" style="margin:2px 0 0">{{ pedido.email_cliente }}{% if pedido.telefone_cliente %} · {{ pedido.telefone_cliente }}{% endif %}</p>
+        </div>
+        <span class="badge
+          {% if pedido.status == 'aprovado' or pedido.status == 'entregue' %}badge--green
+          {% elif pedido.status == 'recusado' or pedido.status == 'cancelado' %}badge--red
+          {% elif pedido.status == 'enviado' %}badge--teal
+          {% elif pedido.status == 'em_separacao' %}badge--blue
+          {% else %}badge--amber{% endif %}">{{ pedido.get_status_display }}</span>
+      </div>
+
+      <p class="small" style="margin:0"><strong>Entrega:</strong> {{ pedido.endereco_texto|default:"—" }}</p>
+      {% if pedido.observacoes %}
+        <p class="small" style="margin:var(--s-2) 0 0"><strong>Observações:</strong> {{ pedido.observacoes }}</p>
+      {% endif %}
+      {% if pedido.assinatura_id %}
+        <span class="badge badge--sub" style="margin-top:var(--s-3)">
+          <svg width="11" height="11"><use href="#i-refresh"></use></svg>Gerado por assinatura
+        </span>
+      {% endif %}
+    </div>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Itens</h3>
+      {% for item in pedido.itens.all %}
+        <div class="row row--between" style="padding-block:var(--s-3);border-top:1px solid var(--line)">
+          <div>
+            <div class="small strong">{{ item.quantidade }}× {{ item.nome_produto }}</div>
+            <div class="xs muted">
+              SKU {{ item.sku }} · {{ item.rotulo_frequencia }} ·
+              estoque atual: <strong style="color:{% if item.tem_estoque %}var(--green){% else %}var(--red){% endif %}">{{ item.produto.estoque }}</strong>
+              {% if item.baixado_do_estoque %}<span class="badge badge--gray" style="margin-left:4px">baixado</span>{% endif %}
+            </div>
+          </div>
+          <span class="strong nowrap">R$ {{ item.total|floatformat:2 }}</span>
+        </div>
+      {% endfor %}
+
+      <hr class="divider">
+      <div class="summary__row"><span>Subtotal</span><span>R$ {{ pedido.subtotal|floatformat:2 }}</span></div>
+      {% if pedido.desconto_assinatura %}<div class="summary__row summary__row--green"><span>Desconto assinatura</span><span>−R$ {{ pedido.desconto_assinatura|floatformat:2 }}</span></div>{% endif %}
+      {% if pedido.desconto %}<div class="summary__row summary__row--green"><span>Cupom {{ pedido.cupom }}</span><span>−R$ {{ pedido.desconto|floatformat:2 }}</span></div>{% endif %}
+      <div class="summary__row"><span>Frete</span><span>R$ {{ pedido.frete|floatformat:2 }}</span></div>
+      <div class="summary__total"><span>Total</span><span>R$ {{ pedido.total|floatformat:2 }}</span></div>
+    </div>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-5)">Linha do tempo</h3>
+      <div class="timeline">
+        {% for e in pedido.eventos.all %}
+          <div class="timeline__item is-done">
+            <span class="timeline__dot"><svg width="13" height="13"><use href="#i-check"></use></svg></span>
+            <div>
+              <div class="timeline__title">{{ e.titulo }}</div>
+              {% if e.descricao %}<div class="timeline__meta">{{ e.descricao }}</div>{% endif %}
+              <div class="timeline__meta">
+                {{ e.criado_em|date:"d/m/Y H:i" }}{% if e.autor %} · {{ e.autor.primeiro_nome }}{% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------------------------------------------ AÇÕES #}
+  <div class="stack" data-reveal="right">
+    {% if faltantes %}
+      <div class="alert alert--error">
+        <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+        <span>
+          <strong>Estoque insuficiente</strong> para:
+          {% for item in faltantes %}{{ item.nome_produto }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+          Reponha o estoque ou recuse o pedido.
+        </span>
+      </div>
+    {% endif %}
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Decisão</h3>
+
+      {% if pedido.status == 'aguardando_aprovacao' %}
+        <form method="post" action="{% url 'dashboard:aprovar' pedido.numero %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--block" style="background:var(--green);color:#fff" {% if faltantes %}disabled{% endif %}>
+            <svg width="15" height="15"><use href="#i-check"></use></svg>Aprovar e baixar estoque
+          </button>
+        </form>
+        <form method="post" action="{% url 'dashboard:recusar' pedido.numero %}" class="stack" style="margin-top:var(--s-3);gap:var(--s-2)">
+          {% csrf_token %}
+          <input type="text" name="motivo" value="Produto sem estoque no momento da conferência" aria-label="Motivo da recusa">
+          <button type="submit" class="btn btn--ghost btn--block" style="color:var(--red);border-color:var(--red)">
+            <svg width="15" height="15"><use href="#i-x"></use></svg>Recusar pedido
+          </button>
+        </form>
+      {% elif pedido.status == 'em_separacao' %}
+        <form method="post" action="{% url 'dashboard:enviar' pedido.numero %}" class="stack" style="gap:var(--s-2)">
+          {% csrf_token %}
+          <input type="text" name="rastreio" placeholder="Código de rastreio (opcional)">
+          <button type="submit" class="btn btn--dark btn--block">
+            <svg width="15" height="15"><use href="#i-caminhao"></use></svg>Marcar como enviado
+          </button>
+        </form>
+      {% else %}
+        <p class="small muted" style="margin:0">
+          Nenhuma ação pendente. Status atual: <strong>{{ pedido.get_status_display }}</strong>.
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Pagamento</h3>
+      {% if pagamento %}
+        <div class="summary__row"><span>Método</span><span>{{ pagamento.get_metodo_display }}</span></div>
+        <div class="summary__row"><span>Status</span><span>{{ pagamento.get_status_display }}</span></div>
+        <div class="summary__row"><span>Valor</span><span>R$ {{ pagamento.valor|floatformat:2 }}</span></div>
+        {% if pagamento.parcelas > 1 %}<div class="summary__row"><span>Parcelas</span><span>{{ pagamento.parcelas }}x</span></div>{% endif %}
+        {% if pagamento.ultimos_digitos %}<div class="summary__row"><span>Cartão</span><span>{{ pagamento.bandeira }} •••• {{ pagamento.ultimos_digitos }}</span></div>{% endif %}
+        {% if pagamento.codigo_autorizacao %}<div class="summary__row"><span>Autorização</span><span class="xs">{{ pagamento.codigo_autorizacao }}</span></div>{% endif %}
+        {% if pagamento.nsu %}<div class="summary__row"><span>NSU</span><span class="xs">{{ pagamento.nsu }}</span></div>{% endif %}
+        {% if pagamento.referencia_externa %}<div class="summary__row"><span>ID Stone</span><span class="xs">{{ pagamento.referencia_externa }}</span></div>{% endif %}
+        {% if pagamento.valor_estornado %}
+          <div class="summary__row summary__row--green"><span>Estornado</span><span>R$ {{ pagamento.valor_estornado|floatformat:2 }}</span></div>
+        {% endif %}
+
+        <a href="/admin/payments/pagamento/{{ pagamento.id }}/change/" class="btn btn--ghost btn--sm btn--block" style="margin-top:var(--s-4)">
+          Ver trilha de auditoria
+        </a>
+      {% else %}
+        <p class="small muted" style="margin:0">Nenhum pagamento registrado.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

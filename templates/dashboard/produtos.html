@@ -1,0 +1,118 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Produtos{% endblock %}
+{% block painel_heading %}Produtos{% endblock %}
+
+{% block painel_content %}
+<div class="row row--between" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:var(--s-3)">
+  <form method="get" class="row" style="gap:var(--s-3);flex-wrap:wrap;flex:1">
+    <div class="input-icon" style="flex:1;min-width:220px">
+      <svg width="17" height="17"><use href="#i-busca"></use></svg>
+      <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome ou SKU...">
+    </div>
+    <button type="submit" class="btn btn--ghost btn--sm">Buscar</button>
+  </form>
+  <a href="/admin/catalog/produto/add/" class="btn btn--primary btn--sm nowrap">
+    + Novo produto
+  </a>
+</div>
+
+<div class="row" style="gap:var(--s-2);margin-bottom:var(--s-5);flex-wrap:wrap">
+  <a href="{% url 'dashboard:produtos' %}" class="chip {% if not filtro %}is-active{% endif %}">
+    Todos <span class="badge badge--gray">{{ total }}</span>
+  </a>
+  <a href="?filtro=sem-imagem" class="chip {% if filtro == 'sem-imagem' %}is-active{% endif %}">
+    Sem imagem {% if sem_imagem %}<span class="badge badge--sale">{{ sem_imagem }}</span>{% endif %}
+  </a>
+  <a href="?filtro=sem-estoque" class="chip {% if filtro == 'sem-estoque' %}is-active{% endif %}">Sem estoque</a>
+  <a href="?filtro=despublicados" class="chip {% if filtro == 'despublicados' %}is-active{% endif %}">Despublicados</a>
+</div>
+
+{% comment %}
+  Um <form> por linha, declarado FORA da tabela. Form entre <td>s é HTML
+  inválido: o parser expulsa o elemento e a tabela renderiza vazia. Os
+  campos dentro das células se ligam a ele pelo atributo form="fN".
+{% endcomment %}
+{% for p in produtos %}
+  <form method="post" action="{% url 'dashboard:salvar_produto' p.id %}" id="f{{ p.id }}" hidden>
+    {% csrf_token %}
+  </form>
+{% endfor %}
+
+<div class="table-wrap" data-reveal>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Foto</th><th>Produto</th><th>Categoria</th>
+        <th>Preço</th><th>Estoque</th><th>No ar</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in produtos %}
+        <tr>
+          <td>
+            <span class="cart-line__media" style="width:52px;height:52px;padding:4px">
+              {% with imagem=p.imagem_principal %}
+                {% if imagem %}
+                  <img src="{{ imagem.imagem.url }}" alt="" loading="lazy">
+                {% else %}
+                  <span class="product__placeholder" style="font-size:1rem">📦</span>
+                {% endif %}
+              {% endwith %}
+            </span>
+          </td>
+          <td>
+            <a href="/admin/catalog/produto/{{ p.id }}/change/" style="font-weight:600;color:var(--ink)">
+              {{ p.nome|truncatechars:44 }}
+            </a>
+            <div class="xs muted">
+              {{ p.sku }}{% if p.marca %} · {{ p.marca.nome }}{% endif %}
+              {% if not p.imagem_principal %}
+                <span class="badge badge--red" style="margin-left:4px">sem foto</span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="small">{{ p.categoria.nome }}</td>
+          <td>
+            <input form="f{{ p.id }}" type="text" name="preco" value="{{ p.preco|floatformat:2 }}"
+                   style="width:88px;padding:.4rem .5rem" aria-label="Preço de {{ p.nome }}">
+          </td>
+          <td>
+            <input form="f{{ p.id }}" type="number" name="estoque" value="{{ p.estoque }}"
+                   style="width:74px;padding:.4rem .5rem" aria-label="Estoque de {{ p.nome }}">
+          </td>
+          <td>
+            <label class="switch-row" style="gap:6px">
+              <input form="f{{ p.id }}" type="checkbox" name="publicado" value="1"
+                     {% if p.publicado %}checked{% endif %} aria-label="Publicar {{ p.nome }}">
+            </label>
+          </td>
+          <td>
+            <button form="f{{ p.id }}" type="submit" class="btn btn--ghost btn--sm nowrap">Salvar</button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="7" class="center" style="padding:var(--s-12)">
+            <p class="empty__title">Nenhum produto no catálogo</p>
+            <p class="small muted">Comece cadastrando o seu primeiro item.</p>
+            <a href="/admin/catalog/produto/add/" class="btn btn--primary" style="margin-top:var(--s-4)">
+              + Novo produto
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="alert alert--info" style="margin-top:var(--s-5)">
+  <svg width="16" height="16"><use href="#i-info"></use></svg>
+  <span>
+    Preço, estoque e publicação você edita direto aqui. Para foto, descrição,
+    espécies indicadas e preço de assinatura, abra o produto no
+    <a href="/admin/catalog/produto/">cadastro completo</a>.
+    Todo ajuste de estoque fica registrado no histórico de movimentações.
+  </span>
+</div>
+{% endblock %}

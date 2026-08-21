@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Seu carrinho — {{ site.nome_loja }}{% endblock %}
+
+{% block content %}
+<div class="wrap section">
+  <h1 style="margin-bottom:var(--s-6)">Seu carrinho</h1>
+
+  {% if carrinho and not carrinho.vazio %}
+    <div class="checkout-grid">
+      <div data-reveal="left">
+        {% for item in carrinho.linhas %}
+          <div class="cart-line">
+            <a href="{{ item.produto.get_absolute_url }}" class="cart-line__media">
+              {% with imagem=item.produto.imagem_principal %}
+                {% if imagem %}<img src="{{ imagem.imagem.url }}" alt="{{ item.produto.nome }}" loading="lazy">{% endif %}
+              {% endwith %}
+            </a>
+
+            <div style="flex:1;min-width:0">
+              <a href="{{ item.produto.get_absolute_url }}" style="font-weight:600;color:var(--ink)">{{ item.produto.nome }}</a>
+
+              {% if item.recorrente %}
+                <div style="margin-top:var(--s-2)">
+                  <span class="badge" style="background:var(--cream-warm);color:#B7492F">
+                    <svg width="12" height="12"><use href="#i-refresh"></use></svg>{{ item.rotulo_frequencia }}
+                  </span>
+                </div>
+              {% endif %}
+
+              {% if not item.disponivel %}
+                <p class="xs" style="color:var(--red);font-weight:600;margin:var(--s-2) 0 0">
+                  Estoque insuficiente — restam {{ item.produto.estoque }} un
+                </p>
+              {% endif %}
+
+              <div class="row" style="margin-top:var(--s-3);gap:var(--s-3)">
+                <form method="post" action="{% url 'cart:atualizar' item.id %}" class="qty">
+                  {% csrf_token %}
+                  <button type="submit" name="quantidade" value="{{ item.quantidade|add:-1 }}" aria-label="Diminuir">−</button>
+                  <input type="number" name="quantidade" value="{{ item.quantidade }}" min="1" max="{{ item.produto.estoque }}"
+                         onchange="this.form.submit()" aria-label="Quantidade">
+                  <button type="submit" name="quantidade" value="{{ item.quantidade|add:1 }}" aria-label="Aumentar">+</button>
+                </form>
+                <form method="post" action="{% url 'cart:remover' item.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="xs muted link-underline" style="font-weight:600">Remover</button>
+                </form>
+              </div>
+            </div>
+
+            <div style="text-align:right;flex:none">
+              {% if item.economia %}
+                <div class="xs muted" style="text-decoration:line-through">R$ {{ item.preco_cheio|floatformat:2 }}</div>
+              {% endif %}
+              <div class="display" style="font-size:var(--fs-lg);color:var(--ink)">R$ {{ item.total|floatformat:2 }}</div>
+              {% if item.economia %}
+                <div class="xs" style="color:var(--green-deep);font-weight:600">−R$ {{ item.economia|floatformat:2 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+
+        <form method="post" action="{% url 'cart:cupom' %}" class="row" style="margin-top:var(--s-6);gap:var(--s-2)">
+          {% csrf_token %}
+          <input type="text" name="cupom" value="{{ carrinho.cupom.codigo|default:'' }}" placeholder="Tem um cupom de desconto?">
+          <button type="submit" class="btn btn--ghost nowrap">Aplicar</button>
+        </form>
+      </div>
+
+      {# --------------------------------------------------- RESUMO #}
+      <aside data-reveal="right">
+        <div class="card card--pad summary">
+          <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Resumo do pedido</h3>
+
+          <div class="summary__row"><span>Subtotal</span><span>R$ {{ carrinho.subtotal|floatformat:2 }}</span></div>
+          {% if carrinho.desconto_assinatura %}
+            <div class="summary__row summary__row--green"><span>Desconto assinatura</span><span>−R$ {{ carrinho.desconto_assinatura|floatformat:2 }}</span></div>
+          {% endif %}
+          {% if carrinho.desconto_cupom %}
+            <div class="summary__row summary__row--green"><span>Cupom {{ carrinho.cupom.codigo }}</span><span>−R$ {{ carrinho.desconto_cupom|floatformat:2 }}</span></div>
+          {% endif %}
+          <div class="summary__row">
+            <span>Frete</span>
+            <span>{% if carrinho.frete_gratis %}<strong style="color:var(--green-deep)">Grátis</strong>{% else %}R$ {{ carrinho.frete|floatformat:2 }}{% endif %}</span>
+          </div>
+
+          {% if not carrinho.frete_gratis %}
+            <div style="margin-top:var(--s-3)">
+              <p class="xs muted" style="margin:0">
+                Faltam <strong style="color:var(--ink)">R$ {{ carrinho.falta_para_frete_gratis|floatformat:2 }}</strong> para o frete grátis
+              </p>
+              <div class="freight-bar">
+                {% widthratio carrinho.subtotal site.frete_gratis_acima_de 100 as progresso %}
+                <div class="freight-bar__fill" style="width:0" data-freight-bar="{{ progresso }}"></div>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="summary__total"><span>Total</span><span>R$ {{ carrinho.total|floatformat:2 }}</span></div>
+
+          <p class="xs muted" style="margin-block:var(--s-2) var(--s-4)">
+            ou <strong style="color:var(--ink)">{{ provedor.parcelas_sem_juros }}x de
+            R$ {% widthratio carrinho.total provedor.parcelas_sem_juros 1 %}</strong> sem juros no cartão
+          </p>
+
+          <a href="{% url 'cart:checkout' %}" class="btn btn--primary btn--block btn--lg">Finalizar compra</a>
+          <a href="{% url 'catalog:catalogo' %}" class="btn btn--ghost btn--block" style="margin-top:var(--s-2)">Continuar comprando</a>
+
+          <div class="alert alert--info" style="margin-top:var(--s-5)">
+            <svg width="16" height="16"><use href="#i-info"></use></svg>
+            <span>Após o pagamento, o pedido fica em análise até a confirmação de estoque pelo lojista.</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  {% else %}
+    <div class="empty card">
+      <div class="empty__icon">🛒</div>
+      <p class="empty__title">Seu carrinho está vazio</p>
+      <p class="small">Que tal começar pelos nossos mais vendidos?</p>
+      <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver catálogo</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

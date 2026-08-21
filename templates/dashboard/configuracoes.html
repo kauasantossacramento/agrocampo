@@ -1,0 +1,226 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Configurações{% endblock %}
+{% block painel_heading %}Configurações{% endblock %}
+
+{% block painel_content %}
+<div class="grid" style="grid-template-columns:1.4fr 1fr;gap:var(--s-5);align-items:start">
+
+  {# =============================================== STATUS DA INTEGRAÇÃO #}
+  <div class="card card--pad" data-reveal="left">
+    <div class="row row--between" style="margin-bottom:var(--s-4)">
+      <h2 style="font-size:var(--fs-lg)">Gateway de pagamento</h2>
+      <a href="/admin/payments/provedorpagamento/{{ provedor.id }}/change/" class="btn btn--primary btn--sm">
+        Editar credenciais
+      </a>
+    </div>
+
+    <div class="alert {% if provedor.credenciais_completas %}alert--success{% else %}alert--warning{% endif %}">
+      <svg width="17" height="17"><use href="#i-{% if provedor.credenciais_completas %}check{% else %}alerta{% endif %}"></use></svg>
+      <span>
+        {% if provedor.driver == 'simulado' %}
+          <strong>Modo simulado ativo.</strong> A loja processa pagamentos de forma fictícia — todo o
+          fluxo de pedido, aprovação e estorno funciona, mas nenhum dinheiro é movimentado.
+          Cadastre a API Key e o Merchant ID da Stone e troque o driver para <em>Stone</em> para
+          entrar em produção.
+        {% elif provedor.credenciais_completas %}
+          <strong>Conectado à Stone.</strong> Ambiente
+          <strong>{{ provedor.get_ambiente_display }}</strong>.
+          Os pagamentos estão sendo processados pelo adquirente.
+        {% else %}
+          <strong>Credenciais pendentes.</strong> O driver está configurado como Stone, mas faltam a
+          API Key e/ou o Merchant ID. Enquanto isso, o sistema opera em modo simulado para não
+          derrubar o checkout.
+        {% endif %}
+      </span>
+    </div>
+
+    <h3 style="font-size:var(--fs-base);margin-block:var(--s-6) var(--s-3)">Credenciais cadastradas</h3>
+    <div class="table-wrap" style="border:none">
+      <table class="data">
+        <tbody>
+          <tr><td class="strong">Driver</td><td>{{ provedor.get_driver_display }}</td></tr>
+          <tr><td class="strong">Ambiente</td><td>{{ provedor.get_ambiente_display }}</td></tr>
+          <tr><td class="strong">URL base</td><td class="xs">{{ provedor.base_url }}</td></tr>
+          <tr>
+            <td class="strong">Client ID</td>
+            <td>{% if provedor.stone_client_id %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="strong">Client Secret</td>
+            <td>{% if provedor.stone_client_secret %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="strong">API Key</td>
+            <td>{% if provedor.stone_api_key %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--red">obrigatório</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="strong">Merchant ID</td>
+            <td>{% if provedor.stone_merchant_id %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--red">obrigatório</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="strong">Código de afiliação</td>
+            <td>{% if provedor.stone_affiliation_code %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="strong">Segredo do webhook</td>
+            <td>{% if provedor.stone_webhook_secret %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--amber">recomendado</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="strong">Chave Pix</td>
+            <td>{% if provedor.stone_pix_chave %}<span class="badge badge--green">{{ provedor.stone_pix_chave }}</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:var(--fs-base);margin-block:var(--s-6) var(--s-3)">Webhook</h3>
+    <p class="small muted" style="margin-bottom:var(--s-2)">
+      Cadastre esta URL no painel da Stone para receber as confirmações de pagamento:
+    </p>
+    <div class="pix-code">
+      <span id="url-webhook">{{ request.scheme }}://{{ request.get_host }}{% url 'payments:webhook' %}</span>
+    </div>
+    <button type="button" class="btn btn--ghost btn--sm" data-copy="#url-webhook" style="margin-top:var(--s-3)">
+      <svg width="14" height="14"><use href="#i-copiar"></use></svg>Copiar URL
+    </button>
+  </div>
+
+  {# ------------------------------------------------- ZONA DE RISCO #}
+  <div class="card card--pad" style="grid-column:1/-1;border-color:rgba(214,43,32,.35)" data-reveal>
+    <h2 style="font-size:var(--fs-lg);color:var(--red-dark)">Começar do zero</h2>
+    <p class="small muted" style="margin-top:var(--s-2)">
+      Apaga os produtos de demonstração para você montar o catálogo com os seus itens.
+      Produtos que já aparecem em algum pedido não são apagados — ficam despublicados,
+      para não quebrar o histórico de vendas nem os estornos.
+    </p>
+
+    <form method="post" action="{% url 'dashboard:limpar_catalogo' %}" class="stack"
+          style="margin-top:var(--s-5);gap:var(--s-4)">
+      {% csrf_token %}
+
+      <div class="stack" style="gap:var(--s-2)" data-option-group>
+        <label class="option">
+          <input type="radio" name="acao" value="sem-imagem" checked>
+          <span>
+            <span class="option__title">Apagar só os produtos sem foto</span>
+            <span class="option__desc">Limpa a vitrine sem perder os itens já fotografados.</span>
+          </span>
+        </label>
+        <label class="option">
+          <input type="radio" name="acao" value="zerar-estoque">
+          <span>
+            <span class="option__title">Zerar o estoque de todos</span>
+            <span class="option__desc">Mantém o cadastro e coloca todo mundo em 0 unidade.</span>
+          </span>
+        </label>
+        <label class="option">
+          <input type="radio" name="acao" value="produtos">
+          <span>
+            <span class="option__title">Apagar todos os produtos</span>
+            <span class="option__desc">Mantém categorias, marcas e espécies cadastradas.</span>
+          </span>
+        </label>
+        <label class="option">
+          <input type="radio" name="acao" value="tudo">
+          <span>
+            <span class="option__title">Apagar produtos, categorias, marcas e espécies</span>
+            <span class="option__desc">Catálogo completamente em branco. Não tem como desfazer.</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="field" style="max-width:320px">
+        <label for="confirmacao">Digite <strong>LIMPAR</strong> para confirmar</label>
+        <input type="text" name="confirmacao" id="confirmacao" placeholder="LIMPAR"
+               autocomplete="off" required>
+      </div>
+
+      <button type="submit" class="btn" style="background:var(--red-dark);color:#fff;align-self:flex-start">
+        <svg width="15" height="15"><use href="#i-alerta"></use></svg>Limpar catálogo
+      </button>
+    </form>
+  </div>
+
+  {# ====================================================== RESUMO LATERAL #}
+  <div class="stack" data-reveal="right">
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Métodos aceitos</h3>
+      <div class="stack" style="gap:var(--s-3)">
+        <div class="row row--between small">
+          <span>Cartão de crédito</span>
+          <span class="badge {% if provedor.aceita_cartao %}badge--green{% else %}badge--gray{% endif %}">
+            {% if provedor.aceita_cartao %}Ativo{% else %}Inativo{% endif %}
+          </span>
+        </div>
+        <div class="row row--between small">
+          <span>Pix</span>
+          <span class="badge {% if provedor.aceita_pix %}badge--green{% else %}badge--gray{% endif %}">
+            {% if provedor.aceita_pix %}Ativo{% else %}Inativo{% endif %}
+          </span>
+        </div>
+        <div class="row row--between small">
+          <span>Boleto</span>
+          <span class="badge {% if provedor.aceita_boleto %}badge--green{% else %}badge--gray{% endif %}">
+            {% if provedor.aceita_boleto %}Ativo{% else %}Inativo{% endif %}
+          </span>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="summary__row"><span>Parcelas máximas</span><span>{{ provedor.parcelas_maximas }}x</span></div>
+      <div class="summary__row"><span>Sem juros até</span><span>{{ provedor.parcelas_sem_juros }}x</span></div>
+      <div class="summary__row"><span>Parcela mínima</span><span>R$ {{ provedor.valor_minimo_parcela|floatformat:2 }}</span></div>
+      <div class="summary__row"><span>Captura automática</span><span>{{ provedor.captura_automatica|yesno:"Sim,Não" }}</span></div>
+      <div class="summary__row"><span>Fatura (soft descriptor)</span><span>{{ provedor.soft_descriptor }}</span></div>
+      <div class="summary__row"><span>Pix expira em</span><span>{{ provedor.pix_expira_em_minutos }} min</span></div>
+    </div>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Aparência da loja</h3>
+      <p class="xs muted" style="margin-bottom:var(--s-4)">
+        Imagem de capa do banner, mensagem do topo, telefone, endereço e textos do rodapé.
+      </p>
+      <div class="stack" style="gap:var(--s-1)">
+        <a href="/admin/core/siteconfig/1/change/" class="filters__link">
+          <span>Identidade, capa e contato</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/core/banner/" class="filters__link">
+          <span>Banners da home (texto + imagem)</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/core/diferencial/" class="filters__link">
+          <span>Faixa de garantias</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/core/pagina/" class="filters__link">
+          <span>Páginas institucionais</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Atalhos</h3>
+      <div class="stack" style="gap:var(--s-1)">
+        <a href="/admin/payments/provedorpagamento/" class="filters__link">Provedores de pagamento</a>
+        <a href="/admin/payments/pagamento/" class="filters__link">Pagamentos</a>
+        <a href="/admin/payments/eventowebhook/" class="filters__link">Eventos de webhook</a>
+        <a href="/admin/payments/estorno/" class="filters__link">Estornos</a>
+        <a href="/admin/core/siteconfig/1/change/" class="filters__link">Configuração da loja</a>
+        <a href="/admin/catalog/produto/" class="filters__link">Produtos</a>
+        <a href="/admin/orders/cupom/" class="filters__link">Cupons</a>
+      </div>
+    </div>
+
+    {% if provedores.count > 1 %}
+      <div class="card card--pad">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Todos os provedores</h3>
+        {% for p in provedores %}
+          <div class="row row--between small" style="padding-block:var(--s-2);border-top:1px solid var(--line)">
+            <span>{{ p.nome }} <span class="xs muted">({{ p.get_ambiente_display }})</span></span>
+            {% if p.padrao %}<span class="badge badge--green">Padrão</span>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

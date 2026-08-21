@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Minhas assinaturas — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section" style="max-width:900px">
+  <div class="section-head">
+    <div class="section-head__title">
+      <h1>Minhas assinaturas</h1>
+      <p>Pause, pule uma entrega ou mude a frequência quando quiser.</p>
+      <span class="rule"></span>
+    </div>
+  </div>
+
+  {% if assinaturas %}
+    <div class="stack" data-stagger>
+      {% for a in assinaturas %}
+        <div class="card card--pad">
+          <div class="row" style="gap:var(--s-4);align-items:flex-start;flex-wrap:wrap">
+            <span class="cart-line__media">
+              {% with imagem=a.produto.imagem_principal %}
+                {% if imagem %}<img src="{{ imagem.imagem.url }}" alt="{{ a.produto.nome }}" loading="lazy">{% endif %}
+              {% endwith %}
+            </span>
+
+            <div style="flex:1;min-width:220px">
+              <a href="{{ a.produto.get_absolute_url }}" style="font-weight:600;color:var(--ink)">{{ a.produto.nome }}</a>
+              <div class="row" style="gap:var(--s-2);margin-top:var(--s-2);flex-wrap:wrap">
+                <span class="badge
+                  {% if a.status == 'ativa' %}badge--green
+                  {% elif a.status == 'pausada' %}badge--amber
+                  {% elif a.status == 'inadimplente' %}badge--red
+                  {% else %}badge--gray{% endif %}">{{ a.get_status_display }}</span>
+                <span class="badge">
+                  <svg width="11" height="11"><use href="#i-refresh"></use></svg>{{ a.get_frequencia_dias_display }}
+                </span>
+                <span class="badge">{{ a.quantidade }} un por entrega</span>
+              </div>
+              <p class="xs muted" style="margin:var(--s-3) 0 0">
+                {% if a.status == 'ativa' %}
+                  Próxima entrega em <strong style="color:var(--ink)">{{ a.proxima_entrega|date:"d/m/Y" }}</strong>
+                  · economia de R$ {{ a.economia_por_ciclo|floatformat:2 }} por ciclo
+                {% elif a.status == 'cancelada' %}
+                  Cancelada em {{ a.cancelada_em|date:"d/m/Y" }}{% if a.motivo_cancelamento %} · {{ a.motivo_cancelamento }}{% endif %}
+                {% else %}
+                  {{ a.ciclos.count }} ciclo{{ a.ciclos.count|pluralize }} processado{{ a.ciclos.count|pluralize }}
+                {% endif %}
+              </p>
+            </div>
+
+            <div style="text-align:right">
+              <div class="display" style="font-size:var(--fs-lg);color:var(--ink)">R$ {{ a.total_por_ciclo|floatformat:2 }}</div>
+              <div class="xs muted">por entrega</div>
+            </div>
+          </div>
+
+          {% if a.status != 'cancelada' %}
+            <hr class="divider" style="margin-block:var(--s-4)">
+            <div class="row" style="gap:var(--s-2);flex-wrap:wrap">
+              {% if a.status == 'ativa' %}
+                <form method="post" action="{% url 'subscriptions:pular' a.id %}">{% csrf_token %}
+                  <button type="submit" class="btn btn--ghost btn--sm">Pular próxima entrega</button>
+                </form>
+                <form method="post" action="{% url 'subscriptions:pausar' a.id %}">{% csrf_token %}
+                  <button type="submit" class="btn btn--ghost btn--sm">Pausar</button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'subscriptions:retomar' a.id %}">{% csrf_token %}
+                  <button type="submit" class="btn btn--primary btn--sm">Retomar assinatura</button>
+                </form>
+              {% endif %}
+
+              <form method="post" action="{% url 'subscriptions:frequencia' a.id %}" class="row" style="gap:var(--s-2)">
+                {% csrf_token %}
+                <select name="frequencia" style="width:auto" aria-label="Frequência">
+                  {% for dias, rotulo in a.FREQUENCIAS %}
+                    <option value="{{ dias }}" {% if a.frequencia_dias == dias %}selected{% endif %}>{{ rotulo }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn--ghost btn--sm">Alterar</button>
+              </form>
+
+              <span class="spacer"></span>
+              <form method="post" action="{% url 'subscriptions:cancelar' a.id %}">{% csrf_token %}
+                <button type="submit" class="xs muted link-underline">Cancelar assinatura</button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty card">
+      <div class="empty__icon">🔁</div>
+      <p class="empty__title">Você ainda não tem assinaturas</p>
+      <p class="small">
+        Assine os produtos que você repõe sempre e economize
+        {{ site.desconto_assinatura_padrao }}% em cada entrega.
+      </p>
+      <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="btn btn--primary" style="margin-top:var(--s-5)">
+        Ver produtos assináveis
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

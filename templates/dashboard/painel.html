@@ -1,0 +1,135 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Pedidos{% endblock %}
+{% block painel_heading %}Pedidos{% endblock %}
+
+{% block painel_content %}
+{% include 'dashboard/_stats.html' %}
+
+<div class="grid" style="grid-template-columns:1.55fr 1fr;gap:var(--s-5);margin-top:var(--s-6);align-items:start">
+
+  {# ---------------------------------------------------- FILA DE PEDIDOS #}
+  <div class="table-wrap" data-reveal="left">
+    <table class="data">
+      <thead>
+        <tr><th>Pedido</th><th>Cliente / Itens</th><th>Total</th><th>Pagamento</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for p in pedidos %}
+          <tr class="{% if selecionado.numero == p.numero %}is-selected{% endif %}"
+              onclick="location.href='?pedido={{ p.numero }}'" style="cursor:pointer">
+            <td class="strong">{{ p.numero }}</td>
+            <td>
+              <div style="font-weight:600;color:var(--ink)">{{ p.nome_cliente }}</div>
+              <div class="xs muted">
+                {% for i in p.itens.all|slice:":2" %}{{ i.nome_produto|truncatechars:26 }}{% if not forloop.last %} + {% endif %}{% endfor %}
+              </div>
+            </td>
+            <td class="strong nowrap">R$ {{ p.total|floatformat:2 }}</td>
+            <td class="small">{{ p.pagamento_atual.get_metodo_display|default:"—" }}</td>
+            <td>
+              <span class="badge
+                {% if p.status == 'aprovado' or p.status == 'entregue' %}badge--green
+                {% elif p.status == 'recusado' or p.status == 'cancelado' %}badge--red
+                {% elif p.status == 'enviado' %}badge--teal
+                {% elif p.status == 'em_separacao' %}badge--blue
+                {% else %}badge--amber{% endif %}">{{ p.get_status_display }}</span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted center" style="padding:var(--s-12)">Nenhum pedido ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ------------------------------------------------ DECISÃO DO LOJISTA #}
+  <div class="stack" data-reveal="right">
+    {% if selecionado %}
+      <div class="card card--pad">
+        <div class="row row--between" style="margin-bottom:var(--s-1)">
+          <strong class="display">{{ selecionado.numero }}</strong>
+          <a href="{% url 'dashboard:pedido' selecionado.numero %}" class="xs strong link-underline">Detalhes →</a>
+        </div>
+        <p class="small" style="margin:0;color:var(--ink)">{{ selecionado.nome_cliente }}</p>
+        <p class="xs muted" style="margin:var(--s-1) 0 var(--s-4)">{{ selecionado.endereco_texto|truncatechars:70 }}</p>
+
+        {% for item in selecionado.itens.all %}
+          <div class="row row--between small" style="padding-block:var(--s-2);border-top:1px solid var(--line)">
+            <span>
+              {{ item.quantidade }}× {{ item.nome_produto|truncatechars:30 }}
+              {% if not item.tem_estoque %}
+                <span class="badge badge--red" style="margin-left:4px">estoque {{ item.produto.estoque }}</span>
+              {% endif %}
+            </span>
+            <span class="nowrap">R$ {{ item.total|floatformat:2 }}</span>
+          </div>
+        {% endfor %}
+
+        <div class="summary__row strong" style="border-top:1px solid var(--line);margin-top:var(--s-2);padding-top:var(--s-3)">
+          <span>Total</span><span>R$ {{ selecionado.total|floatformat:2 }}</span>
+        </div>
+        <div class="summary__row"><span>Pagamento</span><span>{{ selecionado.pagamento_atual.get_metodo_display|default:"—" }}</span></div>
+
+        {% if selecionado.status == 'aguardando_aprovacao' %}
+          <div class="row" style="gap:var(--s-2);margin-top:var(--s-5)">
+            <form method="post" action="{% url 'dashboard:aprovar' selecionado.numero %}" style="flex:1">
+              {% csrf_token %}
+              <button type="submit" class="btn btn--block btn--sm" style="background:var(--green);color:#fff">
+                <svg width="14" height="14"><use href="#i-check"></use></svg>Aprovar
+              </button>
+            </form>
+            <form method="post" action="{% url 'dashboard:recusar' selecionado.numero %}" style="flex:1">
+              {% csrf_token %}
+              <input type="hidden" name="motivo" value="Produto sem estoque no momento da conferência">
+              <button type="submit" class="btn btn--ghost btn--block btn--sm" style="color:var(--red);border-color:var(--red)">
+                <svg width="14" height="14"><use href="#i-x"></use></svg>Sem estoque
+              </button>
+            </form>
+          </div>
+        {% elif selecionado.status == 'em_separacao' %}
+          <form method="post" action="{% url 'dashboard:enviar' selecionado.numero %}" class="stack" style="margin-top:var(--s-5);gap:var(--s-2)">
+            {% csrf_token %}
+            <input type="text" name="rastreio" placeholder="Código de rastreio (opcional)">
+            <button type="submit" class="btn btn--dark btn--block btn--sm">
+              <svg width="14" height="14"><use href="#i-caminhao"></use></svg>Marcar como enviado
+            </button>
+          </form>
+        {% elif selecionado.status == 'aprovado' %}
+          <div class="alert alert--success" style="margin-top:var(--s-5)">
+            <svg width="15" height="15"><use href="#i-check"></use></svg>
+            <span>Aprovado! Cliente notificado automaticamente.</span>
+          </div>
+        {% elif selecionado.status == 'recusado' %}
+          <div class="alert alert--error" style="margin-top:var(--s-5)">
+            <svg width="15" height="15"><use href="#i-x"></use></svg>
+            <span>Recusado. O cliente recebeu desculpas, sugestões de similares e a opção de estorno.</span>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {# --------------------------------------------------- ESTOQUE BAIXO #}
+    <div class="card card--pad">
+      <div class="row row--between" style="margin-bottom:var(--s-4)">
+        <h3 style="font-size:var(--fs-sm);display:flex;align-items:center;gap:var(--s-2)">
+          <svg width="15" height="15" style="color:var(--amber)"><use href="#i-alerta"></use></svg>Estoque baixo
+        </h3>
+        <a href="{% url 'dashboard:estoque' %}?critico=1" class="xs strong link-underline">Ver todos →</a>
+      </div>
+      <div class="stack" style="gap:var(--s-3)">
+        {% for p in estoque_baixo %}
+          <div class="row row--between small">
+            <span>{{ p.nome|truncatechars:32 }}</span>
+            <strong style="color:{% if p.estoque <= 0 %}var(--red){% else %}var(--amber){% endif %}">
+              {% if p.estoque <= 0 %}Esgotado{% else %}{{ p.estoque }} un{% endif %}
+            </strong>
+          </div>
+        {% empty %}
+          <p class="small muted" style="margin:0">Todo o estoque está saudável. 👌</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

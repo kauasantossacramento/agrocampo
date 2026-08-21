@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body{margin:0;font-family:'Inter',sans-serif;background:#FFF8F0;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  ::-webkit-scrollbar{height:8px;width:8px}
+  a{color:#D62B20;text-decoration:none}
+  a:hover{color:#A81F17;text-decoration:underline}
+  button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FFF8F0;padding-top:56px;position:relative">
+
+  <!-- PROTOTYPE TOOLBAR -->
+  <div style="position:fixed;top:0;left:0;right:0;height:56px;background:#221812;display:flex;align-items:center;gap:18px;padding:0 20px;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,.25)">
+    <span style="font:800 14px Poppins,sans-serif;color:#FFC72C;letter-spacing:.3px;white-space:nowrap">AgroCampo · Prévia</span>
+    <div style="display:flex;gap:6px;margin-left:8px">
+      <button onClick="{{goWeb}}" style="{{ webBtnStyle }}">Site Web</button>
+      <button onClick="{{goMobile}}" style="{{ mobileBtnStyle }}">App Mobile (PWA)</button>
+      <button onClick="{{goAdmin}}" style="{{ adminBtnStyle }}">Painel Admin</button>
+    </div>
+    <sc-if value="{{isWeb}}" hint-placeholder-val="{{true}}">
+      <div style="display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end">
+        <button onClick="{{goHome}}" style="{{ tabStyleHome }}">Home</button>
+        <button onClick="{{goCatalogo}}" style="{{ tabStyleCatalogo }}">Catálogo</button>
+        <button onClick="{{goProduto}}" style="{{ tabStyleProduto }}">Produto</button>
+        <button onClick="{{goCarrinho}}" style="{{ tabStyleCarrinho }}">Carrinho</button>
+        <button onClick="{{goStatus}}" style="{{ tabStyleStatus }}">Status do Pedido</button>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- ================= WEB MODE ================= -->
+  <sc-if value="{{isWeb}}" hint-placeholder-val="{{true}}">
+    <div>
+      <!-- SITE HEADER -->
+      <header style="position:sticky;top:56px;z-index:900;background:#FFFFFF;border-bottom:1px solid rgba(42,32,25,.1);padding:14px 32px;display:flex;align-items:center;gap:28px">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onClick="{{goHome}}">
+          <img src="uploads/ChatGPT%20Image%203%20de%20ago.%20de%202026%2C%2015_30_05-d2ca40d8.png" style="height:44px;width:auto" alt="AgroCampo">
+        </div>
+        <nav style="display:flex;gap:22px;font:600 14px Inter,sans-serif;color:#3A2E24;flex:1">
+          <a href="#" onClick="{{goCatalogo}}" style="color:#3A2E24">Ração &amp; Alimentação</a>
+          <a href="#" onClick="{{goCatalogo}}" style="color:#3A2E24">Aves &amp; Pássaros</a>
+          <a href="#" onClick="{{goCatalogo}}" style="color:#3A2E24">Rural &amp; Fazenda</a>
+          <a href="#" onClick="{{goCatalogo}}" style="color:#3A2E24">Saúde Animal</a>
+          <a href="#" onClick="{{goCatalogo}}" style="color:#3A2E24">Acessórios</a>
+          <a href="#" style="color:#D62B20;font-weight:700">Assinatura ✚</a>
+        </nav>
+        <div style="display:flex;align-items:center;gap:18px">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#3A2E24" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.6" y2="16.6"></line></svg>
+          <div style="position:relative">
+            <svg onClick="{{ toggleNotif }}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A2E24" stroke-width="2" style="cursor:pointer"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+            <span style="position:absolute;top:-4px;right:-6px;background:#D62B20;color:#fff;font:700 9px Inter,sans-serif;padding:1px 4px;border-radius:8px">3</span>
+            <sc-if value="{{notifOpen}}" hint-placeholder-val="{{false}}">
+              <div style="position:absolute;top:30px;right:-10px;width:290px;background:#fff;border:1px solid rgba(42,32,25,.12);border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,.15);padding:8px;z-index:50">
+                <div style="font:700 12px Poppins,sans-serif;color:#221812;padding:6px 8px 4px">Notificações</div>
+                <div style="padding:9px 8px;border-radius:8px;font:500 12.5px Inter,sans-serif;color:#3A2E24">✅ <b>Pagamento confirmado</b><br><span style="color:#8a7c70">Pedido #3321 · há 2 min</span></div>
+                <div style="padding:9px 8px;border-radius:8px;font:500 12.5px Inter,sans-serif;color:#3A2E24">📦 <b>Pedido aprovado</b> pelo lojista<br><span style="color:#8a7c70">A caminho da separação · há 1h</span></div>
+                <div style="padding:9px 8px;border-radius:8px;font:500 12.5px Inter,sans-serif;color:#3A2E24">🔁 <b>Assinatura renovada</b><br><span style="color:#8a7c70">Ração Golden 15kg · há 1 dia</span></div>
+              </div>
+            </sc-if>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3A2E24" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>
+          <div style="position:relative">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#3A2E24" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M1 1h3l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6"></path></svg>
+            <span style="position:absolute;top:-4px;right:-6px;background:#221812;color:#fff;font:700 9px Inter,sans-serif;padding:1px 4px;border-radius:8px">2</span>
+          </div>
+        </div>
+      </header>
+
+      <sc-if value="{{isHome}}" hint-placeholder-val="{{true}}">
+        <main>
+          <section style="display:grid;grid-template-columns:1.1fr 1fr;gap:0;background:#D62B20;min-height:420px;align-items:stretch">
+            <div style="padding:64px 56px;display:flex;flex-direction:column;justify-content:center;gap:18px">
+              <span style="display:inline-block;background:#FFC72C;color:#3A2100;font:700 12px Inter,sans-serif;padding:6px 14px;border-radius:20px;width:fit-content">Frete facilitado para zona rural</span>
+              <h1 style="font:800 44px/1.12 Poppins,sans-serif;color:#fff;margin:0;max-width:520px">Tudo para o campo e para quem você ama cuidar.</h1>
+              <p style="font:400 16px/1.5 Inter,sans-serif;color:#FFE3D6;max-width:460px;margin:0">Ração, suplementos e equipamentos rurais com entrega rápida — e assinatura recorrente para nunca faltar o essencial.</p>
+              <div style="display:flex;gap:12px;margin-top:8px">
+                <button onClick="{{goCatalogo}}" style="background:#FFC72C;color:#3A2100;border:none;padding:14px 26px;border-radius:10px;font:700 15px Inter,sans-serif">Ver catálogo</button>
+                <button style="background:transparent;color:#fff;border:2px solid #fff;padding:12px 26px;border-radius:10px;font:700 15px Inter,sans-serif">Assine e economize</button>
+              </div>
+            </div>
+            <div style="position:relative;width:100%;height:100%;overflow:hidden">
+              <svg style="position:absolute;left:50%;bottom:-4%;transform:translateX(-50%);width:88%;height:82%" viewBox="0 0 515.25 513" preserveAspectRatio="xMidYMid meet"><path fill="#FFC72C" d="M 203.492188 417.863281 L 204.664062 417.957031 C 222.722656 419.785156 245.457031 415.539062 272.867188 405.214844 C 329.378906 382.078125 368.398438 363.40625 389.925781 349.199219 C 441.253906 317.246094 469.117188 284.25 473.515625 250.203125 C 475.371094 239.925781 474.242188 228.773438 470.136719 216.75 C 465.976562 207.421875 460.683594 200.863281 454.253906 197.070312 C 447.589844 192.722656 440.304688 189.375 432.402344 187.023438 C 429.121094 185.566406 408.765625 180.613281 371.332031 172.15625 C 356.976562 167.929688 347.304688 164.300781 342.316406 161.269531 C 335.523438 157.464844 329.429688 152.738281 324.035156 147.082031 C 322.847656 146.761719 313.515625 134.558594 296.035156 110.484375 C 288.710938 102.25 284.105469 97.703125 282.214844 96.832031 C 277.839844 92 267.820312 88.695312 252.167969 86.921875 C 215.929688 83.578125 180.683594 95.382812 146.4375 122.328125 C 101.886719 161.746094 77.980469 198.386719 74.710938 232.238281 C 68.3125 280.472656 75.703125 320.902344 96.890625 353.539062 C 122.097656 386.785156 157.628906 408.226562 203.492188 417.863281 " fill-opacity="1" fill-rule="nonzero"></path></svg>
+              <svg width="0" height="0"><defs><linearGradient id="pawGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFE382"></stop><stop offset="100%" stop-color="#FFC72C"></stop></linearGradient></defs></svg>
+              <svg style="position:absolute;top:9%;left:7%;width:56px;height:56px;opacity:.55;transform:rotate(-15deg)" viewBox="0 0 64 64" fill="url(#pawGrad)"><circle cx="32" cy="40" r="14"></circle><circle cx="14" cy="20" r="7"></circle><circle cx="32" cy="8" r="7"></circle><circle cx="50" cy="20" r="7"></circle></svg>
+              <svg style="position:absolute;top:64%;left:5%;width:40px;height:40px;opacity:.45;transform:rotate(20deg)" viewBox="0 0 64 64" fill="url(#pawGrad)"><circle cx="32" cy="40" r="14"></circle><circle cx="14" cy="20" r="7"></circle><circle cx="32" cy="8" r="7"></circle><circle cx="50" cy="20" r="7"></circle></svg>
+              <svg style="position:absolute;top:5%;right:13%;width:46px;height:46px;opacity:.5;transform:rotate(30deg)" viewBox="0 0 64 64" fill="url(#pawGrad)"><circle cx="32" cy="40" r="14"></circle><circle cx="14" cy="20" r="7"></circle><circle cx="32" cy="8" r="7"></circle><circle cx="50" cy="20" r="7"></circle></svg>
+              <svg style="position:absolute;top:32%;left:36%;width:32px;height:32px;opacity:.4;transform:rotate(-8deg)" viewBox="0 0 64 64" fill="url(#pawGrad)"><circle cx="32" cy="40" r="14"></circle><circle cx="14" cy="20" r="7"></circle><circle cx="32" cy="8" r="7"></circle><circle cx="50" cy="20" r="7"></circle></svg>
+              <svg style="position:absolute;top:42%;right:7%;width:40px;height:40px;opacity:.5" viewBox="0 0 24 24" fill="none" stroke="url(#pawGrad)" stroke-width="1.6"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+              <svg style="position:absolute;bottom:8%;right:5%;width:34px;height:34px;opacity:.45;transform:rotate(10deg)" viewBox="0 0 24 24" fill="none" stroke="url(#pawGrad)" stroke-width="1.6"><path d="M17 4c1.5 3-2 5-5 3-3 2-6 0-5-3 2-4 8-4 10 0z"></path></svg>
+              <img src="uploads/Design%20sem%20nome%20(2).png" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);height:78%;width:auto;max-width:none">
+            </div>
+          </section>
+
+          <section style="display:flex;gap:28px;padding:22px 56px;background:#fff;border-bottom:1px solid rgba(42,32,25,.08);flex-wrap:wrap">
+            <div style="flex:1;min-width:180px;font:600 13.5px Inter,sans-serif;color:#3A2E24">🚚 Frete para toda zona rural</div>
+            <div style="flex:1;min-width:180px;font:600 13.5px Inter,sans-serif;color:#3A2E24">⚡ Pix aprovado na hora</div>
+            <div style="flex:1;min-width:180px;font:600 13.5px Inter,sans-serif;color:#3A2E24">🔁 Assinatura com 10% OFF</div>
+            <div style="flex:1;min-width:180px;font:600 13.5px Inter,sans-serif;color:#3A2E24">🛡️ Compra 100% garantida</div>
+          </section>
+
+          <section style="padding:46px 56px">
+            <h2 style="font:700 24px Poppins,sans-serif;color:#221812;margin:0 0 20px">Compre por categoria</h2>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+              <div style="background:#FFF1E4;border-radius:14px;padding:20px;text-align:center;font:700 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setCatRacao}}">🐕 Ração &amp; Alimentação</div>
+              <div style="background:#FFF1E4;border-radius:14px;padding:20px;text-align:center;font:700 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setCatAves}}">🐦 Aves &amp; Pássaros</div>
+              <div style="background:#FFF1E4;border-radius:14px;padding:20px;text-align:center;font:700 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setCatRural}}">🚜 Rural &amp; Fazenda</div>
+              <div style="background:#FFF1E4;border-radius:14px;padding:20px;text-align:center;font:700 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setCatSaude}}">💊 Saúde Animal</div>
+              <div style="background:#FFF1E4;border-radius:14px;padding:20px;text-align:center;font:700 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setCatAcessorios}}">🦴 Acessórios</div>
+            </div>
+          </section>
+
+          <section style="padding:0 56px 46px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px">
+              <h2 style="font:700 24px Poppins,sans-serif;color:#221812;margin:0">Mais vendidos</h2>
+              <a href="#" onClick="{{goCatalogo}}" style="font:600 13px Inter,sans-serif">Ver tudo →</a>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+              <sc-for list="{{featured}}" as="p" hint-placeholder-count="4">
+                <div style="border:1px solid rgba(42,32,25,.1);border-radius:14px;overflow:hidden;background:#fff;cursor:pointer" onClick="{{goProduto}}">
+                  <image-slot id="{{p.imgId}}" src="{{p.img}}" shape="rect" placeholder="{{p.name}}" style="width:100%;height:150px"></image-slot>
+                  <div style="padding:14px">
+                    <div style="font:500 10.5px Inter,sans-serif;color:#B7492F;text-transform:uppercase;letter-spacing:.4px">{{p.category}}</div>
+                    <div style="font:600 13.5px Inter,sans-serif;color:#221812;margin:4px 0 8px;min-height:34px">{{p.name}}</div>
+                    <div style="font:700 15px Poppins,sans-serif;color:#221812">{{p.price}}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+
+          <section style="padding:0 56px 46px">
+            <h2 style="font:700 22px Poppins,sans-serif;color:#221812;margin:0 0 4px;text-align:center">Marcas que trabalhamos</h2>
+            <p style="font:400 13px Inter,sans-serif;color:#8a7c70;text-align:center;margin:0 0 26px">Selecionamos as melhores marcas do mercado para o seu pet e para sua fazenda</p>
+            <div style="display:flex;justify-content:center;align-items:center;gap:44px;flex-wrap:wrap;background:#FFF8F0;border:1px solid rgba(42,32,25,.08);border-radius:18px;padding:34px 40px">
+              <div style="text-align:center;line-height:1"><span style="font:800 27px Poppins,sans-serif;color:#E8601C;letter-spacing:-.5px">Golden</span><span style="display:block;font:700 11px Inter,sans-serif;color:#3A2E24;letter-spacing:3px;margin-top:2px">FÓRMULA</span></div>
+              <img src="uploads/pasted-1785783426650-0.png" style="height:54px;width:auto">
+              <img src="uploads/image-removebg-preview.png" style="height:62px;width:auto">
+              <div style="font:800 21px Poppins,sans-serif;color:#2F6B3A;letter-spacing:.5px">AGROMIX</div>
+              <div style="font:800 19px Poppins,sans-serif;color:#1F6B31">alcon <span style="color:#E2A100">eco club</span></div>
+            </div>
+          </section>
+
+          <section style="margin:0 56px 46px;background:#FFC72C;border-radius:20px;padding:36px 44px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap">
+            <div>
+              <h3 style="font:800 22px Poppins,sans-serif;color:#3A2100;margin:0 0 6px">Assinatura AgroCampo Recorrente</h3>
+              <p style="font:500 14px Inter,sans-serif;color:#5A3B00;margin:0;max-width:520px">Escolha a frequência de entrega da ração ou suplementos e ganhe 10% de desconto fixo em toda recompra automática.</p>
+            </div>
+            <button onClick="{{goProduto}}" style="background:#221812;color:#fff;border:none;padding:14px 26px;border-radius:10px;font:700 14px Inter,sans-serif;white-space:nowrap">Configurar assinatura</button>
+          </section>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{isCatalogo}}" hint-placeholder-val="{{false}}">
+        <main style="display:grid;grid-template-columns:240px 1fr;gap:32px;padding:32px 56px 60px">
+          <aside style="display:flex;flex-direction:column;gap:22px">
+            <div>
+              <div style="font:700 13px Poppins,sans-serif;color:#221812;margin-bottom:10px">Categorias</div>
+              <div style="display:flex;flex-direction:column;gap:2px;font:500 13.5px Inter,sans-serif">
+                <div onClick="{{setCatTodos}}" style="{{rowTodos}}">Todos os produtos</div>
+                <div onClick="{{setCatRacao}}" style="{{rowRacao}}">Ração &amp; Alimentação</div>
+                <div onClick="{{setCatAves}}" style="{{rowAves}}">Aves &amp; Pássaros</div>
+                <div onClick="{{setCatRural}}" style="{{rowRural}}">Rural &amp; Fazenda</div>
+                <div onClick="{{setCatSaude}}" style="{{rowSaude}}">Saúde Animal</div>
+                <div onClick="{{setCatAcessorios}}" style="{{rowAcessorios}}">Acessórios</div>
+              </div>
+            </div>
+            <div>
+              <div style="font:700 13px Poppins,sans-serif;color:#221812;margin-bottom:10px">Faixa de preço</div>
+              <input type="range" style="width:100%">
+              <div style="display:flex;justify-content:space-between;font:500 11px Inter,sans-serif;color:#8a7c70"><span>R$ 0</span><span>R$ 400+</span></div>
+            </div>
+            <div>
+              <div style="font:700 13px Poppins,sans-serif;color:#221812;margin-bottom:10px">Compra</div>
+              <label style="display:flex;gap:8px;align-items:center;font:500 13.5px Inter,sans-serif;color:#3A2E24"><input type="checkbox"> Disponível para assinatura</label>
+            </div>
+          </aside>
+          <div>
+            <div style="position:relative;margin-bottom:18px">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a7c70" stroke-width="2" style="position:absolute;left:14px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.6" y2="16.6"></line></svg>
+              <input value="{{searchQuery}}" onChange="{{onSearchChange}}" placeholder="Buscar por nome ou categoria..." style="width:100%;border:1px solid rgba(42,32,25,.15);border-radius:10px;padding:12px 14px 12px 40px;font:500 13.5px Inter,sans-serif;color:#221812">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+              <h2 style="font:700 22px Poppins,sans-serif;color:#221812;margin:0">Catálogo · {{resultsCount}} produtos</h2>
+              <select style="border:1px solid rgba(42,32,25,.15);border-radius:8px;padding:8px 12px;font:500 13px Inter,sans-serif;color:#3A2E24"><option>Mais relevantes</option><option>Menor preço</option><option>Maior preço</option></select>
+            </div>
+            <sc-if value="{{hasResults}}" hint-placeholder-val="{{true}}">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+              <sc-for list="{{filteredProducts}}" as="p" hint-placeholder-count="8">
+                <div style="border:1px solid rgba(42,32,25,.1);border-radius:14px;overflow:hidden;background:#fff;cursor:pointer;position:relative" onClick="{{goProduto}}">
+                  <sc-if value="{{p.subscribable}}" hint-placeholder-val="{{false}}">
+                    <span style="position:absolute;top:10px;left:10px;background:#FFC72C;color:#3A2100;font:700 9.5px Inter,sans-serif;padding:3px 8px;border-radius:6px;z-index:2">ASSINATURA -10%</span>
+                  </sc-if>
+                  <image-slot id="{{p.imgId}}" src="{{p.img}}" shape="rect" placeholder="{{p.name}}" style="width:100%;height:150px"></image-slot>
+                  <div style="padding:14px">
+                    <div style="font:500 10.5px Inter,sans-serif;color:#B7492F;text-transform:uppercase;letter-spacing:.4px">{{p.category}}</div>
+                    <div style="font:600 13.5px Inter,sans-serif;color:#221812;margin:4px 0 8px;min-height:34px">{{p.name}}</div>
+                    <div style="font:700 15px Poppins,sans-serif;color:#221812">{{p.price}}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+            <sc-if value="{{noResults}}" hint-placeholder-val="{{false}}">
+              <div style="text-align:center;padding:60px 20px;color:#8a7c70">
+                <div style="font:700 15px Poppins,sans-serif;color:#221812;margin-bottom:6px">Nenhum produto encontrado</div>
+                <div style="font:400 13px Inter,sans-serif">Tente outro termo de busca ou selecione outra categoria.</div>
+              </div>
+            </sc-if>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{isProduto}}" hint-placeholder-val="{{false}}">
+        <main style="padding:36px 56px 60px;display:grid;grid-template-columns:1fr 1fr;gap:52px;max-width:1200px;margin:0 auto">
+          <div>
+            <image-slot id="produto-main" src="uploads/pasted-1785783061543-0.png" shape="rounded" radius="16" placeholder="Foto principal — Ração Golden 15kg" style="width:100%;height:420px"></image-slot>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px">
+              <image-slot id="produto-t1" shape="rounded" radius="10" placeholder="Ângulo 2" style="width:100%;height:80px"></image-slot>
+              <image-slot id="produto-t2" shape="rounded" radius="10" placeholder="Ângulo 3" style="width:100%;height:80px"></image-slot>
+              <image-slot id="produto-t3" shape="rounded" radius="10" placeholder="Tabela nutricional" style="width:100%;height:80px"></image-slot>
+              <image-slot id="produto-t4" shape="rounded" radius="10" placeholder="Embalagem" style="width:100%;height:80px"></image-slot>
+            </div>
+          </div>
+          <div>
+            <div style="font:500 11px Inter,sans-serif;color:#B7492F;text-transform:uppercase;letter-spacing:.5px">Ração &amp; Alimentação · Cães</div>
+            <h1 style="font:700 27px Poppins,sans-serif;color:#221812;margin:8px 0 10px">Ração Golden Fórmula Adulto Raças Médias e Grandes 15kg</h1>
+            <div style="display:flex;gap:6px;align-items:center;font:600 13px Inter,sans-serif;color:#3A2E24;margin-bottom:16px">⭐⭐⭐⭐⭐ <span style="color:#8a7c70;font-weight:500">(214 avaliações)</span></div>
+            <div style="font:800 30px Poppins,sans-serif;color:#221812;margin-bottom:4px">R$ 289,90</div>
+            <div style="font:600 13px Inter,sans-serif;color:#2F9E44;margin-bottom:22px">🟢 Em estoque — 23 unidades</div>
+
+            <div style="border:1px solid rgba(42,32,25,.12);border-radius:14px;padding:18px;margin-bottom:22px">
+              <div style="font:700 13.5px Poppins,sans-serif;color:#221812;margin-bottom:12px">Frequência de entrega</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <label style="display:flex;align-items:center;gap:10px;border:1.5px solid {{freqUnicaBorder}};border-radius:10px;padding:10px 12px;font:500 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setFreqUnica}}">
+                  <input type="radio" checked="{{isFreqUnica}}" readonly=""> Compra única — R$ 289,90
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;border:1.5px solid {{freq30Border}};border-radius:10px;padding:10px 12px;font:500 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setFreq30}}">
+                  <input type="radio" checked="{{isFreq30}}" readonly=""> Entregar a cada 30 dias — <b style="color:#2F9E44">R$ 260,90 (-10%)</b>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;border:1.5px solid {{freq60Border}};border-radius:10px;padding:10px 12px;font:500 13px Inter,sans-serif;color:#3A2E24;cursor:pointer" onClick="{{setFreq60}}">
+                  <input type="radio" checked="{{isFreq60}}" readonly=""> Entregar a cada 60 dias — <b style="color:#2F9E44">R$ 260,90 (-10%)</b>
+                </label>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-bottom:26px">
+              <button onClick="{{goCarrinho}}" style="flex:1;background:#D62B20;color:#fff;border:none;padding:15px 20px;border-radius:10px;font:700 15px Inter,sans-serif">Adicionar ao carrinho</button>
+              <button style="width:52px;border:1.5px solid rgba(42,32,25,.15);border-radius:10px;background:#fff;font-size:18px">♡</button>
+            </div>
+
+            <div style="font:700 13.5px Poppins,sans-serif;color:#221812;margin-bottom:8px">Sobre o produto</div>
+            <ul style="margin:0;padding-left:18px;font:400 13.5px/1.7 Inter,sans-serif;color:#4A3D33">
+              <li>Fórmula com carne de frango de verdade e proteína animal como 1º ingrediente</li>
+              <li>Reforça imunidade, pele e pelagem com Ômega 3 e 6</li>
+              <li>Indicado para cães adultos de raças médias e grandes</li>
+              <li>Pacote de 15kg — rendimento aproximado de 45 dias</li>
+            </ul>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{isCarrinho}}" hint-placeholder-val="{{false}}">
+        <main style="padding:36px 56px 60px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.5fr 1fr;gap:40px">
+          <div>
+            <h1 style="font:700 24px Poppins,sans-serif;color:#221812;margin:0 0 20px">Seu carrinho</h1>
+            <div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(42,32,25,.1)">
+              <image-slot id="cart-1" src="uploads/pasted-1785783061543-0.png" shape="rounded" radius="10" placeholder="Ração Golden 15kg" style="width:84px;height:84px;flex:none"></image-slot>
+              <div style="flex:1">
+                <div style="font:600 14px Inter,sans-serif;color:#221812">Ração Golden Fórmula Adulto 15kg</div>
+                <span style="display:inline-block;margin-top:6px;background:#FFF1E4;color:#B7492F;font:700 10.5px Inter,sans-serif;padding:3px 8px;border-radius:6px">🔁 Recorrente · a cada 30 dias</span>
+                <div style="font:500 12.5px Inter,sans-serif;color:#8a7c70;margin-top:8px">Qtd: 1</div>
+              </div>
+              <div style="font:700 15px Poppins,sans-serif;color:#221812">R$ 260,90</div>
+            </div>
+            <div style="display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(42,32,25,.1)">
+              <image-slot id="cart-2" src="uploads/pasted-1785783167342-0.png" shape="rounded" radius="10" placeholder="Sal Mineral Bovino 25kg" style="width:84px;height:84px;flex:none"></image-slot>
+              <div style="flex:1">
+                <div style="font:600 14px Inter,sans-serif;color:#221812">Sal Mineral Bovino Fósforo 30 · 25kg</div>
+                <div style="font:500 12.5px Inter,sans-serif;color:#8a7c70;margin-top:8px">Qtd: 1 · compra única</div>
+              </div>
+              <div style="font:700 15px Poppins,sans-serif;color:#221812">R$ 119,90</div>
+            </div>
+
+            <h2 style="font:700 16px Poppins,sans-serif;color:#221812;margin:28px 0 14px">Pagamento</h2>
+            <div style="display:flex;gap:12px">
+              <div style="flex:1;border:2px solid #D62B20;border-radius:12px;padding:16px;font:600 13.5px Inter,sans-serif;color:#221812">💳 Cartão de crédito<div style="font:400 11.5px Inter,sans-serif;color:#8a7c70;margin-top:4px">Em até 3x sem juros</div></div>
+              <div style="flex:1;border:1.5px solid rgba(42,32,25,.15);border-radius:12px;padding:16px;font:600 13.5px Inter,sans-serif;color:#221812">⚡ Pix<div style="font:400 11.5px Inter,sans-serif;color:#8a7c70;margin-top:4px">Aprovação e conferência mais rápidas</div></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="border:1px solid rgba(42,32,25,.12);border-radius:14px;padding:22px;position:sticky;top:190px">
+              <div style="font:700 15px Poppins,sans-serif;color:#221812;margin-bottom:16px">Resumo do pedido</div>
+              <div style="display:flex;justify-content:space-between;font:500 13.5px Inter,sans-serif;color:#4A3D33;margin-bottom:8px"><span>Subtotal</span><span>R$ 380,80</span></div>
+              <div style="display:flex;justify-content:space-between;font:500 13.5px Inter,sans-serif;color:#2F9E44;margin-bottom:8px"><span>Desconto assinatura</span><span>-R$ 29,00</span></div>
+              <div style="display:flex;justify-content:space-between;font:500 13.5px Inter,sans-serif;color:#4A3D33;margin-bottom:14px"><span>Frete</span><span>R$ 0,00</span></div>
+              <div style="display:flex;justify-content:space-between;font:800 18px Poppins,sans-serif;color:#221812;border-top:1px solid rgba(42,32,25,.12);padding-top:14px;margin-bottom:18px"><span>Total</span><span>R$ 351,80</span></div>
+              <button onClick="{{goStatus}}" style="width:100%;background:#D62B20;color:#fff;border:none;padding:15px;border-radius:10px;font:700 15px Inter,sans-serif;margin-bottom:10px">Finalizar pagamento</button>
+              <p style="font:400 11.5px/1.5 Inter,sans-serif;color:#8a7c70;margin:0">Após o pagamento, o pedido fica em análise até a confirmação do lojista.</p>
+            </div>
+          </div>
+        </main>
+      </sc-if>
+
+      <sc-if value="{{isStatus}}" hint-placeholder-val="{{false}}">
+        <main style="padding:36px 56px 70px;max-width:760px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;flex-wrap:wrap;gap:12px">
+            <h1 style="font:700 24px Poppins,sans-serif;color:#221812;margin:0">Pedido #3325</h1>
+            <div style="display:flex;gap:6px;background:#FFF1E4;border-radius:10px;padding:4px">
+              <button onClick="{{setStatusAnalise}}" style="{{ statusBtnAnalise }}">Simular: Em análise</button>
+              <button onClick="{{setStatusAprovado}}" style="{{ statusBtnAprovado }}">Simular: Aprovado</button>
+              <button onClick="{{setStatusRecusado}}" style="{{ statusBtnRecusado }}">Simular: Recusado</button>
+            </div>
+          </div>
+
+          <sc-if value="{{isAnalise}}" hint-placeholder-val="{{false}}">
+            <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:16px;padding:30px">
+              <div style="display:flex;flex-direction:column;gap:22px">
+                <div style="display:flex;gap:14px;align-items:flex-start">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#2F9E44;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px Inter,sans-serif;flex:none">✓</div>
+                  <div><div style="font:700 14px Inter,sans-serif;color:#221812">Pagamento confirmado</div><div style="font:400 12.5px Inter,sans-serif;color:#8a7c70">Pix aprovado instantaneamente · hoje às 09:12</div></div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#E2A100;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px Inter,sans-serif;flex:none">⏳</div>
+                  <div><div style="font:700 14px Inter,sans-serif;color:#221812">Aguardando conferência do lojista</div><div style="font:400 12.5px Inter,sans-serif;color:#8a7c70">A equipe está confirmando a disponibilidade em estoque</div></div>
+                </div>
+                <div style="display:flex;gap:14px;align-items:flex-start;opacity:.4">
+                  <div style="width:26px;height:26px;border-radius:50%;background:#c9bdb2;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px Inter,sans-serif;flex:none">3</div>
+                  <div><div style="font:700 14px Inter,sans-serif;color:#221812">Pedido aprovado e em separação</div></div>
+                </div>
+              </div>
+              <div style="margin-top:24px;background:#FFF1E4;border-radius:10px;padding:14px 16px;font:500 12.5px Inter,sans-serif;color:#7A4A1F">🔔 Você será notificado assim que o lojista confirmar seu pedido.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{isAprovado}}" hint-placeholder-val="{{false}}">
+            <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:16px;padding:30px;text-align:center">
+              <div style="width:64px;height:64px;border-radius:50%;background:#2F9E44;color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 18px">✓</div>
+              <h2 style="font:700 20px Poppins,sans-serif;color:#221812;margin:0 0 8px">Pedido aprovado!</h2>
+              <p style="font:400 14px/1.6 Inter,sans-serif;color:#4A3D33;max-width:440px;margin:0 auto 22px">Seu pagamento foi confirmado e o lojista validou a disponibilidade dos produtos. Seu pedido já está sendo preparado para envio.</p>
+              <div style="background:#FFF1E4;border-radius:10px;padding:14px 16px;font:500 12.5px Inter,sans-serif;color:#7A4A1F;text-align:left;max-width:420px;margin:0 auto">🔔 Notificação enviada: "Seu pedido #3325 foi aprovado e está em separação."</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{isRecusado}}" hint-placeholder-val="{{false}}">
+            <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:16px;padding:30px">
+              <div style="width:56px;height:56px;border-radius:50%;background:#FBEAE8;color:#D62B20;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:16px">✕</div>
+              <h2 style="font:700 20px Poppins,sans-serif;color:#221812;margin:0 0 8px">Sentimos muito, seu pedido não pôde ser confirmado</h2>
+              <p style="font:400 14px/1.6 Inter,sans-serif;color:#4A3D33;margin:0 0 6px">Motivo: <b>Sal Mineral Bovino 25kg</b> ficou sem estoque no momento da conferência.</p>
+              <p style="font:400 14px/1.6 Inter,sans-serif;color:#4A3D33;margin:0 0 22px">Pedimos desculpas pelo transtorno. Preparamos sugestões parecidas, ou você pode solicitar o estorno integral.</p>
+              <div style="font:700 13.5px Poppins,sans-serif;color:#221812;margin-bottom:12px">Produtos semelhantes disponíveis</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+                <sc-for list="{{suggestions}}" as="p" hint-placeholder-count="3">
+                  <div style="border:1px solid rgba(42,32,25,.1);border-radius:12px;overflow:hidden;background:#fff">
+                    <image-slot id="{{p.imgId}}" shape="rect" placeholder="{{p.name}}" style="width:100%;height:100px"></image-slot>
+                    <div style="padding:10px">
+                      <div style="font:600 12px Inter,sans-serif;color:#221812;min-height:30px">{{p.name}}</div>
+                      <div style="font:700 13px Poppins,sans-serif;color:#221812;margin:4px 0 8px">{{p.price}}</div>
+                      <button style="width:100%;background:#221812;color:#fff;border:none;padding:8px;border-radius:7px;font:600 11.5px Inter,sans-serif">Escolher este</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{refundRequested}}" hint-placeholder-val="{{false}}">
+                <div style="background:#EAF6EC;border:1px solid #bfe3c4;border-radius:10px;padding:14px 16px;font:500 13px Inter,sans-serif;color:#1F6B31">✅ Estorno solicitado! O valor de R$ 119,90 retorna ao seu meio de pagamento em até 5 dias úteis.</div>
+              </sc-if>
+              <sc-if value="{{refundNotRequested}}" hint-placeholder-val="{{true}}">
+                <button onClick="{{ requestRefund }}" style="background:transparent;color:#D62B20;border:1.5px solid #D62B20;padding:11px 20px;border-radius:9px;font:700 13.5px Inter,sans-serif">Não quero, solicitar estorno</button>
+              </sc-if>
+            </div>
+          </sc-if>
+        </main>
+      </sc-if>
+
+      <footer style="background:#221812;padding:44px 56px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px;color:#D9CCC0">
+        <div>
+          <div style="margin-bottom:14px">
+            <img src="uploads/ChatGPT%20Image%203%20de%20ago.%20de%202026%2C%2015_30_05-d2ca40d8.png" style="height:34px;width:auto;display:block;filter:brightness(0) invert(1)">
+          </div>
+          <p style="font:400 12.5px/1.6 Inter,sans-serif;color:#B0A398;max-width:280px">Tudo para o campo e para os animais — ração, saúde animal, equipamentos rurais e assinatura recorrente.</p>
+        </div>
+        <div>
+          <div style="font:700 12.5px Inter,sans-serif;color:#fff;margin-bottom:10px">Categorias</div>
+          <div style="display:flex;flex-direction:column;gap:7px;font:400 12.5px Inter,sans-serif"><a href="#" style="color:#B0A398">Ração &amp; Alimentação</a><a href="#" style="color:#B0A398">Aves &amp; Pássaros</a><a href="#" style="color:#B0A398">Rural &amp; Fazenda</a><a href="#" style="color:#B0A398">Saúde Animal</a></div>
+        </div>
+        <div>
+          <div style="font:700 12.5px Inter,sans-serif;color:#fff;margin-bottom:10px">Ajuda</div>
+          <div style="display:flex;flex-direction:column;gap:7px;font:400 12.5px Inter,sans-serif"><a href="#" style="color:#B0A398">Central de atendimento</a><a href="#" style="color:#B0A398">Trocas e estornos</a><a href="#" style="color:#B0A398">Assinatura recorrente</a></div>
+        </div>
+        <div>
+          <div style="font:700 12.5px Inter,sans-serif;color:#fff;margin-bottom:10px">Desenvolvido por</div>
+          <img src="uploads/pasted-1785780626554-0.png" style="width:150px;filter:brightness(0) invert(1)">
+        </div>
+      </footer>
+    </div>
+  </sc-if>
+
+  <!-- ================= ADMIN MODE ================= -->
+  <sc-if value="{{isAdmin}}" hint-placeholder-val="{{false}}">
+    <div style="display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 56px)">
+      <aside style="background:#221812;padding:24px 16px;display:flex;flex-direction:column;gap:4px">
+        <div style="padding:0 10px 18px"><img src="uploads/ChatGPT%20Image%203%20de%20ago.%20de%202026%2C%2015_30_05-d2ca40d8.png" style="height:36px;width:auto;filter:brightness(0) invert(1)"></div>
+        <div style="background:#D62B20;color:#fff;font:600 13px Inter,sans-serif;padding:10px 12px;border-radius:8px;display:flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>Pedidos</div>
+        <div style="color:#D9CCC0;font:500 13px Inter,sans-serif;padding:10px 12px;display:flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>Métricas</div>
+        <div style="color:#D9CCC0;font:500 13px Inter,sans-serif;padding:10px 12px;display:flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>Estoque</div>
+        <div style="color:#D9CCC0;font:500 13px Inter,sans-serif;padding:10px 12px;display:flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>Assinaturas</div>
+        <div style="color:#D9CCC0;font:500 13px Inter,sans-serif;padding:10px 12px;display:flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V8a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Configurações</div>
+      </aside>
+      <div style="padding:28px 36px;background:#FBF7F2">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+          <h1 style="font:700 22px Poppins,sans-serif;color:#221812;margin:0">Pedidos</h1>
+          <div style="position:relative">
+            <button onClick="{{ toggleNotif }}" style="background:#fff;border:1px solid rgba(42,32,25,.15);border-radius:9px;padding:9px 14px;font:600 12.5px Inter,sans-serif;color:#3A2E24;display:inline-flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A2E24" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>Notificações <span style="background:#D62B20;color:#fff;border-radius:8px;padding:1px 6px;font:700 10px Inter,sans-serif">2</span></button>
+            <sc-if value="{{notifOpen}}" hint-placeholder-val="{{false}}">
+              <div style="position:absolute;top:42px;right:0;width:280px;background:#fff;border:1px solid rgba(42,32,25,.12);border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,.15);padding:8px;z-index:50;text-align:left">
+                <div style="padding:9px 8px;border-radius:8px;font:500 12.5px Inter,sans-serif;color:#3A2E24;display:flex;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2F9E44" stroke-width="2" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg><span><b>Novo pedido recebido</b><br><span style="color:#8a7c70">#3325 · Maria Silva · há 3 min</span></span></div>
+                <div style="padding:9px 8px;border-radius:8px;font:500 12.5px Inter,sans-serif;color:#3A2E24;display:flex;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E2A100" stroke-width="2" style="flex:none;margin-top:2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span><b>Estoque baixo</b><br><span style="color:#8a7c70">Areia Higiênica Gato Limpo · 0 un</span></span></div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px">
+          <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:12px;padding:16px"><div style="font:500 12px Inter,sans-serif;color:#8a7c70">Vendas hoje</div><div style="font:800 22px Poppins,sans-serif;color:#221812">R$ 4.280</div></div>
+          <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:12px;padding:16px"><div style="font:500 12px Inter,sans-serif;color:#8a7c70">Pedidos pendentes</div><div style="font:800 22px Poppins,sans-serif;color:#E2A100">6</div></div>
+          <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:12px;padding:16px"><div style="font:500 12px Inter,sans-serif;color:#8a7c70">Ticket médio</div><div style="font:800 22px Poppins,sans-serif;color:#221812">R$ 187</div></div>
+          <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:12px;padding:16px"><div style="font:500 12px Inter,sans-serif;color:#8a7c70">Assinaturas ativas</div><div style="font:800 22px Poppins,sans-serif;color:#2F9E44">42</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:20px">
+          <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:14px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:1fr 1.6fr 1fr 1fr 1fr;gap:8px;padding:12px 18px;background:#FBF3EC;font:700 11px Inter,sans-serif;color:#8a7c70;text-transform:uppercase">
+              <div>Pedido</div><div>Cliente / Itens</div><div>Total</div><div>Pagamento</div><div>Status</div>
+            </div>
+            <sc-for list="{{orders}}" as="o" hint-placeholder-count="6">
+              <div onClick="{{o.select}}" style="{{ o.rowStyle }}">
+                <div style="font:700 12.5px Inter,sans-serif;color:#221812">{{o.id}}</div>
+                <div><div style="font:600 12.5px Inter,sans-serif;color:#221812">{{o.cliente}}</div><div style="font:400 11.5px Inter,sans-serif;color:#8a7c70">{{o.itens}}</div></div>
+                <div style="font:700 12.5px Inter,sans-serif;color:#221812">{{o.total}}</div>
+                <div style="font:500 12px Inter,sans-serif;color:#4A3D33">{{o.pagamento}}</div>
+                <div><span style="background:{{o.statusBg}};color:{{o.statusColor}};font:700 10.5px Inter,sans-serif;padding:4px 9px;border-radius:7px;white-space:nowrap">{{o.status}}</span></div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:14px;padding:20px">
+              <div style="font:700 13.5px Poppins,sans-serif;color:#221812;margin-bottom:4px">{{selectedOrder.id}} — {{selectedOrder.cliente}}</div>
+              <div style="font:400 12px Inter,sans-serif;color:#8a7c70;margin-bottom:14px">{{selectedOrder.itens}}</div>
+              <div style="display:flex;justify-content:space-between;font:600 13px Inter,sans-serif;color:#3A2E24;margin-bottom:8px"><span>Total</span><span>{{selectedOrder.total}}</span></div>
+              <div style="display:flex;justify-content:space-between;font:500 12.5px Inter,sans-serif;color:#8a7c70;margin-bottom:18px"><span>Pagamento</span><span>{{selectedOrder.pagamento}}</span></div>
+              <sc-if value="{{showDecideButtons}}" hint-placeholder-val="{{true}}">
+                <div style="display:flex;gap:10px">
+                  <button onClick="{{ decideApprove }}" style="flex:1;background:#2F9E44;color:#fff;border:none;padding:11px;border-radius:9px;font:700 12.5px Inter,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>Aprovar</button>
+                  <button onClick="{{ decideReject }}" style="flex:1;background:#fff;color:#D62B20;border:1.5px solid #D62B20;padding:11px;border-radius:9px;font:700 12.5px Inter,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D62B20" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Sem estoque</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{decidedApproved}}" hint-placeholder-val="{{false}}">
+                <div style="background:#EAF6EC;color:#1F6B31;border-radius:9px;padding:12px;font:600 12.5px Inter,sans-serif;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1F6B31" stroke-width="2.5" style="flex:none"><polyline points="20 6 9 17 4 12"></polyline></svg>Aprovado! Cliente notificado automaticamente.</div>
+              </sc-if>
+              <sc-if value="{{decidedRejected}}" hint-placeholder-val="{{false}}">
+                <div style="background:#FBEAE8;color:#A81F17;border-radius:9px;padding:12px;font:600 12.5px Inter,sans-serif;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A81F17" stroke-width="2.5" style="flex:none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Recusado por falta de estoque. Cliente recebeu desculpas + sugestões e opção de estorno.</div>
+              </sc-if>
+            </div>
+
+            <div style="background:#fff;border:1px solid rgba(42,32,25,.1);border-radius:14px;padding:20px">
+              <div style="font:700 13.5px Poppins,sans-serif;color:#221812;margin-bottom:12px;display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2A100" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Estoque baixo</div>
+              <div style="display:flex;flex-direction:column;gap:10px;font:500 12.5px Inter,sans-serif;color:#3A2E24">
+                <div style="display:flex;justify-content:space-between"><span>Ração Golden 15kg</span><b style="color:#E2A100">2 un</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Areia Higiênica Gato Limpo</span><b style="color:#D62B20">Esgotado</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Vitamina Aviário Suplex</span><b style="color:#E2A100">4 un</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ================= MOBILE MODE ================= -->
+  <sc-if value="{{isMobile}}" hint-placeholder-val="{{false}}">
+    <div style="padding:32px 40px;display:flex;gap:26px;overflow-x:auto">
+
+      <div style="flex:none;width:300px;height:640px;border-radius:38px;background:#221812;padding:12px;box-shadow:0 20px 40px rgba(0,0,0,.25)">
+        <div style="background:#fff;border-radius:28px;height:100%;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:26px;display:flex;align-items:center;justify-content:center;font:600 10px Inter,sans-serif;color:#221812">9:41</div>
+          <div style="flex:1;overflow-y:auto">
+            <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+              <img src="uploads/ChatGPT%20Image%203%20de%20ago.%20de%202026%2C%2015_30_05-5a4e6409.png" style="height: 33px; width: 44px">
+              <div style="position:relative">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#221812" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+                <span style="position:absolute;top:-4px;right:-6px;background:#D62B20;color:#fff;font:700 8px Inter,sans-serif;padding:1px 4px;border-radius:6px">3</span>
+              </div>
+            </div>
+            <div style="margin: 0 14px 14px; background: #D62B20; border-radius: 14px; padding: 16px 16px 0; color: #fff; position: relative; overflow: hidden; height: 139px; display: flex; flex-direction: column; width: 247px">
+              <div style="position:relative;z-index:2;max-width:62%">
+                <div style="font:700 16px Poppins,sans-serif;margin-bottom:4px">Tudo para o campo</div>
+                <div style="font:400 11.5px Inter,sans-serif;color:#FFE3D6">Assinatura com 10% OFF</div>
+              </div>
+              <svg style="position: absolute; left: 182px; bottom: -46px; transform: translateX(-50%); width: 154px; height: 152px" viewBox="0 0 515.25 513" preserveAspectRatio="xMidYMid meet"><path fill="#FFC72C" d="M 203.492188 417.863281 L 204.664062 417.957031 C 222.722656 419.785156 245.457031 415.539062 272.867188 405.214844 C 329.378906 382.078125 368.398438 363.40625 389.925781 349.199219 C 441.253906 317.246094 469.117188 284.25 473.515625 250.203125 C 475.371094 239.925781 474.242188 228.773438 470.136719 216.75 C 465.976562 207.421875 460.683594 200.863281 454.253906 197.070312 C 447.589844 192.722656 440.304688 189.375 432.402344 187.023438 C 429.121094 185.566406 408.765625 180.613281 371.332031 172.15625 C 356.976562 167.929688 347.304688 164.300781 342.316406 161.269531 C 335.523438 157.464844 329.429688 152.738281 324.035156 147.082031 C 322.847656 146.761719 313.515625 134.558594 296.035156 110.484375 C 288.710938 102.25 284.105469 97.703125 282.214844 96.832031 C 277.839844 92 267.820312 88.695312 252.167969 86.921875 C 215.929688 83.578125 180.683594 95.382812 146.4375 122.328125 C 101.886719 161.746094 77.980469 198.386719 74.710938 232.238281 C 68.3125 280.472656 75.703125 320.902344 96.890625 353.539062 C 122.097656 386.785156 157.628906 408.226562 203.492188 417.863281 " fill-opacity="1" fill-rule="nonzero"></path></svg>
+              <img src="uploads/Design%20sem%20nome%20(2).png" style="position: absolute; height: 134px; width: 261px; max-width: none; z-index: 1; left: 63px; top: 9px">
+            </div>
+            <div style="display:flex;gap:8px;padding:0 14px 12px;overflow-x:auto">
+              <span style="background:#FFF1E4;color:#3A2E24;font:600 10.5px Inter,sans-serif;padding:6px 11px;border-radius:16px;white-space:nowrap">🐕 Ração</span>
+              <span style="background:#FFF1E4;color:#3A2E24;font:600 10.5px Inter,sans-serif;padding:6px 11px;border-radius:16px;white-space:nowrap">🐦 Aves</span>
+              <span style="background:#FFF1E4;color:#3A2E24;font:600 10.5px Inter,sans-serif;padding:6px 11px;border-radius:16px;white-space:nowrap">🚜 Rural</span>
+            </div>
+            <div style="padding:0 14px;font:700 13px Poppins,sans-serif;color:#221812;margin-bottom:8px">Mais vendidos</div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:0 14px 16px">
+              <div style="display:flex;gap:10px;border:1px solid rgba(42,32,25,.1);border-radius:12px;padding:8px">
+                <image-slot id="m-home-1" src="uploads/pasted-1785783061543-0.png" shape="rounded" radius="8" placeholder="Ração Golden" style="width:52px;height:52px;flex:none"></image-slot>
+                <div style="flex:1"><div style="font:600 11.5px Inter,sans-serif;color:#221812">Ração Golden 15kg</div><div style="font:700 12.5px Poppins,sans-serif;color:#221812;margin-top:2px">R$ 289,90</div></div>
+              </div>
+              <div style="display:flex;gap:10px;border:1px solid rgba(42,32,25,.1);border-radius:12px;padding:8px">
+                <image-slot id="m-home-2" src="uploads/pasted-1785783136452-0.png" shape="rounded" radius="8" placeholder="Sementes Aves" style="width:52px;height:52px;flex:none"></image-slot>
+                <div style="flex:1"><div style="font:600 11.5px Inter,sans-serif;color:#221812">Mistura Sementes Aves 1kg</div><div style="font:700 12.5px Poppins,sans-serif;color:#221812;margin-top:2px">R$ 34,90</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="height:58px;border-top:1px solid rgba(42,32,25,.1);display:flex;align-items:center;justify-content:space-around">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D62B20" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8a7c70" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.6" y2="16.6"></line></svg>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8a7c70" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M1 1h3l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6"></path></svg>
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8a7c70" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:none;width:300px;height:640px;border-radius:38px;background:#221812;padding:12px;box-shadow:0 20px 40px rgba(0,0,0,.25)">
+        <div style="background:#fff;border-radius:28px;height:100%;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:26px;display:flex;align-items:center;justify-content:center;font:600 10px Inter,sans-serif;color:#221812">9:41</div>
+          <div style="flex:1;overflow-y:auto">
+            <image-slot id="m-produto" src="uploads/pasted-1785783061543-0.png" shape="rect" placeholder="Ração Golden 15kg" style="width:100%;height:200px"></image-slot>
+            <div style="padding:14px">
+              <div style="font:600 14px Inter,sans-serif;color:#221812;margin-bottom:6px">Ração Golden Fórmula Adulto 15kg</div>
+              <div style="font:800 20px Poppins,sans-serif;color:#221812;margin-bottom:12px">R$ 289,90</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+                <div style="border:1.5px solid #D62B20;border-radius:9px;padding:8px 10px;font:600 11px Inter,sans-serif;color:#221812">🔁 A cada 30 dias — R$ 260,90</div>
+                <div style="border:1px solid rgba(42,32,25,.15);border-radius:9px;padding:8px 10px;font:500 11px Inter,sans-serif;color:#3A2E24">Compra única — R$ 289,90</div>
+              </div>
+              <div style="font:400 11.5px/1.6 Inter,sans-serif;color:#4A3D33">Fórmula com carne de frango de verdade. Reforça imunidade, pele e pelagem.</div>
+            </div>
+          </div>
+          <div style="padding:12px 14px;border-top:1px solid rgba(42,32,25,.1)"><button style="width:100%;background:#D62B20;color:#fff;border:none;padding:13px;border-radius:10px;font:700 13px Inter,sans-serif">Adicionar ao carrinho</button></div>
+        </div>
+      </div>
+
+      <div style="flex:none;width:300px;height:640px;border-radius:38px;background:#221812;padding:12px;box-shadow:0 20px 40px rgba(0,0,0,.25)">
+        <div style="background:#fff;border-radius:28px;height:100%;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:26px;display:flex;align-items:center;justify-content:center;font:600 10px Inter,sans-serif;color:#221812">9:41</div>
+          <div style="flex:1;overflow-y:auto;padding:14px">
+            <div style="font:700 15px Poppins,sans-serif;color:#221812;margin-bottom:12px">Carrinho</div>
+            <div style="display:flex;gap:10px;border-bottom:1px solid rgba(42,32,25,.1);padding-bottom:12px;margin-bottom:12px">
+              <image-slot id="m-cart-1" src="uploads/pasted-1785783061543-0.png" shape="rounded" radius="8" placeholder="Ração Golden" style="width:48px;height:48px;flex:none"></image-slot>
+              <div style="flex:1"><div style="font:600 11.5px Inter,sans-serif;color:#221812">Ração Golden 15kg</div><span style="font:700 9px Inter,sans-serif;color:#B7492F">🔁 Recorrente</span></div>
+              <div style="font:700 12px Poppins,sans-serif;color:#221812">R$ 260,90</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font:800 15px Poppins,sans-serif;color:#221812;padding-top:8px">Total<span>R$ 260,90</span></div>
+          </div>
+          <div style="padding:12px 14px;border-top:1px solid rgba(42,32,25,.1);display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px"><div style="flex:1;text-align:center;border:1.5px solid #D62B20;border-radius:8px;padding:7px;font:600 10.5px Inter,sans-serif">💳 Cartão</div><div style="flex:1;text-align:center;border:1px solid rgba(42,32,25,.15);border-radius:8px;padding:7px;font:600 10.5px Inter,sans-serif">⚡ Pix</div></div>
+            <button style="width:100%;background:#D62B20;color:#fff;border:none;padding:13px;border-radius:10px;font:700 13px Inter,sans-serif">Finalizar pagamento</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:none;width:300px;height:640px;border-radius:38px;background:#221812;padding:12px;box-shadow:0 20px 40px rgba(0,0,0,.25)">
+        <div style="background:#fff;border-radius:28px;height:100%;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:26px;display:flex;align-items:center;justify-content:center;font:600 10px Inter,sans-serif;color:#221812">9:41</div>
+          <div style="padding:14px 16px;font:700 15px Poppins,sans-serif;color:#221812">Notificações</div>
+          <div style="flex:1;overflow-y:auto;padding:0 14px;display:flex;flex-direction:column;gap:10px">
+            <div style="background:#EAF6EC;border-radius:11px;padding:12px"><div style="font:700 12px Inter,sans-serif;color:#1F6B31;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1F6B31" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>Pagamento confirmado</div><div style="font:400 10.5px Inter,sans-serif;color:#4A3D33;margin-top:3px">Pix aprovado · pedido #3325</div></div>
+            <div style="background:#FFF1E4;border-radius:11px;padding:12px"><div style="font:700 12px Inter,sans-serif;color:#7A4A1F;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7A4A1F" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>Pedido aprovado</div><div style="font:400 10.5px Inter,sans-serif;color:#4A3D33;margin-top:3px">Seu pedido está em separação</div></div>
+            <div style="background:#FBEAE8;border-radius:11px;padding:12px"><div style="font:700 12px Inter,sans-serif;color:#A81F17;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A81F17" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Item sem estoque</div><div style="font:400 10.5px Inter,sans-serif;color:#4A3D33;margin-top:3px">Toque para ver sugestões ou estornar</div></div>
+            <div style="background:#F4F1EC;border-radius:11px;padding:12px"><div style="font:700 12px Inter,sans-serif;color:#221812;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#221812" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>Assinatura renovada</div><div style="font:400 10.5px Inter,sans-serif;color:#4A3D33;margin-top:3px">Próxima entrega em 30 dias</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    mode: 'web',
+    screen: 'home',
+    orderStatus: 'analise',
+    refundRequested: false,
+    notifOpen: false,
+    freq: '30',
+    adminSelectedOrder: 'PED-3325',
+    adminDecision: null,
+    catFilter: 'all',
+    searchQuery: '',
+  };
+
+  btn(active) {
+    return `background:${active ? '#D62B20' : 'transparent'};color:${active ? '#fff' : '#D9CCC0'};border:none;padding:8px 14px;border-radius:7px;font:600 12.5px Inter,sans-serif;white-space:nowrap`;
+  }
+  tab(active) {
+    return `background:${active ? '#FFC72C' : 'transparent'};color:${active ? '#3A2100' : '#D9CCC0'};border:none;padding:8px 12px;border-radius:7px;font:600 12px Inter,sans-serif;white-space:nowrap`;
+  }
+  statusBtn(active) {
+    return `background:${active ? '#221812' : 'transparent'};color:${active ? '#fff' : '#7A6F66'};border:none;padding:8px 12px;border-radius:8px;font:600 11.5px Inter,sans-serif;white-space:nowrap`;
+  }
+  catRow(active) {
+    return `display:flex;gap:8px;align-items:center;padding:7px 8px;border-radius:8px;cursor:pointer;background:${active ? '#FFF1E4' : 'transparent'};color:${active ? '#B7492F' : '#3A2E24'};font-weight:${active ? '700' : '500'}`;
+  }
+
+  productList() {
+    return [
+      { id: 'p1', imgId: 'cat-p1', img: 'uploads/pasted-1785783061543-0.png', name: 'Ração Golden Fórmula Adulto 15kg', category: 'Ração & Alimentação', price: 'R$ 289,90', subscribable: true },
+      { id: 'p2', imgId: 'cat-p2', name: 'Ração Special Dog Puppy 10,1kg', category: 'Ração & Alimentação', price: 'R$ 149,90', subscribable: true },
+      { id: 'p3', imgId: 'cat-p3', img: 'uploads/pasted-1785783136452-0.png', name: 'Mistura de Sementes Alcon Aves 1kg', category: 'Aves & Pássaros', price: 'R$ 34,90', subscribable: false },
+      { id: 'p4', imgId: 'cat-p4', name: 'Areia Higiênica Gato Limpo 4kg', category: 'Acessórios', price: 'R$ 39,90', subscribable: false },
+      { id: 'p5', imgId: 'cat-p5', name: 'Suplemento Vitamínico Aviário Suplex 100ml', category: 'Saúde Animal', price: 'R$ 28,50', subscribable: false },
+      { id: 'p6', imgId: 'cat-p6', img: 'uploads/pasted-1785783167342-0.png', name: 'Sal Mineral Bovino Fósforo 30 · 25kg', category: 'Rural & Fazenda', price: 'R$ 119,90', subscribable: false },
+      { id: 'p7', imgId: 'cat-p7', img: 'uploads/pasted-1785783190822-0.png', name: 'Comedouro Automático Pet Duplo Inox', category: 'Acessórios', price: 'R$ 79,90', subscribable: false },
+      { id: 'p8', imgId: 'cat-p8', name: 'Cerca Elétrica Rural Kit Completo', category: 'Rural & Fazenda', price: 'R$ 349,90', subscribable: false },
+    ];
+  }
+
+  ordersList() {
+    const map = {
+      'Aguardando aprovação': { bg: '#FFF3D6', color: '#8A6100' },
+      'Aprovado': { bg: '#EAF6EC', color: '#1F6B31' },
+      'Em separação': { bg: '#E7F1FB', color: '#2F6FB0' },
+      'Enviado': { bg: '#E3F5F2', color: '#0E8074' },
+      'Recusado': { bg: '#FBEAE8', color: '#A81F17' },
+    };
+    const raw = [
+      { id: 'PED-3325', cliente: 'Maria Silva', itens: 'Ração Golden 15kg + Areia Higiênica 4kg', total: 'R$ 329,80', status: 'Aguardando aprovação', pagamento: 'Pix' },
+      { id: 'PED-3324', cliente: 'João Pereira', itens: 'Sal Mineral Bovino 25kg', total: 'R$ 119,90', status: 'Aguardando aprovação', pagamento: 'Cartão' },
+      { id: 'PED-3321', cliente: 'Ana Costa', itens: 'Suplemento Aviário + Mistura Sementes', total: 'R$ 63,40', status: 'Aprovado', pagamento: 'Pix' },
+      { id: 'PED-3318', cliente: 'Carlos Souza', itens: 'Cerca Elétrica Rural Kit', total: 'R$ 349,90', status: 'Em separação', pagamento: 'Cartão' },
+      { id: 'PED-3311', cliente: 'Fernanda Lima', itens: 'Ração Special Dog Puppy 10,1kg', total: 'R$ 149,90', status: 'Enviado', pagamento: 'Pix' },
+      { id: 'PED-3298', cliente: 'Roberto Alves', itens: 'Comedouro Automático Duplo Inox', total: 'R$ 79,90', status: 'Recusado', pagamento: 'Cartão' },
+    ];
+    return raw.map(o => ({
+      ...o,
+      statusBg: map[o.status].bg,
+      statusColor: map[o.status].color,
+      rowStyle: `display:grid;grid-template-columns:1fr 1.6fr 1fr 1fr 1fr;gap:8px;padding:14px 18px;border-top:1px solid rgba(42,32,25,.08);cursor:pointer;align-items:center;background:${o.id === this.state.adminSelectedOrder ? '#FFF8ED' : '#fff'}`,
+      select: () => this.setState({ adminSelectedOrder: o.id, adminDecision: null }),
+    }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const products = this.productList();
+    const featured = products.filter(p => ['p1', 'p3', 'p6', 'p7'].includes(p.id));
+    const suggestions = products.filter(p => ['p2', 'p4', 'p5'].includes(p.id));
+    const q = s.searchQuery.trim().toLowerCase();
+    const filteredProducts = products.filter(p =>
+      (s.catFilter === 'all' || p.category === s.catFilter) &&
+      (!q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+    );
+    const orders = this.ordersList();
+    const selectedOrder = orders.find(o => o.id === s.adminSelectedOrder) || orders[0];
+
+    return {
+      isWeb: s.mode === 'web', isAdmin: s.mode === 'admin', isMobile: s.mode === 'mobile',
+      goWeb: () => this.setState({ mode: 'web', notifOpen: false }),
+      goMobile: () => this.setState({ mode: 'mobile', notifOpen: false }),
+      goAdmin: () => this.setState({ mode: 'admin', notifOpen: false }),
+      webBtnStyle: this.btn(s.mode === 'web'),
+      mobileBtnStyle: this.btn(s.mode === 'mobile'),
+      adminBtnStyle: this.btn(s.mode === 'admin'),
+
+      goHome: () => this.setState({ screen: 'home', notifOpen: false }),
+      goCatalogo: () => this.setState({ screen: 'catalogo', notifOpen: false }),
+      goProduto: () => this.setState({ screen: 'produto', notifOpen: false }),
+      goCarrinho: () => this.setState({ screen: 'carrinho', notifOpen: false }),
+      goStatus: () => this.setState({ screen: 'status', notifOpen: false }),
+      tabStyleHome: this.tab(s.screen === 'home'),
+      tabStyleCatalogo: this.tab(s.screen === 'catalogo'),
+      tabStyleProduto: this.tab(s.screen === 'produto'),
+      tabStyleCarrinho: this.tab(s.screen === 'carrinho'),
+      tabStyleStatus: this.tab(s.screen === 'status'),
+      isHome: s.screen === 'home', isCatalogo: s.screen === 'catalogo', isProduto: s.screen === 'produto',
+      isCarrinho: s.screen === 'carrinho', isStatus: s.screen === 'status',
+
+      notifOpen: s.notifOpen,
+      toggleNotif: () => this.setState(st => ({ notifOpen: !st.notifOpen })),
+
+      freq: s.freq,
+      isFreqUnica: s.freq === 'unica', isFreq30: s.freq === '30', isFreq60: s.freq === '60',
+      setFreqUnica: () => this.setState({ freq: 'unica' }),
+      setFreq30: () => this.setState({ freq: '30' }),
+      setFreq60: () => this.setState({ freq: '60' }),
+      freqUnicaBorder: s.freq === 'unica' ? '#D62B20' : 'rgba(42,32,25,.15)',
+      freq30Border: s.freq === '30' ? '#D62B20' : 'rgba(42,32,25,.15)',
+      freq60Border: s.freq === '60' ? '#D62B20' : 'rgba(42,32,25,.15)',
+
+      orderStatus: s.orderStatus,
+      isAnalise: s.orderStatus === 'analise', isAprovado: s.orderStatus === 'aprovado', isRecusado: s.orderStatus === 'recusado',
+      setStatusAnalise: () => this.setState({ orderStatus: 'analise', refundRequested: false }),
+      setStatusAprovado: () => this.setState({ orderStatus: 'aprovado', refundRequested: false }),
+      setStatusRecusado: () => this.setState({ orderStatus: 'recusado', refundRequested: false }),
+      statusBtnAnalise: this.statusBtn(s.orderStatus === 'analise'),
+      statusBtnAprovado: this.statusBtn(s.orderStatus === 'aprovado'),
+      statusBtnRecusado: this.statusBtn(s.orderStatus === 'recusado'),
+      refundRequested: s.refundRequested,
+      refundNotRequested: !s.refundRequested,
+      requestRefund: () => this.setState({ refundRequested: true }),
+
+      products, featured, suggestions, orders, selectedOrder, filteredProducts,
+      hasResults: filteredProducts.length > 0,
+      noResults: filteredProducts.length === 0,
+      resultsCount: filteredProducts.length,
+      searchQuery: s.searchQuery,
+      onSearchChange: (e) => this.setState({ searchQuery: e.target.value }),
+      catFilter: s.catFilter,
+      catLabel: s.catFilter === 'all' ? 'todos os produtos' : s.catFilter,
+      rowTodos: this.catRow(s.catFilter === 'all'),
+      rowRacao: this.catRow(s.catFilter === 'Ração & Alimentação'),
+      rowAves: this.catRow(s.catFilter === 'Aves & Pássaros'),
+      rowRural: this.catRow(s.catFilter === 'Rural & Fazenda'),
+      rowSaude: this.catRow(s.catFilter === 'Saúde Animal'),
+      rowAcessorios: this.catRow(s.catFilter === 'Acessórios'),
+      setCatTodos: () => this.setState({ catFilter: 'all', screen: 'catalogo' }),
+      setCatRacao: () => this.setState({ catFilter: 'Ração & Alimentação', screen: 'catalogo' }),
+      setCatAves: () => this.setState({ catFilter: 'Aves & Pássaros', screen: 'catalogo' }),
+      setCatRural: () => this.setState({ catFilter: 'Rural & Fazenda', screen: 'catalogo' }),
+      setCatSaude: () => this.setState({ catFilter: 'Saúde Animal', screen: 'catalogo' }),
+      setCatAcessorios: () => this.setState({ catFilter: 'Acessórios', screen: 'catalogo' }),
+      showDecideButtons: !s.adminDecision,
+      decidedApproved: s.adminDecision === 'aprovado',
+      decidedRejected: s.adminDecision === 'recusado',
+      decideApprove: () => this.setState({ adminDecision: 'aprovado' }),
+      decideReject: () => this.setState({ adminDecision: 'recusado' }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

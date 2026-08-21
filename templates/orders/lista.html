@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Meus pedidos — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section" style="max-width:900px">
+  <h1 style="margin-bottom:var(--s-6)">Meus pedidos</h1>
+
+  {% if pedidos %}
+    <div class="stack" data-stagger>
+      {% for pedido in pedidos %}
+        <a href="{{ pedido.get_absolute_url }}" class="card card--pad card--hover" style="color:inherit">
+          <div class="row row--between" style="flex-wrap:wrap;gap:var(--s-3)">
+            <div>
+              <strong class="display">{{ pedido.numero }}</strong>
+              <p class="xs muted" style="margin:2px 0 0">{{ pedido.criado_em|date:"d/m/Y" }} · {{ pedido.quantidade_itens }} item{{ pedido.quantidade_itens|pluralize:"ns" }}</p>
+            </div>
+            <span class="badge
+              {% if pedido.status == 'aprovado' or pedido.status == 'entregue' %}badge--green
+              {% elif pedido.status == 'recusado' or pedido.status == 'cancelado' %}badge--red
+              {% elif pedido.status == 'enviado' %}badge--teal
+              {% elif pedido.status == 'em_separacao' %}badge--blue
+              {% else %}badge--amber{% endif %}">{{ pedido.get_status_display }}</span>
+          </div>
+
+          <div class="row" style="gap:var(--s-2);margin-top:var(--s-4);flex-wrap:wrap">
+            {% for item in pedido.itens.all|slice:":4" %}
+              <span class="cart-line__media" style="width:52px;height:52px">
+                {% with imagem=item.produto.imagem_principal %}
+                  {% if imagem %}<img src="{{ imagem.imagem.url }}" alt="" loading="lazy">{% endif %}
+                {% endwith %}
+              </span>
+            {% endfor %}
+            <span class="spacer"></span>
+            <span class="display" style="font-size:var(--fs-lg);color:var(--ink)">R$ {{ pedido.total|floatformat:2 }}</span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+
+    {% if pagina.has_other_pages %}
+      <nav class="pager">
+        {% if pagina.has_previous %}<a href="?pagina={{ pagina.previous_page_number }}">←</a>{% endif %}
+        <span class="is-current">{{ pagina.number }}</span>
+        {% if pagina.has_next %}<a href="?pagina={{ pagina.next_page_number }}">→</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="empty card">
+      <div class="empty__icon">📦</div>
+      <p class="empty__title">Você ainda não fez nenhum pedido</p>
+      <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver catálogo</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

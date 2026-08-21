@@ -1,0 +1,10 @@
+Django>=5.0,<6.0
+djangorestframework>=3.15
+django-environ>=0.11
+Pillow>=10.0
+requests>=2.31
+whitenoise>=6.6
+
+# --- producao ---
+gunicorn>=22.0
+psycopg[binary]>=3.1

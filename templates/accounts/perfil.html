@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Meus dados — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section" style="max-width:820px">
+  <h1 style="margin-bottom:var(--s-6)">Meus dados</h1>
+
+  <div class="card card--pad" data-reveal>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      <div class="grid grid--2" style="gap:var(--s-4)">
+        <div class="field"><label>Nome</label>{{ form.first_name }}</div>
+        <div class="field"><label>Sobrenome</label>{{ form.last_name }}</div>
+        <div class="field"><label>Telefone</label>{{ form.telefone }}</div>
+        <div class="field"><label>CPF</label>{{ form.cpf }}</div>
+        <div class="field"><label>Data de nascimento</label>{{ form.data_nascimento }}</div>
+      </div>
+      <label class="switch-row">{{ form.aceita_marketing }} Quero receber ofertas e novidades</label>
+      <button type="submit" class="btn btn--primary" style="align-self:flex-start">Salvar alterações</button>
+    </form>
+  </div>
+
+  <div class="grid grid--2" style="margin-top:var(--s-6)" data-stagger>
+    <div class="card card--pad">
+      <div class="row row--between" style="margin-bottom:var(--s-4)">
+        <h3 style="font-size:var(--fs-base)">Endereços</h3>
+        <a href="{% url 'accounts:enderecos' %}" class="xs strong link-underline">Gerenciar →</a>
+      </div>
+      {% for e in enderecos %}
+        <div class="small" style="padding-block:var(--s-2);border-bottom:1px solid var(--line)">
+          <strong>{{ e.apelido }}</strong>{% if e.padrao %} <span class="badge badge--green">Padrão</span>{% endif %}
+          <div class="xs muted">{{ e.linha_unica }}</div>
+        </div>
+      {% empty %}
+        <p class="small muted" style="margin:0">Nenhum endereço cadastrado.</p>
+      {% endfor %}
+    </div>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Cartões salvos</h3>
+      {% for c in cartoes %}
+        <div class="row row--between small" style="padding-block:var(--s-2);border-bottom:1px solid var(--line)">
+          <span>
+            <svg width="15" height="15" style="vertical-align:-2px"><use href="#i-cartao"></use></svg>
+            {{ c.bandeira }} •••• {{ c.ultimos_digitos }}
+          </span>
+          {% if c.padrao %}<span class="badge badge--green">Padrão</span>{% endif %}
+        </div>
+      {% empty %}
+        <p class="small muted" style="margin:0">Nenhum cartão salvo. Você pode salvar um no checkout.</p>
+      {% endfor %}
+      <p class="xs muted" style="margin-top:var(--s-4)">
+        Os cartões são tokenizados pela Stone. A loja guarda apenas a bandeira e os 4 últimos dígitos.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Assinatura de {{ assinatura.produto.nome }}{% endblock %}
+{% block content %}
+<div class="wrap section" style="max-width:760px">
+  <a href="{% url 'subscriptions:lista' %}" class="small muted link-underline">← Minhas assinaturas</a>
+
+  <h1 style="margin-block:var(--s-4) var(--s-6);font-size:var(--fs-2xl)">{{ assinatura.produto.nome }}</h1>
+
+  <div class="card card--pad" data-reveal>
+    <div class="grid grid--2" style="gap:var(--s-5)">
+      <div>
+        <p class="label">Status</p>
+        <span class="badge {% if assinatura.status == 'ativa' %}badge--green{% else %}badge--amber{% endif %}">
+          {{ assinatura.get_status_display }}
+        </span>
+      </div>
+      <div>
+        <p class="label">Frequência</p>
+        <p class="small" style="margin:0">{{ assinatura.get_frequencia_dias_display }}</p>
+      </div>
+      <div>
+        <p class="label">Próxima entrega</p>
+        <p class="small" style="margin:0">{{ assinatura.proxima_entrega|date:"d/m/Y" }}</p>
+      </div>
+      <div>
+        <p class="label">Valor por ciclo</p>
+        <p class="small strong" style="margin:0">R$ {{ assinatura.total_por_ciclo|floatformat:2 }}</p>
+      </div>
+      <div>
+        <p class="label">Entrega em</p>
+        <p class="small" style="margin:0">{{ assinatura.endereco_entrega.linha_unica|default:"—" }}</p>
+      </div>
+      <div>
+        <p class="label">Forma de pagamento</p>
+        <p class="small" style="margin:0">
+          {% if assinatura.cartao %}{{ assinatura.cartao.bandeira }} •••• {{ assinatura.cartao.ultimos_digitos }}
+          {% else %}<span style="color:var(--red)">Nenhum cartão salvo</span>{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card--pad" style="margin-top:var(--s-6)" data-reveal>
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Histórico de entregas</h3>
+    <div class="table-wrap" style="border:none">
+      <table class="data">
+        <thead>
+          <tr><th>Ciclo</th><th>Data prevista</th><th>Valor</th><th>Status</th><th>Pedido</th></tr>
+        </thead>
+        <tbody>
+          {% for c in ciclos %}
+            <tr>
+              <td class="strong">#{{ c.numero_ciclo }}</td>
+              <td>{{ c.data_prevista|date:"d/m/Y" }}</td>
+              <td>R$ {{ c.valor|floatformat:2 }}</td>
+              <td>
+                <span class="badge
+                  {% if c.status == 'pago' %}badge--green
+                  {% elif c.status == 'falhou' %}badge--red
+                  {% elif c.status == 'agendado' %}badge--amber
+                  {% else %}badge--gray{% endif %}">{{ c.get_status_display }}</span>
+                {% if c.erro %}<div class="xs muted" style="margin-top:4px">{{ c.erro }}</div>{% endif %}
+              </td>
+              <td>{% if c.pedido %}<a href="{{ c.pedido.get_absolute_url }}">{{ c.pedido.numero }}</a>{% else %}—{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="muted center" style="padding:var(--s-8)">Nenhum ciclo processado ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

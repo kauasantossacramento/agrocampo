@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Navegar por espécie — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div class="section-head section-head--center" data-reveal>
+    <h1>Encontre pelo seu animal</h1>
+    <p>Cada espécie tem necessidades próprias — separamos o que cada uma precisa</p>
+    <span class="rule"></span>
+  </div>
+
+  {% for grupo in grupos %}
+    <section class="section section--tight" data-reveal>
+      <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-5)">{{ grupo.nome }}</h2>
+      <div class="grid grid--6" data-stagger style="gap:var(--s-6)">
+        {% for e in grupo.itens %}
+          <a href="{{ e.get_absolute_url }}" class="species-tile"
+             {% if e.credito_imagem %}title="Foto: {{ e.credito_imagem }}"{% endif %}>
+            <span class="species-tile__circle">
+              {% if e.imagem %}<img src="{{ e.imagem.url }}" alt="{{ e.nome }}" loading="lazy">{% else %}{{ e.icone|default:"🐦" }}{% endif %}
+            </span>
+            <span>{{ e.nome }}</span>
+            {% if e.nome_cientifico %}<span class="xs muted" style="font-style:italic">{{ e.nome_cientifico }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% empty %}
+    <div class="empty"><p class="empty__title">Nenhuma espécie cadastrada ainda</p></div>
+  {% endfor %}
+
+  {% if creditos %}
+    <details class="card card--pad" style="margin-top:var(--s-8)">
+      <summary class="small strong" style="cursor:pointer">Créditos das fotografias</summary>
+      <p class="xs muted" style="margin:var(--s-3) 0 0;line-height:1.7">
+        Fotos do Wikimedia Commons sob licença livre. Autores e licenças:
+      </p>
+      <ul class="xs muted" style="margin:var(--s-2) 0 0;padding-left:18px;line-height:1.7">
+        {% for c in creditos %}<li><strong>{{ c.nome }}</strong> — {{ c.credito_imagem }}</li>{% endfor %}
+      </ul>
+    </details>
+  {% endif %}
+</div>
+{% endblock %}

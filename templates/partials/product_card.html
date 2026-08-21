@@ -1,0 +1,62 @@
+{# Card de produto reutilizado em toda a vitrine. Espera `produto`. #}
+<article class="product">
+  <div class="product__flags">
+    {% if produto.promocao_vigente %}<span class="badge badge--sale">−{{ produto.percentual_desconto }}%</span>{% endif %}
+    {% if produto.permite_assinatura %}<span class="badge badge--sub">ASSINATURA −{{ produto.desconto_assinatura }}%</span>{% endif %}
+    {% if produto.lancamento %}<span class="badge badge--new">NOVO</span>{% endif %}
+    {% if not produto.em_estoque %}<span class="badge badge--gray">ESGOTADO</span>{% endif %}
+  </div>
+
+  {% if user.is_authenticated %}
+    <form method="post" action="{% url 'catalog:desejo' produto.slug %}">{% csrf_token %}
+      <button type="submit" class="product__wish" aria-label="Salvar na lista de desejos">
+        <svg width="16" height="16"><use href="#i-coracao"></use></svg>
+      </button>
+    </form>
+  {% endif %}
+
+  <a href="{{ produto.get_absolute_url }}" class="product__media" aria-label="{{ produto.nome }}">
+    {% with imagem=produto.imagem_principal %}
+      {% if imagem %}
+        <img src="{{ imagem.imagem.url }}" alt="{{ produto.nome }}" loading="lazy">
+      {% else %}
+        <span class="product__placeholder">{{ produto.categoria.icone|default:"🐾" }}</span>
+      {% endif %}
+    {% endwith %}
+  </a>
+
+  <div class="product__body">
+    <span class="product__cat">{{ produto.categoria.nome }}</span>
+    <a href="{{ produto.get_absolute_url }}" class="product__name" style="color:var(--ink)">{{ produto.nome }}</a>
+
+    {% if produto.total_avaliacoes %}
+      <div class="product__rating">
+        <span class="product__stars">{% for _ in "12345"|make_list %}★{% endfor %}</span>
+        <span>({{ produto.total_avaliacoes }})</span>
+      </div>
+    {% endif %}
+
+    <div class="product__price">
+      {% if produto.promocao_vigente %}
+        <div class="product__price-old">R$ {{ produto.preco|floatformat:2 }}</div>
+      {% endif %}
+      <div class="product__price-now">R$ {{ produto.preco_atual|floatformat:2 }}</div>
+      {% if produto.permite_assinatura %}
+        <div class="product__price-sub">R$ {{ produto.preco_assinatura|floatformat:2 }} na assinatura</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="product__actions">
+    {% if produto.em_estoque %}
+      <form method="post" action="{% url 'cart:adicionar' produto.slug %}" data-cart-form>{% csrf_token %}
+        <input type="hidden" name="quantidade" value="1">
+        <button type="submit" class="btn btn--primary btn--sm btn--block">
+          <svg width="15" height="15"><use href="#i-carrinho"></use></svg>Adicionar
+        </button>
+      </form>
+    {% else %}
+      <a href="{{ produto.get_absolute_url }}" class="btn btn--ghost btn--sm btn--block">Ver similares</a>
+    {% endif %}
+  </div>
+</article>

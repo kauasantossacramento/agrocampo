@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block header %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block title %}{% block painel_title %}Painel{% endblock %} — {{ site.nome_loja }}{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <aside class="panel__aside">
+    <a href="{% url 'core:home' %}">
+      {% if site.logo_claro %}
+        <img src="{{ site.logo_claro.url }}" alt="{{ site.nome_loja }}" class="panel__logo">
+      {% else %}
+        <img src="{% static 'img/logo-agrocampo.png' %}" alt="{{ site.nome_loja }}" class="panel__logo">
+      {% endif %}
+    </a>
+
+    <a href="{% url 'dashboard:painel' %}" class="panel__link {% if secao == 'painel' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-pacote"></use></svg>Pedidos
+    </a>
+    <a href="{% url 'dashboard:metricas' %}" class="panel__link {% if secao == 'metricas' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-grafico"></use></svg>Métricas
+    </a>
+    <a href="{% url 'dashboard:produtos' %}" class="panel__link {% if secao == 'produtos' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-folha"></use></svg>Produtos
+    </a>
+    <a href="{% url 'dashboard:estoque' %}" class="panel__link {% if secao == 'estoque' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-estoque"></use></svg>Estoque
+      {% if metricas.estoque_critico %}
+        <span class="badge badge--red" style="margin-left:auto">{{ metricas.estoque_critico }}</span>
+      {% endif %}
+    </a>
+    <a href="{% url 'dashboard:assinaturas' %}" class="panel__link {% if secao == 'assinaturas' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-refresh"></use></svg>Assinaturas
+    </a>
+    <a href="{% url 'dashboard:configuracoes' %}" class="panel__link {% if secao == 'config' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-config"></use></svg>Configurações
+    </a>
+
+    <span class="spacer" style="flex:1"></span>
+    <a href="{% url 'core:home' %}" class="panel__link">
+      <svg width="16" height="16"><use href="#i-seta-esq"></use></svg>Voltar à loja
+    </a>
+  </aside>
+
+  <div class="panel__main">
+    <div class="row row--between" style="margin-bottom:var(--s-6);flex-wrap:wrap;gap:var(--s-3)">
+      <h1 style="font-size:var(--fs-xl)">{% block painel_heading %}Pedidos{% endblock %}</h1>
+
+      <div class="dropdown" data-dropdown>
+        <button class="btn btn--ghost btn--sm" data-dropdown-trigger>
+          <svg width="15" height="15"><use href="#i-sino"></use></svg>
+          Notificações
+          {% if notificacoes_nao_lidas %}
+            <span class="badge badge--sale">{{ notificacoes_nao_lidas }}</span>
+          {% endif %}
+        </button>
+        <div class="dropdown__panel" data-dropdown-panel>
+          {% for n in notificacoes %}
+            <a href="{{ n.link|default:'#' }}" class="notif__item {% if not n.lida %}is-unread{% endif %}">
+              <svg width="15" height="15" style="flex:none;margin-top:3px;color:{% if n.nivel == 'sucesso' %}var(--green){% elif n.nivel == 'erro' %}var(--red){% elif n.nivel == 'alerta' %}var(--amber){% else %}var(--blue){% endif %}">
+                <use href="#i-{{ n.icone }}"></use>
+              </svg>
+              <span>
+                <span class="notif__title">{{ n.titulo }}</span>
+                <span class="notif__meta">{{ n.mensagem }}</span>
+              </span>
+            </a>
+          {% empty %}
+            <p class="small muted center" style="padding:var(--s-6)">Nada novo por aqui.</p>
+          {% endfor %}
+          {% if notificacoes_nao_lidas %}
+            <form method="post" action="{% url 'dashboard:notificacoes_lidas' %}" style="padding:var(--s-2)">
+              {% csrf_token %}
+              <button type="submit" class="btn btn--ghost btn--sm btn--block">Marcar todas como lidas</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% block painel_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

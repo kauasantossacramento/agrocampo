@@ -1,0 +1,22 @@
+{
+  "name": "Veterinária AgroCampo",
+  "short_name": "AgroCampo",
+  "description": "Ração, saúde animal e insumos rurais com entrega e assinatura recorrente.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF8F0",
+  "theme_color": "#D62B20",
+  "lang": "pt-BR",
+  "categories": ["shopping", "food"],
+  "icons": [
+    { "src": "/static/img/logo-agrocampo-compacto.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/img/logo-agrocampo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Catálogo", "url": "/catalogo/" },
+    { "name": "Meus pedidos", "url": "/pedidos/" },
+    { "name": "Assinaturas", "url": "/assinaturas/" }
+  ]
+}

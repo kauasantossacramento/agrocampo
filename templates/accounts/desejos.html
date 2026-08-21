@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Lista de desejos — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <h1 style="margin-bottom:var(--s-6)">Lista de desejos</h1>
+  {% if itens %}
+    <div class="grid grid--4" data-stagger>
+      {% for item in itens %}
+        {% with produto=item.produto %}{% include 'partials/product_card.html' %}{% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty card">
+      <div class="empty__icon">♡</div>
+      <p class="empty__title">Sua lista está vazia</p>
+      <p class="small">Toque no coração de um produto para guardá-lo aqui.</p>
+      <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Explorar catálogo</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

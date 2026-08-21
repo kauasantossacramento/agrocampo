@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Marcas — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div class="section-head section-head--center" data-reveal>
+    <h1>Marcas que trabalhamos</h1>
+    <p>Selecionamos as melhores marcas do mercado para o seu pet e para sua fazenda</p>
+    <span class="rule"></span>
+  </div>
+  <div class="grid grid--5" data-stagger>
+    {% for m in marcas %}
+      <a href="{{ m.get_absolute_url }}" class="card card--hover" style="padding:var(--s-6);display:grid;place-items:center;min-height:130px;color:inherit;text-align:center">
+        {% if m.logo %}
+          <img src="{{ m.logo.url }}" alt="{{ m.nome }}" style="max-height:56px;width:auto;object-fit:contain" loading="lazy">
+        {% else %}
+          <span class="brand-chip__text">{{ m.nome }}</span>
+        {% endif %}
+      </a>
+    {% empty %}
+      <div class="empty" style="grid-column:1/-1"><p class="empty__title">Nenhuma marca cadastrada ainda</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

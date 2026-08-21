@@ -1,0 +1,68 @@
+{% load static %}
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer__grid">
+      <div>
+        {% if site.logo_claro %}
+          <img src="{{ site.logo_claro.url }}" alt="{{ site.nome_loja }}" class="footer__logo">
+        {% else %}
+          <img src="{% static 'img/logo-agrocampo.png' %}" alt="{{ site.nome_loja }}" class="footer__logo">
+        {% endif %}
+        <p class="footer__desc">{{ site.texto_rodape }}</p>
+        <div class="footer__social">
+          {% if site.whatsapp_url %}<a href="{{ site.whatsapp_url }}" aria-label="WhatsApp"><svg width="18" height="18"><use href="#i-whatsapp"></use></svg></a>{% endif %}
+          {% if site.instagram %}<a href="{{ site.instagram }}" aria-label="Instagram"><svg width="18" height="18"><use href="#i-instagram"></use></svg></a>{% endif %}
+          {% if site.facebook %}<a href="{{ site.facebook }}" aria-label="Facebook"><svg width="18" height="18"><use href="#i-facebook"></use></svg></a>{% endif %}
+        </div>
+      </div>
+
+      <div>
+        <h4>Categorias</h4>
+        <div class="stack" style="gap:0">
+          {% for categoria in menu_categorias %}
+            <a href="{{ categoria.get_absolute_url }}">{{ categoria.nome }}</a>
+          {% endfor %}
+          <a href="{% url 'catalog:especies' %}">Navegar por espécie</a>
+          <a href="{% url 'catalog:marcas' %}">Todas as marcas</a>
+        </div>
+      </div>
+
+      <div>
+        <h4>Institucional</h4>
+        <div class="stack" style="gap:0">
+          {% for p in paginas_rodape %}
+            <a href="{{ p.get_absolute_url }}">{{ p.nome }}</a>
+          {% endfor %}
+          <a href="{% url 'blog:lista' %}">Blog</a>
+        </div>
+      </div>
+
+      <div>
+        <h4>Minha conta</h4>
+        <div class="stack" style="gap:0">
+          <a href="{% url 'orders:lista' %}">Meus pedidos</a>
+          <a href="{% url 'subscriptions:lista' %}">Minhas assinaturas</a>
+          <a href="{% url 'cart:detalhe' %}">Carrinho</a>
+          <a href="{% url 'accounts:desejos' %}">Lista de desejos</a>
+        </div>
+
+        <h4 style="margin-top:var(--s-6)">Formas de pagamento</h4>
+        <div class="footer__pay">
+          <span>PIX</span><span>VISA</span><span>MASTER</span><span>ELO</span><span>HIPER</span><span>AMEX</span>
+        </div>
+        <p class="xs" style="color:var(--muted-2);margin-top:var(--s-3)">
+          Pagamento processado com segurança pela <strong style="color:#fff">Stone</strong>.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <span>
+        © {% now "Y" %} {{ site.nome_loja }}{% if site.cnpj %} · CNPJ {{ site.cnpj }}{% endif %}
+        {% if site.endereco_completo %} · {{ site.endereco_completo }}{% endif %}
+        {% if site.telefone %} · {{ site.telefone }}{% endif %}
+      </span>
+      <span>{{ site.anos_de_mercado }} anos cuidando de quem cuida do campo.</span>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,132 @@
+/* ============================================================================
+   AgroCampo — Responsivo
+   Carregado por último: concentra em um só lugar tudo que muda por largura,
+   para não caçar media query espalhada por três arquivos.
+
+   Breakpoints: 1180 (menu compacto) · 980 (painel/menu mobile) ·
+                860 (2 colunas) · 620 (1 coluna) · 420 (ajuste fino)
+   ========================================================================== */
+
+/* Rede de segurança: nenhum filho deve criar rolagem horizontal no documento.
+   `clip` em vez de `hidden` porque `hidden` quebraria o position:sticky
+   do cabeçalho e das colunas de resumo. */
+html { overflow-x: clip; }
+body { overflow-x: clip; max-width: 100%; }
+
+/* Mídia e conteúdo largo nunca estouram o container.
+   Sem `height: auto` de propósito: ele sobrescreveria a altura fixa das
+   miniaturas (carrinho, painel, pedidos) e estouraria as linhas da tabela. */
+img, svg, video, canvas { max-width: 100%; }
+pre, code { overflow-x: auto; max-width: 100%; }
+
+/* Itens de flex/grid podem encolher abaixo do conteúdo (o padrão `auto`
+   é a causa mais comum de overflow horizontal) */
+.row > *, .grid > *, .stack > * { min-width: 0; }
+
+/* Filtros do catálogo: acordeão só no mobile (regras em ≤860px). */
+.filters__toggle { display: none; }
+.filters .accordion__panel { max-height: none; overflow: visible; }
+
+/* ======================================================== ≤ 1180px */
+@media (max-width: 1180px) {
+  .catalog { grid-template-columns: 210px 1fr; gap: var(--s-6); }
+}
+
+/* ========================================================= ≤ 980px */
+@media (max-width: 980px) {
+  :root { --header-h: 64px; }
+
+  /* a topbar vira só a mensagem principal — os links já estão no rodapé
+     e no menu, e eram o que empurrava o documento para fora da tela */
+  .topbar__pills { display: none; }
+  .topbar .wrap { justify-content: center; }
+  .topbar__highlight { text-align: center; }
+
+  .header__main { gap: var(--s-3); }
+  .logo img { height: 38px; }
+
+  /* grades de painel declaradas inline no template caem para uma coluna */
+  .panel__main .grid[style] { grid-template-columns: 1fr !important; }
+}
+
+/* ========================================================= ≤ 860px */
+@media (max-width: 860px) {
+  .catalog { grid-template-columns: 1fr; }
+
+  /* filtros recolhidos por padrão: o primeiro produto fica logo abaixo */
+  .filters { position: static; }
+  .filters__toggle { display: inline-flex; }
+  .filters .accordion__panel { max-height: 0; overflow: hidden; }
+  .filters.is-open .accordion__panel {
+    max-height: 1600px;
+    overflow: visible;
+    margin-top: var(--s-4);
+    padding: var(--s-5);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+  }
+
+  .hero__cta .btn { flex: 1 1 auto; justify-content: center; }
+  .section-head { align-items: flex-start; }
+}
+
+/* ========================================================= ≤ 620px */
+@media (max-width: 620px) {
+  :root { --fs-4xl: 1.875rem; --fs-3xl: 1.625rem; --fs-2xl: 1.375rem; }
+
+  .wrap { padding-inline: var(--s-4); }
+
+  .trust__grid { grid-template-columns: 1fr; gap: var(--s-4); }
+  .grid--6, .grid--5, .grid--4, .grid--3 { grid-template-columns: repeat(2, 1fr); }
+
+  /* linha de carrinho/pedido empilha em vez de espremer */
+  .cart-line { flex-wrap: wrap; }
+  .cart-line__media { width: 68px; height: 68px; }
+  .cart-line > div:last-child { width: 100%; text-align: left; }
+
+  /* tabelas de dados rolam dentro do próprio container */
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+  table.data { min-width: 560px; }
+
+  .newsletter { padding: var(--s-6); }
+  .flash__inner { padding: var(--s-6); }
+  .countdown { flex-wrap: wrap; }
+
+  .toast-stack { left: var(--s-4); right: var(--s-4); bottom: var(--s-4); max-width: none; }
+
+  .gallery__thumbs { grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+
+  .pager a, .pager span { min-width: 36px; height: 36px; }
+}
+
+/* ========================================================= ≤ 420px
+   Vitrine continua em 2 colunas — é o padrão de e-commerce mobile e evita
+   uma home quilométrica. Só os pares de conteúdo (.grid--2) empilham. */
+@media (max-width: 420px) {
+  .grid--2 { grid-template-columns: 1fr; }
+  .grid--6, .grid--5, .grid--4, .grid--3 { gap: var(--s-3); }
+
+  .hero__cta { flex-direction: column; }
+  .hero__cta .btn { width: 100%; }
+
+  .product__body { padding: var(--s-3); }
+  .product__actions { padding: 0 var(--s-3) var(--s-3); }
+  .product__name { font-size: var(--fs-xs); }
+  .product__price-now { font-size: var(--fs-base); }
+  .cat-tile { padding: var(--s-4) var(--s-2); font-size: var(--fs-xs); }
+  .species-tile__circle { width: 68px; height: 68px; }
+
+  .btn--lg { padding: .85rem 1.25rem; font-size: var(--fs-base); }
+}
+
+/* ========================================================= ≤ 340px
+   Aparelhos muito estreitos: aí sim vale empilhar tudo. */
+@media (max-width: 340px) {
+  .grid--6, .grid--5, .grid--4, .grid--3 { grid-template-columns: 1fr; }
+}
+
+/* ============================================== telas largas de verdade */
+@media (min-width: 1500px) {
+  :root { --wrap: 1340px; }
+}

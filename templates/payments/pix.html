@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Pague com Pix — pedido {{ pedido.numero }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div class="pix-box card card--pad" data-reveal="scale" data-pix-status="{% url 'payments:status' pagamento.id %}">
+    <span class="badge badge--green">
+      <svg width="12" height="12"><use href="#i-raio"></use></svg>Pix
+    </span>
+    <h1 style="font-size:var(--fs-xl);margin-block:var(--s-3) var(--s-2)">Escaneie para pagar</h1>
+    <p class="small muted" style="margin:0">
+      Pedido {{ pedido.numero }} ·
+      <strong style="color:var(--ink)">R$ {{ pagamento.valor|floatformat:2 }}</strong>
+    </p>
+
+    <div class="pix-qr">
+      {% if pagamento.pix_qrcode_imagem %}
+        <img src="{{ pagamento.pix_qrcode_imagem }}" alt="QR Code do Pix">
+      {% else %}
+        <div class="center">
+          <svg width="46" height="46" style="color:var(--muted-2)"><use href="#i-raio"></use></svg>
+          <p class="xs muted" style="margin-top:var(--s-3)">Use o código copia-e-cola abaixo<br>no app do seu banco</p>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if pagamento.pix_qrcode %}
+      <p class="label" style="text-align:left">Código copia-e-cola</p>
+      <div class="pix-code">
+        <span id="brcode">{{ pagamento.pix_qrcode }}</span>
+      </div>
+      <button type="button" class="btn btn--dark btn--block" data-copy="#brcode" style="margin-top:var(--s-3)">
+        <svg width="15" height="15"><use href="#i-copiar"></use></svg>Copiar código Pix
+      </button>
+    {% endif %}
+
+    <div class="alert alert--info" style="margin-top:var(--s-5);text-align:left">
+      <svg width="16" height="16"><use href="#i-relogio"></use></svg>
+      <span>
+        Status: <strong data-pix-label>{{ pagamento.get_status_display }}</strong><br>
+        {% if pagamento.pix_expira_em %}Este código expira em {{ pagamento.pix_expira_em|timeuntil }}.{% endif %}
+        Assim que a Stone confirmar, esta página avança sozinha.
+      </span>
+    </div>
+
+    {% if pagamento.provedor.driver == 'simulado' %}
+      <form method="post" action="{% url 'payments:simular_pix' pagamento.id %}" style="margin-top:var(--s-4)">
+        {% csrf_token %}
+        <button type="submit" class="btn btn--ghost btn--block btn--sm">
+          Simular confirmação do Pix (ambiente de desenvolvimento)
+        </button>
+      </form>
+    {% endif %}
+
+    <a href="{{ pedido.get_absolute_url }}" class="small muted link-underline" style="display:inline-block;margin-top:var(--s-5)">
+      Ver o pedido
+    </a>
+  </div>
+</div>
+{% endblock %}
