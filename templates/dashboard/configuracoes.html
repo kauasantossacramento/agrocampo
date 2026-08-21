@@ -1,93 +1,508 @@
 {% extends 'dashboard/base_painel.html' %}
+{% load static %}
 
 {% block painel_title %}Configurações{% endblock %}
 {% block painel_heading %}Configurações{% endblock %}
 
 {% block painel_content %}
-<div class="grid" style="grid-template-columns:1.4fr 1fr;gap:var(--s-5);align-items:start">
 
-  {# =============================================== STATUS DA INTEGRAÇÃO #}
-  <div class="card card--pad" data-reveal="left">
-    <div class="row row--between" style="margin-bottom:var(--s-4)">
-      <h2 style="font-size:var(--fs-lg)">Gateway de pagamento</h2>
-      <a href="/admin/payments/provedorpagamento/{{ provedor.id }}/change/" class="btn btn--primary btn--sm">
-        Editar credenciais
-      </a>
+<nav class="abas" aria-label="Seções">
+  <button type="button" class="aba" data-aba="aparencia">
+    <svg width="15" height="15"><use href="#i-imagem"></use></svg>Aparência
+  </button>
+  <button type="button" class="aba" data-aba="pagamentos">
+    <svg width="15" height="15"><use href="#i-cartao"></use></svg>Pagamentos
+  </button>
+  <button type="button" class="aba" data-aba="regras">
+    <svg width="15" height="15"><use href="#i-escudo"></use></svg>Regras da loja
+  </button>
+  <button type="button" class="aba" data-aba="contato">
+    <svg width="15" height="15"><use href="#i-whatsapp"></use></svg>Contato
+  </button>
+  <button type="button" class="aba" data-aba="firebase">
+    <svg width="15" height="15"><use href="#i-sino"></use></svg>Notificações
+  </button>
+  <button type="button" class="aba" data-aba="avancado">
+    <svg width="15" height="15"><use href="#i-config"></use></svg>Avançado
+  </button>
+</nav>
+
+{# ══════════════════════════════════════════════════════ APARÊNCIA #}
+<section data-painel-aba="aparencia" hidden>
+  <div class="grid" style="grid-template-columns:1.35fr 1fr;gap:var(--s-6);align-items:start">
+    <form method="post" enctype="multipart/form-data"
+          action="{% url 'dashboard:salvar_config' 'aparencia' %}" class="card card--pad">
+      {% csrf_token %}
+      <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Aparência da loja</h2>
+      <p class="small muted" style="margin-bottom:var(--s-5)">
+        Nome, textos da capa e imagens. A prévia ao lado atualiza enquanto você digita.
+      </p>
+
+      <div class="field">
+        <label for="{{ form_aparencia.nome_loja.id_for_label }}">Nome da loja</label>
+        {{ form_aparencia.nome_loja }}
+      </div>
+      <div class="field" style="margin-top:var(--s-4)">
+        <label for="{{ form_aparencia.chamada.id_for_label }}">Frase principal do banner</label>
+        {{ form_aparencia.chamada }}
+      </div>
+      <div class="field" style="margin-top:var(--s-4)">
+        <label for="{{ form_aparencia.descricao.id_for_label }}">Descrição</label>
+        {{ form_aparencia.descricao }}
+      </div>
+
+      <hr class="divider">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Imagens</h3>
+      <div class="grid grid--2" style="gap:var(--s-4)">
+        <div class="field">
+          <label for="{{ form_aparencia.logo.id_for_label }}">Logo</label>
+          {{ form_aparencia.logo }}
+        </div>
+        <div class="field">
+          <label for="{{ form_aparencia.logo_claro.id_for_label }}">Logo para fundo escuro</label>
+          {{ form_aparencia.logo_claro }}
+        </div>
+        <div class="field">
+          <label for="{{ form_aparencia.favicon.id_for_label }}">Ícone do navegador</label>
+          {{ form_aparencia.favicon }}
+        </div>
+        <div class="field">
+          <label for="{{ form_aparencia.imagem_capa.id_for_label }}">Imagem de capa</label>
+          {{ form_aparencia.imagem_capa }}
+          <span class="help">PNG com fundo transparente fica melhor.</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Faixa do topo</h3>
+      <div class="grid" style="grid-template-columns:90px 1fr;gap:var(--s-3)">
+        <div class="field">
+          <label for="{{ form_aparencia.topbar_icone.id_for_label }}">Emoji</label>
+          {{ form_aparencia.topbar_icone }}
+        </div>
+        <div class="field">
+          <label for="{{ form_aparencia.topbar_mensagem.id_for_label }}">Mensagem</label>
+          {{ form_aparencia.topbar_mensagem }}
+          <span class="help">Vazio esconde a faixa.</span>
+        </div>
+      </div>
+      <div class="grid grid--2" style="gap:var(--s-4);margin-top:var(--s-4)">
+        <div class="field">
+          <label for="{{ form_aparencia.topbar_link_texto.id_for_label }}">Texto do link</label>
+          {{ form_aparencia.topbar_link_texto }}
+        </div>
+        <div class="field">
+          <label for="{{ form_aparencia.topbar_link_url.id_for_label }}">Endereço do link</label>
+          {{ form_aparencia.topbar_link_url }}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn--primary" style="margin-top:var(--s-6)">
+        <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar aparência
+      </button>
+    </form>
+
+    {# ─────────────────────────────────────── prévia ao vivo #}
+    <div class="previa" data-previa>
+      <div class="previa__rotulo">
+        <svg width="12" height="12" style="vertical-align:-2px"><use href="#i-olho"></use></svg>
+        Prévia
+      </div>
+      <div class="previa__topbar">
+        <span data-previa-topbar-icone></span> <span data-previa-topbar></span>
+      </div>
+      <div class="previa__header">
+        {% if config.logo %}
+          <img src="{{ config.logo.url }}" alt="" data-previa-logo>
+        {% else %}
+          <img src="{% static 'img/logo-agrocampo.png' %}" alt="" data-previa-logo>
+        {% endif %}
+        <span class="xs muted" data-previa-nome></span>
+      </div>
+      <div class="previa__hero">
+        <h3 data-previa-chamada></h3>
+        <p data-previa-descricao></p>
+        {% if config.imagem_capa %}
+          <img src="{{ config.imagem_capa.url }}" alt="" class="previa__figura" data-previa-figura>
+        {% else %}
+          <img src="{% static 'img/hero-figura.png' %}" alt="" class="previa__figura" data-previa-figura>
+        {% endif %}
+      </div>
+      <p class="xs muted" style="padding:var(--s-3) var(--s-4);margin:0">
+        Aproximação do resultado. Salve para ver na loja.
+      </p>
+    </div>
+  </div>
+</section>
+
+{# ═════════════════════════════════════════════════════ PAGAMENTOS #}
+<section data-painel-aba="pagamentos" hidden>
+  <div class="alert {% if provedor.credenciais_completas %}alert--success{% else %}alert--warning{% endif %}"
+       style="margin-bottom:var(--s-5)">
+    <svg width="17" height="17"><use href="#i-{% if provedor.credenciais_completas %}check{% else %}alerta{% endif %}"></use></svg>
+    <span>
+      {% if provedor.driver == 'simulado' %}
+        <strong>Modo simulado.</strong> A loja processa pagamentos de forma fictícia —
+        pedido, aprovação e estorno funcionam, mas nenhum dinheiro é movimentado.
+        Preencha a API Key e o Merchant ID e troque o driver para <em>Stone</em>.
+      {% elif provedor.credenciais_completas %}
+        <strong>Conectado à Stone</strong> · ambiente {{ provedor.get_ambiente_display }}.
+      {% else %}
+        <strong>Credenciais pendentes.</strong> Faltam API Key e/ou Merchant ID —
+        até lá a loja opera em modo simulado, para o checkout não quebrar.
+      {% endif %}
+    </span>
+  </div>
+
+  <form method="post" action="{% url 'dashboard:salvar_provedor' provedor.id %}">
+    {% csrf_token %}
+    {% if form_provedor.non_field_errors %}
+      <div class="alert alert--error" style="margin-bottom:var(--s-4)">
+        <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+        <span>{{ form_provedor.non_field_errors|join:" " }}</span>
+      </div>
+    {% endif %}
+
+    <div class="grid grid--2" style="gap:var(--s-5);align-items:start">
+      <div class="card card--pad">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Conexão</h3>
+        <div class="grid grid--2" style="gap:var(--s-4)">
+          <div class="field"><label>Nome</label>{{ form_provedor.nome }}</div>
+          <div class="field"><label>Driver</label>{{ form_provedor.driver }}</div>
+          <div class="field"><label>Ambiente</label>{{ form_provedor.ambiente }}</div>
+          <label class="switch-row" style="align-self:end">{{ form_provedor.ativo }} Ativo</label>
+        </div>
+
+        <hr class="divider">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Credenciais Stone</h3>
+        <p class="xs muted" style="margin-bottom:var(--s-4)">
+          Console da Stone. Os campos de segredo ficam mascarados na tela.
+        </p>
+        <div class="stack" style="gap:var(--s-4)">
+          <div class="field">
+            <label>API Key <span style="color:var(--red)">*</span></label>
+            {{ form_provedor.stone_api_key }}
+            {% if form_provedor.stone_api_key.errors %}<span class="error-text">{{ form_provedor.stone_api_key.errors|join:" " }}</span>{% endif %}
+          </div>
+          <div class="field">
+            <label>Merchant ID <span style="color:var(--red)">*</span></label>
+            {{ form_provedor.stone_merchant_id }}
+          </div>
+          <div class="grid grid--2" style="gap:var(--s-4)">
+            <div class="field"><label>Client ID</label>{{ form_provedor.stone_client_id }}</div>
+            <div class="field"><label>Client Secret</label>{{ form_provedor.stone_client_secret }}</div>
+          </div>
+          <div class="grid grid--2" style="gap:var(--s-4)">
+            <div class="field"><label>Código de afiliação</label>{{ form_provedor.stone_affiliation_code }}</div>
+            <div class="field"><label>Segredo do webhook</label>{{ form_provedor.stone_webhook_secret }}</div>
+          </div>
+          <div class="field">
+            <label>Chave Pix do recebedor</label>
+            {{ form_provedor.stone_pix_chave }}
+          </div>
+        </div>
+
+        <details style="margin-top:var(--s-5)">
+          <summary class="small strong" style="cursor:pointer">URLs da API</summary>
+          <div class="grid grid--2" style="gap:var(--s-4);margin-top:var(--s-3)">
+            <div class="field"><label>Sandbox</label>{{ form_provedor.stone_base_url_sandbox }}</div>
+            <div class="field"><label>Produção</label>{{ form_provedor.stone_base_url_producao }}</div>
+          </div>
+        </details>
+      </div>
+
+      <div class="stack">
+        <div class="card card--pad">
+          <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Métodos aceitos</h3>
+          <div class="stack" style="gap:var(--s-3)">
+            <label class="switch-row">{{ form_provedor.aceita_cartao }} Cartão de crédito</label>
+            <label class="switch-row">{{ form_provedor.aceita_pix }} Pix</label>
+            <label class="switch-row">{{ form_provedor.aceita_boleto }} Boleto</label>
+          </div>
+          <p class="xs muted" style="margin-top:var(--s-3)">
+            Pelo menos um precisa ficar ativo, senão ninguém fecha pedido.
+          </p>
+        </div>
+
+        <div class="card card--pad">
+          <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Parcelamento</h3>
+          <div class="stack" style="gap:var(--s-4)">
+            <div class="field">
+              <label>Máximo de parcelas</label>
+              {{ form_provedor.parcelas_maximas }}
+            </div>
+            <div class="field">
+              <label>Sem juros até</label>
+              {{ form_provedor.parcelas_sem_juros }}
+              {% if form_provedor.parcelas_sem_juros.errors %}<span class="error-text">{{ form_provedor.parcelas_sem_juros.errors|join:" " }}</span>{% endif %}
+            </div>
+            <div class="field">
+              <label>Valor mínimo da parcela (R$)</label>
+              {{ form_provedor.valor_minimo_parcela }}
+              <span class="help">Abaixo disso a loja não oferece mais parcelas.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card--pad">
+          <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Comportamento</h3>
+          <div class="stack" style="gap:var(--s-4)">
+            <label class="switch-row">
+              {{ form_provedor.captura_automatica }} Capturar automaticamente
+            </label>
+            <div class="field">
+              <label>Texto na fatura do cartão</label>
+              {{ form_provedor.soft_descriptor }}
+              <span class="help">Máximo 22 caracteres.</span>
+            </div>
+            <div class="grid grid--2" style="gap:var(--s-3)">
+              <div class="field"><label>Pix expira (min)</label>{{ form_provedor.pix_expira_em_minutos }}</div>
+              <div class="field"><label>Timeout (seg)</label>{{ form_provedor.timeout_segundos }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="alert {% if provedor.credenciais_completas %}alert--success{% else %}alert--warning{% endif %}">
-      <svg width="17" height="17"><use href="#i-{% if provedor.credenciais_completas %}check{% else %}alerta{% endif %}"></use></svg>
-      <span>
-        {% if provedor.driver == 'simulado' %}
-          <strong>Modo simulado ativo.</strong> A loja processa pagamentos de forma fictícia — todo o
-          fluxo de pedido, aprovação e estorno funciona, mas nenhum dinheiro é movimentado.
-          Cadastre a API Key e o Merchant ID da Stone e troque o driver para <em>Stone</em> para
-          entrar em produção.
-        {% elif provedor.credenciais_completas %}
-          <strong>Conectado à Stone.</strong> Ambiente
-          <strong>{{ provedor.get_ambiente_display }}</strong>.
-          Os pagamentos estão sendo processados pelo adquirente.
-        {% else %}
-          <strong>Credenciais pendentes.</strong> O driver está configurado como Stone, mas faltam a
-          API Key e/ou o Merchant ID. Enquanto isso, o sistema opera em modo simulado para não
-          derrubar o checkout.
-        {% endif %}
+    <div class="card card--pad" style="margin-top:var(--s-5)">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Webhook</h3>
+      <p class="small muted" style="margin-bottom:var(--s-3)">
+        Cadastre esta URL no painel da Stone para receber as confirmações:
+      </p>
+      <div class="pix-code">
+        <span id="url-webhook">{{ request.scheme }}://{{ request.get_host }}{% url 'payments:webhook' %}</span>
+      </div>
+      <button type="button" class="btn btn--ghost btn--sm" data-copy="#url-webhook" style="margin-top:var(--s-3)">
+        <svg width="14" height="14"><use href="#i-copiar"></use></svg>Copiar URL
+      </button>
+    </div>
+
+    <button type="submit" class="btn btn--primary" style="margin-top:var(--s-5)">
+      <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar pagamentos
+    </button>
+  </form>
+</section>
+
+{# ═══════════════════════════════════════════════════ REGRAS DA LOJA #}
+<section data-painel-aba="regras" hidden>
+  <form method="post" action="{% url 'dashboard:salvar_config' 'regras' %}"
+        class="card card--pad" style="max-width:720px">
+    {% csrf_token %}
+    <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Regras da loja</h2>
+    <p class="small muted" style="margin-bottom:var(--s-5)">
+      Estes números aparecem na vitrine <strong>e são aplicados na cobrança</strong>.
+      Só prometa o que for cumprir.
+    </p>
+
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Frete</h3>
+    <div class="grid grid--2" style="gap:var(--s-4)">
+      <div class="field">
+        <label>Valor do frete (R$)</label>
+        {{ form_regras.frete_valor }}
+      </div>
+      <div class="field">
+        <label>Frete grátis acima de (R$)</label>
+        {{ form_regras.frete_gratis_acima_de }}
+        <span class="help">0 desliga o frete grátis.</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Descontos</h3>
+    <div class="grid grid--2" style="gap:var(--s-4)">
+      <div class="field">
+        <label>Assinatura (%)</label>
+        {{ form_regras.desconto_assinatura_padrao }}
+        <span class="help">Vale para todos os produtos assináveis sem percentual próprio.</span>
+      </div>
+      <div class="field">
+        <label>Pix (%)</label>
+        {{ form_regras.desconto_pix }}
+        <span class="help">Abatido de verdade do total no checkout. 0 não promete nada.</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Loja</h3>
+    <div class="field">
+      <label>Ano de fundação</label>
+      {{ form_regras.ano_fundacao }}
+      <span class="help">
+        A loja calcula os anos de mercado a partir daqui — hoje, {{ config.anos_de_mercado }} anos.
+      </span>
+    </div>
+    <label class="switch-row" style="margin-top:var(--s-4)">
+      {{ form_regras.blog_ativo }} Blog ativo
+    </label>
+
+    <hr class="divider">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Convite para instalar o app</h3>
+    <label class="switch-row">{{ form_regras.pwa_convite_ativo }} Convidar quem ainda não instalou</label>
+    <div class="grid grid--2" style="gap:var(--s-4);margin-top:var(--s-4)">
+      <div class="field">
+        <label>Esperar (segundos)</label>
+        {{ form_regras.pwa_convite_segundos }}
+      </div>
+      <div class="field">
+        <label>Texto do convite</label>
+        {{ form_regras.pwa_convite_texto }}
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn--primary" style="margin-top:var(--s-6)">
+      <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar regras
+    </button>
+  </form>
+</section>
+
+{# ═══════════════════════════════════════════════════════ CONTATO #}
+<section data-painel-aba="contato" hidden>
+  <form method="post" action="{% url 'dashboard:salvar_config' 'contato' %}"
+        class="card card--pad" style="max-width:720px">
+    {% csrf_token %}
+    <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-5)">Contato e rodapé</h2>
+
+    <div class="grid grid--2" style="gap:var(--s-4)">
+      <div class="field"><label>Telefone</label>{{ form_contato.telefone }}</div>
+      <div class="field">
+        <label>WhatsApp</label>
+        {{ form_contato.whatsapp }}
+        <span class="help">Só números, com DDI. Ex.: 5514997202800</span>
+      </div>
+      <div class="field"><label>E-mail</label>{{ form_contato.email_contato }}</div>
+      <div class="field"><label>Horário de atendimento</label>{{ form_contato.horario_atendimento }}</div>
+    </div>
+
+    <hr class="divider">
+    <div class="field"><label>Endereço</label>{{ form_contato.endereco }}</div>
+    <div class="grid grid--3" style="gap:var(--s-4);margin-top:var(--s-4)">
+      <div class="field"><label>Cidade / UF</label>{{ form_contato.cidade_uf }}</div>
+      <div class="field"><label>CEP</label>{{ form_contato.cep }}</div>
+      <div class="field"><label>CNPJ</label>{{ form_contato.cnpj }}</div>
+    </div>
+
+    <hr class="divider">
+    <div class="grid grid--3" style="gap:var(--s-4)">
+      <div class="field"><label>Instagram</label>{{ form_contato.instagram }}</div>
+      <div class="field"><label>Facebook</label>{{ form_contato.facebook }}</div>
+      <div class="field"><label>YouTube</label>{{ form_contato.youtube }}</div>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label>Texto do rodapé</label>
+      {{ form_contato.rodape_sobre }}
+      <span class="help">Vazio usa a descrição da loja.</span>
+    </div>
+
+    <button type="submit" class="btn btn--primary" style="margin-top:var(--s-6)">
+      <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar contato
+    </button>
+  </form>
+</section>
+
+{# ═════════════════════════════════════════════════ NOTIFICAÇÕES #}
+<section data-painel-aba="firebase" hidden>
+  <form method="post" action="{% url 'dashboard:salvar_config' 'firebase' %}"
+        class="card card--pad" style="max-width:720px">
+    {% csrf_token %}
+    <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Notificações push (Firebase)</h2>
+    <p class="small muted" style="margin-bottom:var(--s-5)">
+      Console do Firebase › Configurações do projeto. Enquanto estiver vazio, o push
+      fica desligado e a loja segue com as notificações internas.
+      {% if config.firebase_configurado %}
+        <span class="badge badge--green" style="margin-left:var(--s-2)">configurado</span>
+      {% endif %}
+    </p>
+
+    <div class="grid grid--2" style="gap:var(--s-4)">
+      <div class="field"><label>apiKey</label>{{ form_firebase.firebase_api_key }}</div>
+      <div class="field"><label>authDomain</label>{{ form_firebase.firebase_auth_domain }}</div>
+      <div class="field"><label>projectId</label>{{ form_firebase.firebase_project_id }}</div>
+      <div class="field"><label>storageBucket</label>{{ form_firebase.firebase_storage_bucket }}</div>
+      <div class="field"><label>messagingSenderId</label>{{ form_firebase.firebase_messaging_sender_id }}</div>
+      <div class="field"><label>appId</label>{{ form_firebase.firebase_app_id }}</div>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label>Chave VAPID (Web Push)</label>
+      {{ form_firebase.firebase_vapid_key }}
+      <span class="help">Cloud Messaging › Certificados push da Web.</span>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label>JSON da conta de serviço</label>
+      {{ form_firebase.firebase_service_account }}
+      <span class="help">
+        Credencial do Admin SDK. Fica só no servidor e nunca vai para o navegador.
       </span>
     </div>
 
-    <h3 style="font-size:var(--fs-base);margin-block:var(--s-6) var(--s-3)">Credenciais cadastradas</h3>
-    <div class="table-wrap" style="border:none">
-      <table class="data">
-        <tbody>
-          <tr><td class="strong">Driver</td><td>{{ provedor.get_driver_display }}</td></tr>
-          <tr><td class="strong">Ambiente</td><td>{{ provedor.get_ambiente_display }}</td></tr>
-          <tr><td class="strong">URL base</td><td class="xs">{{ provedor.base_url }}</td></tr>
-          <tr>
-            <td class="strong">Client ID</td>
-            <td>{% if provedor.stone_client_id %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="strong">Client Secret</td>
-            <td>{% if provedor.stone_client_secret %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="strong">API Key</td>
-            <td>{% if provedor.stone_api_key %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--red">obrigatório</span>{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="strong">Merchant ID</td>
-            <td>{% if provedor.stone_merchant_id %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--red">obrigatório</span>{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="strong">Código de afiliação</td>
-            <td>{% if provedor.stone_affiliation_code %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="strong">Segredo do webhook</td>
-            <td>{% if provedor.stone_webhook_secret %}<span class="badge badge--green">configurado</span>{% else %}<span class="badge badge--amber">recomendado</span>{% endif %}</td>
-          </tr>
-          <tr>
-            <td class="strong">Chave Pix</td>
-            <td>{% if provedor.stone_pix_chave %}<span class="badge badge--green">{{ provedor.stone_pix_chave }}</span>{% else %}<span class="badge badge--gray">vazio</span>{% endif %}</td>
-          </tr>
-        </tbody>
-      </table>
+    <button type="submit" class="btn btn--primary" style="margin-top:var(--s-6)">
+      <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar notificações
+    </button>
+  </form>
+</section>
+
+{# ══════════════════════════════════════════════════════ AVANÇADO #}
+<section data-painel-aba="avancado" hidden>
+  <div class="grid grid--2" style="gap:var(--s-5);align-items:start">
+    <div class="card card--pad">
+      <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Conteúdo da loja</h2>
+      <p class="small muted" style="margin-bottom:var(--s-4)">
+        Banners, categorias, marcas, espécies e páginas institucionais.
+      </p>
+      <div class="stack" style="gap:var(--s-1)">
+        <a href="/admin/core/banner/" class="filters__link">
+          <span>Banners da home</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/core/diferencial/" class="filters__link">
+          <span>Faixa de garantias</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/core/pagina/" class="filters__link">
+          <span>Páginas institucionais</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/catalog/categoria/" class="filters__link">
+          <span>Categorias</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/catalog/marca/" class="filters__link">
+          <span>Marcas</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/catalog/especie/" class="filters__link">
+          <span>Espécies</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/orders/cupom/" class="filters__link">
+          <span>Cupons de desconto</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+      </div>
+      <p class="xs muted" style="margin-top:var(--s-4)">
+        Estas telas ainda usam o cadastro técnico do Django.
+      </p>
     </div>
 
-    <h3 style="font-size:var(--fs-base);margin-block:var(--s-6) var(--s-3)">Webhook</h3>
-    <p class="small muted" style="margin-bottom:var(--s-2)">
-      Cadastre esta URL no painel da Stone para receber as confirmações de pagamento:
-    </p>
-    <div class="pix-code">
-      <span id="url-webhook">{{ request.scheme }}://{{ request.get_host }}{% url 'payments:webhook' %}</span>
+    <div class="card card--pad">
+      <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Auditoria de pagamentos</h2>
+      <p class="small muted" style="margin-bottom:var(--s-4)">
+        Rastro bruto de tudo que foi trocado com o adquirente.
+      </p>
+      <div class="stack" style="gap:var(--s-1)">
+        <a href="/admin/payments/pagamento/" class="filters__link">
+          <span>Pagamentos</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/payments/eventowebhook/" class="filters__link">
+          <span>Eventos de webhook</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/payments/estorno/" class="filters__link">
+          <span>Estornos</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+        <a href="/admin/payments/transacaopagamento/" class="filters__link">
+          <span>Transações com a Stone</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
+      </div>
     </div>
-    <button type="button" class="btn btn--ghost btn--sm" data-copy="#url-webhook" style="margin-top:var(--s-3)">
-      <svg width="14" height="14"><use href="#i-copiar"></use></svg>Copiar URL
-    </button>
   </div>
 
   {# ------------------------------------------------- ZONA DE RISCO #}
-  <div class="card card--pad" style="grid-column:1/-1;border-color:rgba(214,43,32,.35)" data-reveal>
+  <div class="card card--pad" style="margin-top:var(--s-5);border-color:rgba(214,43,32,.35)">
     <h2 style="font-size:var(--fs-lg);color:var(--red-dark)">Começar do zero</h2>
     <p class="small muted" style="margin-top:var(--s-2)">
       Apaga os produtos de demonstração para você montar o catálogo com os seus itens.
@@ -98,7 +513,6 @@
     <form method="post" action="{% url 'dashboard:limpar_catalogo' %}" class="stack"
           style="margin-top:var(--s-5);gap:var(--s-4)">
       {% csrf_token %}
-
       <div class="stack" style="gap:var(--s-2)" data-option-group>
         <label class="option">
           <input type="radio" name="acao" value="sem-imagem" checked>
@@ -125,7 +539,7 @@
           <input type="radio" name="acao" value="tudo">
           <span>
             <span class="option__title">Apagar produtos, categorias, marcas e espécies</span>
-            <span class="option__desc">Catálogo completamente em branco. Não tem como desfazer.</span>
+            <span class="option__desc">Catálogo em branco. Não tem como desfazer.</span>
           </span>
         </label>
       </div>
@@ -141,86 +555,6 @@
       </button>
     </form>
   </div>
+</section>
 
-  {# ====================================================== RESUMO LATERAL #}
-  <div class="stack" data-reveal="right">
-    <div class="card card--pad">
-      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Métodos aceitos</h3>
-      <div class="stack" style="gap:var(--s-3)">
-        <div class="row row--between small">
-          <span>Cartão de crédito</span>
-          <span class="badge {% if provedor.aceita_cartao %}badge--green{% else %}badge--gray{% endif %}">
-            {% if provedor.aceita_cartao %}Ativo{% else %}Inativo{% endif %}
-          </span>
-        </div>
-        <div class="row row--between small">
-          <span>Pix</span>
-          <span class="badge {% if provedor.aceita_pix %}badge--green{% else %}badge--gray{% endif %}">
-            {% if provedor.aceita_pix %}Ativo{% else %}Inativo{% endif %}
-          </span>
-        </div>
-        <div class="row row--between small">
-          <span>Boleto</span>
-          <span class="badge {% if provedor.aceita_boleto %}badge--green{% else %}badge--gray{% endif %}">
-            {% if provedor.aceita_boleto %}Ativo{% else %}Inativo{% endif %}
-          </span>
-        </div>
-      </div>
-
-      <hr class="divider">
-      <div class="summary__row"><span>Parcelas máximas</span><span>{{ provedor.parcelas_maximas }}x</span></div>
-      <div class="summary__row"><span>Sem juros até</span><span>{{ provedor.parcelas_sem_juros }}x</span></div>
-      <div class="summary__row"><span>Parcela mínima</span><span>R$ {{ provedor.valor_minimo_parcela|floatformat:2 }}</span></div>
-      <div class="summary__row"><span>Captura automática</span><span>{{ provedor.captura_automatica|yesno:"Sim,Não" }}</span></div>
-      <div class="summary__row"><span>Fatura (soft descriptor)</span><span>{{ provedor.soft_descriptor }}</span></div>
-      <div class="summary__row"><span>Pix expira em</span><span>{{ provedor.pix_expira_em_minutos }} min</span></div>
-    </div>
-
-    <div class="card card--pad">
-      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Aparência da loja</h3>
-      <p class="xs muted" style="margin-bottom:var(--s-4)">
-        Imagem de capa do banner, mensagem do topo, telefone, endereço e textos do rodapé.
-      </p>
-      <div class="stack" style="gap:var(--s-1)">
-        <a href="/admin/core/siteconfig/1/change/" class="filters__link">
-          <span>Identidade, capa e contato</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
-        </a>
-        <a href="/admin/core/banner/" class="filters__link">
-          <span>Banners da home (texto + imagem)</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
-        </a>
-        <a href="/admin/core/diferencial/" class="filters__link">
-          <span>Faixa de garantias</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
-        </a>
-        <a href="/admin/core/pagina/" class="filters__link">
-          <span>Páginas institucionais</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
-        </a>
-      </div>
-    </div>
-
-    <div class="card card--pad">
-      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Atalhos</h3>
-      <div class="stack" style="gap:var(--s-1)">
-        <a href="/admin/payments/provedorpagamento/" class="filters__link">Provedores de pagamento</a>
-        <a href="/admin/payments/pagamento/" class="filters__link">Pagamentos</a>
-        <a href="/admin/payments/eventowebhook/" class="filters__link">Eventos de webhook</a>
-        <a href="/admin/payments/estorno/" class="filters__link">Estornos</a>
-        <a href="/admin/core/siteconfig/1/change/" class="filters__link">Configuração da loja</a>
-        <a href="/admin/catalog/produto/" class="filters__link">Produtos</a>
-        <a href="/admin/orders/cupom/" class="filters__link">Cupons</a>
-      </div>
-    </div>
-
-    {% if provedores.count > 1 %}
-      <div class="card card--pad">
-        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Todos os provedores</h3>
-        {% for p in provedores %}
-          <div class="row row--between small" style="padding-block:var(--s-2);border-top:1px solid var(--line)">
-            <span>{{ p.nome }} <span class="xs muted">({{ p.get_ambiente_display }})</span></span>
-            {% if p.padrao %}<span class="badge badge--green">Padrão</span>{% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  </div>
-</div>
 {% endblock %}

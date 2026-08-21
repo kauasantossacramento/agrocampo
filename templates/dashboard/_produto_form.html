@@ -1,0 +1,188 @@
+{% comment %}
+  Fragmento do wizard de produto, carregado dentro do modal.
+  Os quatro passos existem no DOM ao mesmo tempo; o JS só troca qual está
+  visível. Assim o formulário é um <form> só e um POST só — nada de estado
+  parcial salvo pela metade se o celular perder a conexão no meio.
+{% endcomment %}
+
+<div class="wizard" data-wizard
+     data-acao="{% if produto %}{% url 'dashboard:produto_salvar' produto.id %}{% else %}{% url 'dashboard:produto_salvar_novo' %}{% endif %}">
+
+  <ol class="wizard__passos" aria-label="Etapas">
+    <li class="wizard__passo is-atual"><span>1</span>Produto</li>
+    <li class="wizard__passo"><span>2</span>Preço</li>
+    <li class="wizard__passo"><span>3</span>Fotos</li>
+    <li class="wizard__passo"><span>4</span>Vitrine</li>
+  </ol>
+
+  {% if form.non_field_errors %}
+    <div class="alert alert--error" style="margin-bottom:var(--s-4)">
+      <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+      <span>{{ form.non_field_errors|join:" " }}</span>
+    </div>
+  {% endif %}
+
+  {# ─────────────────────────────────────────────── 1. produto #}
+  <section class="wizard__tela is-atual" data-tela="1">
+    <div class="field">
+      <label for="{{ form.nome.id_for_label }}">Nome do produto *</label>
+      {{ form.nome }}
+      {% if form.nome.errors %}<span class="error-text">{{ form.nome.errors|join:" " }}</span>{% endif %}
+    </div>
+
+    <div class="grid grid--2" style="gap:var(--s-4);margin-top:var(--s-4)">
+      <div class="field">
+        <label for="{{ form.categoria.id_for_label }}">Categoria *</label>
+        {{ form.categoria }}
+        {% if form.categoria.errors %}<span class="error-text">{{ form.categoria.errors|join:" " }}</span>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.marca.id_for_label }}">Marca</label>
+        {{ form.marca }}
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label for="{{ form.resumo.id_for_label }}">Resumo</label>
+      {{ form.resumo }}
+      <span class="help">Frase curta que aparece no card da vitrine.</span>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label for="{{ form.descricao.id_for_label }}">Descrição</label>
+      {{ form.descricao }}
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label for="{{ form.sku.id_for_label }}">Código (SKU)</label>
+      {{ form.sku }}
+      <span class="help">Pode deixar vazio — a loja gera um automaticamente.</span>
+      {% if form.sku.errors %}<span class="error-text">{{ form.sku.errors|join:" " }}</span>{% endif %}
+    </div>
+  </section>
+
+  {# ─────────────────────────────────────────────── 2. preço e estoque #}
+  <section class="wizard__tela" data-tela="2" hidden>
+    <div class="grid grid--2" style="gap:var(--s-4)">
+      <div class="field">
+        <label for="{{ form.preco.id_for_label }}">Preço de venda *</label>
+        {{ form.preco }}
+        {% if form.preco.errors %}<span class="error-text">{{ form.preco.errors|join:" " }}</span>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.preco_promocional.id_for_label }}">Preço promocional</label>
+        {{ form.preco_promocional }}
+        {% if form.preco_promocional.errors %}<span class="error-text">{{ form.preco_promocional.errors|join:" " }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label for="{{ form.promocao_ate.id_for_label }}">Promoção válida até</label>
+      {{ form.promocao_ate }}
+      <span class="help">Com data preenchida, a home mostra o contador regressivo.</span>
+    </div>
+
+    <hr class="divider">
+
+    <div class="grid grid--2" style="gap:var(--s-4)">
+      <div class="field">
+        <label for="{{ form.estoque.id_for_label }}">Estoque atual *</label>
+        {{ form.estoque }}
+      </div>
+      <div class="field">
+        <label for="{{ form.estoque_minimo.id_for_label }}">Alerta abaixo de</label>
+        {{ form.estoque_minimo }}
+      </div>
+      <div class="field">
+        <label for="{{ form.unidade.id_for_label }}">Unidade</label>
+        {{ form.unidade }}
+      </div>
+      <div class="field">
+        <label for="{{ form.peso_kg.id_for_label }}">Peso (kg)</label>
+        {{ form.peso_kg }}
+      </div>
+    </div>
+  </section>
+
+  {# ─────────────────────────────────────────────── 3. fotos #}
+  <section class="wizard__tela" data-tela="3" hidden>
+    <p class="small muted" style="margin-bottom:var(--s-4)">
+      A primeira foto é a que aparece na vitrine. No celular, o botão abre a
+      câmera direto.
+    </p>
+
+    <div class="foto-acoes">
+      <label class="btn btn--primary">
+        <svg width="16" height="16"><use href="#i-camera"></use></svg>
+        Tirar foto
+        {# `capture` faz o Android/iOS abrir a camera em vez da galeria #}
+        <input type="file" name="fotos" accept="image/*" capture="environment"
+               multiple hidden data-foto-input>
+      </label>
+      <label class="btn btn--ghost">
+        <svg width="16" height="16"><use href="#i-imagem"></use></svg>
+        Escolher da galeria
+        <input type="file" name="fotos" accept="image/*" multiple hidden data-foto-input>
+      </label>
+    </div>
+
+    <div class="foto-grade" data-foto-previa>
+      {% if produto %}
+        {% for img in produto.imagens.all %}
+          <figure class="foto-item" data-imagem-id="{{ img.id }}">
+            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+            <button type="button" class="foto-item__remover" data-remover-foto="{{ img.id }}"
+                    aria-label="Remover foto">
+              <svg width="14" height="14"><use href="#i-x"></use></svg>
+            </button>
+            {% if forloop.first %}<figcaption>Capa</figcaption>{% endif %}
+          </figure>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    <p class="small muted" data-foto-vazio {% if produto.imagens.exists %}hidden{% endif %}>
+      Nenhuma foto ainda. Produto sem foto não entra na vitrine.
+    </p>
+  </section>
+
+  {# ─────────────────────────────────────────────── 4. vitrine #}
+  <section class="wizard__tela" data-tela="4" hidden>
+    <div class="card card--pad" style="background:var(--cream)">
+      <label class="switch-row" style="font-size:var(--fs-base)">
+        {{ form.permite_assinatura }} Disponível para assinatura recorrente
+      </label>
+      <div class="field" style="margin-top:var(--s-3)">
+        <label for="{{ form.desconto_assinatura_proprio.id_for_label }}">
+          Desconto próprio da assinatura (%)
+        </label>
+        {{ form.desconto_assinatura_proprio }}
+        <span class="help">
+          Vazio segue o percentual global da loja ({{ site.desconto_assinatura_padrao }}%).
+        </span>
+      </div>
+    </div>
+
+    <div class="stack" style="gap:var(--s-3);margin-top:var(--s-5)">
+      <label class="switch-row">{{ form.publicado }} Publicado (visível na loja)</label>
+      <label class="switch-row">{{ form.destaque }} Mostrar em “Mais vendidos”</label>
+      <label class="switch-row">{{ form.lancamento }} Marcar como lançamento</label>
+    </div>
+  </section>
+
+  {# ─────────────────────────────────────────────── navegação #}
+  <footer class="wizard__rodape">
+    <button type="button" class="btn btn--ghost" data-wizard-voltar hidden>
+      <svg width="15" height="15"><use href="#i-seta-esq"></use></svg>Voltar
+    </button>
+    <span class="spacer"></span>
+    <button type="button" class="btn btn--ghost" data-wizard-cancelar>Cancelar</button>
+    <button type="button" class="btn btn--primary" data-wizard-avancar>
+      Continuar<svg width="15" height="15"><use href="#i-seta-dir"></use></svg>
+    </button>
+    <button type="button" class="btn btn--primary" data-wizard-salvar hidden>
+      <svg width="15" height="15"><use href="#i-check"></use></svg>
+      {% if produto %}Salvar alterações{% else %}Cadastrar produto{% endif %}
+    </button>
+  </footer>
+</div>

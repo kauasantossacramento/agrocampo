@@ -307,3 +307,160 @@ class RetornoAoCheckoutTests(TestCase):
         self.assertEqual(resposta.status_code, 302)
         self.assertNotIn("site-falso", resposta.url)
         self.assertEqual(resposta.url, reverse("core:home"))
+
+
+class PainelSemAdminDjangoTests(TestCase):
+    """O lojista cadastra produto pelo painel, nunca pelo admin do Django."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed", verbosity=0)
+        cls.lojista = User.objects.create_user(
+            email="lojista2@exemplo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.lojista)
+
+    def test_formulario_do_wizard_carrega(self):
+        html = self.client.get(reverse("dashboard:produto_form_novo")).content.decode()
+        self.assertIn("data-wizard", html)
+        self.assertIn('data-tela="1"', html)
+        self.assertIn('data-tela="4"', html)
+        # o input de foto precisa abrir a câmera no celular
+        self.assertIn('capture="environment"', html)
+
+    def test_cadastra_produto_pelo_painel(self):
+        from apps.catalog.models import Categoria, Produto
+
+        categoria = Categoria.objects.first()
+        resposta = self.client.post(reverse("dashboard:produto_salvar_novo"), {
+            "nome": "Ração Teste do Painel",
+            "categoria": categoria.id,
+            "preco": "99.90",
+            "estoque": "12",
+            "estoque_minimo": "5",
+            "unidade": "un",
+            "peso_kg": "1",
+            "publicado": "on",
+        })
+        self.assertEqual(resposta.status_code, 200)
+        self.assertTrue(resposta.json()["ok"])
+
+        produto = Produto.objects.get(nome="Ração Teste do Painel")
+        self.assertTrue(produto.sku.startswith("AGC-"))   # gerado sozinho
+        self.assertEqual(produto.estoque, 12)
+
+    def test_wizard_devolve_erros_sem_perder_o_preenchido(self):
+        resposta = self.client.post(reverse("dashboard:produto_salvar_novo"), {
+            "nome": "Sem categoria nem preço",
+        })
+        self.assertEqual(resposta.status_code, 400)
+        dados = resposta.json()
+        self.assertFalse(dados["ok"])
+        self.assertIn("categoria", dados["erros"])
+        # devolve o HTML com o que já foi digitado
+        self.assertIn("Sem categoria nem preço", dados["html"])
+
+    def test_promocional_maior_que_o_preco_e_recusado(self):
+        from apps.catalog.models import Categoria
+
+        resposta = self.client.post(reverse("dashboard:produto_salvar_novo"), {
+            "nome": "Promoção invertida", "categoria": Categoria.objects.first().id,
+            "preco": "50.00", "preco_promocional": "80.00",
+            "estoque": "1", "estoque_minimo": "1", "unidade": "un", "peso_kg": "1",
+        })
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("preco_promocional", resposta.json()["erros"])
+
+    def test_configuracoes_tem_todas_as_abas(self):
+        html = self.client.get(reverse("dashboard:configuracoes")).content.decode()
+        for aba in ["aparencia", "pagamentos", "regras", "contato", "firebase", "avancado"]:
+            self.assertIn(f'data-aba="{aba}"', html)
+        self.assertIn("data-previa", html)          # pré-visualização
+        self.assertIn("stone_api_key", html)        # credenciais na tela
+
+    def test_salva_credenciais_e_parcelas_pelo_painel(self):
+        from apps.payments.models import ProvedorPagamento
+
+        provedor = ProvedorPagamento.ativo_padrao()
+        self.client.post(
+            reverse("dashboard:salvar_provedor", args=[provedor.id]),
+            {
+                "nome": "Stone", "driver": "simulado", "ambiente": "sandbox", "ativo": "on",
+                "stone_api_key": "chave-de-teste", "stone_merchant_id": "merchant-1",
+                "stone_client_id": "", "stone_client_secret": "",
+                "stone_affiliation_code": "", "stone_webhook_secret": "",
+                "stone_pix_chave": "pix@agrocampo.online",
+                "stone_base_url_sandbox": "https://sandbox-api.stone.com.br",
+                "stone_base_url_producao": "https://api.stone.com.br",
+                "aceita_cartao": "on", "aceita_pix": "on",
+                "parcelas_maximas": "10", "parcelas_sem_juros": "6",
+                "valor_minimo_parcela": "25.00",
+                "soft_descriptor": "AGROCAMPO",
+                "pix_expira_em_minutos": "20", "timeout_segundos": "30",
+            },
+        )
+        provedor.refresh_from_db()
+        self.assertEqual(provedor.parcelas_maximas, 10)
+        self.assertEqual(provedor.parcelas_sem_juros, 6)
+        self.assertEqual(provedor.stone_api_key, "chave-de-teste")
+        self.assertFalse(provedor.aceita_boleto)
+
+    def test_nao_deixa_desligar_todos_os_metodos(self):
+        """Sem método de pagamento ativo, ninguém consegue fechar pedido."""
+        from apps.payments.models import ProvedorPagamento
+
+        provedor = ProvedorPagamento.ativo_padrao()
+        self.client.post(
+            reverse("dashboard:salvar_provedor", args=[provedor.id]),
+            {
+                "nome": "Stone", "driver": "simulado", "ambiente": "sandbox", "ativo": "on",
+                "parcelas_maximas": "12", "parcelas_sem_juros": "3",
+                "valor_minimo_parcela": "30.00", "soft_descriptor": "AGROCAMPO",
+                "pix_expira_em_minutos": "30", "timeout_segundos": "30",
+                "stone_base_url_sandbox": "https://sandbox-api.stone.com.br",
+                "stone_base_url_producao": "https://api.stone.com.br",
+            },
+        )
+        provedor.refresh_from_db()
+        self.assertTrue(
+            provedor.aceita_cartao or provedor.aceita_pix or provedor.aceita_boleto
+        )
+
+    def test_sem_juros_maior_que_o_total_de_parcelas_e_recusado(self):
+        from apps.payments.models import ProvedorPagamento
+
+        from apps.dashboard.forms import ProvedorPagamentoForm
+
+        form = ProvedorPagamentoForm(
+            instance=ProvedorPagamento.ativo_padrao(),
+            data={
+                "nome": "Stone", "driver": "simulado", "ambiente": "sandbox", "ativo": "on",
+                "aceita_pix": "on",
+                "parcelas_maximas": "3", "parcelas_sem_juros": "10",
+                "valor_minimo_parcela": "30.00", "soft_descriptor": "AGROCAMPO",
+                "pix_expira_em_minutos": "30", "timeout_segundos": "30",
+                "stone_base_url_sandbox": "https://sandbox-api.stone.com.br",
+                "stone_base_url_producao": "https://api.stone.com.br",
+            },
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("parcelas_sem_juros", form.errors)
+
+    def test_salva_aparencia_pela_tela(self):
+        from apps.core.models import SiteConfig
+
+        self.client.post(reverse("dashboard:salvar_config", args=["aparencia"]), {
+            "nome_loja": "AgroCampo Editado",
+            "chamada": "Nova chamada da capa",
+            "descricao": "Nova descrição",
+            "topbar_icone": "🚜",
+            "topbar_mensagem": "Nova faixa",
+            "topbar_link_texto": "Rastrear",
+            "topbar_link_url": "/pedidos/",
+        })
+        config = SiteConfig.load()
+        self.assertEqual(config.nome_loja, "AgroCampo Editado")
+        self.assertEqual(config.chamada, "Nova chamada da capa")

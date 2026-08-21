@@ -12,9 +12,11 @@
     </div>
     <button type="submit" class="btn btn--ghost btn--sm">Buscar</button>
   </form>
-  <a href="/admin/catalog/produto/add/" class="btn btn--primary btn--sm nowrap">
+  <button type="button" class="btn btn--primary btn--sm nowrap"
+          data-produto-modal="{% url 'dashboard:produto_form_novo' %}"
+          data-produto-titulo="Novo produto">
     + Novo produto
-  </a>
+  </button>
 </div>
 
 <div class="row" style="gap:var(--s-2);margin-bottom:var(--s-5);flex-wrap:wrap">
@@ -62,9 +64,11 @@
             </span>
           </td>
           <td>
-            <a href="/admin/catalog/produto/{{ p.id }}/change/" style="font-weight:600;color:var(--ink)">
+            <button type="button" class="link-produto"
+                    data-produto-modal="{% url 'dashboard:produto_form' p.id %}"
+                    data-produto-titulo="Editar produto">
               {{ p.nome|truncatechars:44 }}
-            </a>
+            </button>
             <div class="xs muted">
               {{ p.sku }}{% if p.marca %} · {{ p.marca.nome }}{% endif %}
               {% if not p.imagem_principal %}
@@ -88,7 +92,14 @@
             </label>
           </td>
           <td>
-            <button form="f{{ p.id }}" type="submit" class="btn btn--ghost btn--sm nowrap">Salvar</button>
+            <div class="row" style="gap:var(--s-2)">
+              <button form="f{{ p.id }}" type="submit" class="btn btn--ghost btn--sm nowrap">Salvar</button>
+              <button type="button" class="icon-btn" aria-label="Editar {{ p.nome }}"
+                      data-produto-modal="{% url 'dashboard:produto_form' p.id %}"
+                      data-produto-titulo="Editar produto">
+                <svg width="16" height="16"><use href="#i-lapis"></use></svg>
+              </button>
+            </div>
           </td>
         </tr>
       {% empty %}
@@ -96,9 +107,11 @@
           <td colspan="7" class="center" style="padding:var(--s-12)">
             <p class="empty__title">Nenhum produto no catálogo</p>
             <p class="small muted">Comece cadastrando o seu primeiro item.</p>
-            <a href="/admin/catalog/produto/add/" class="btn btn--primary" style="margin-top:var(--s-4)">
+            <button type="button" class="btn btn--primary" style="margin-top:var(--s-4)"
+                    data-produto-modal="{% url 'dashboard:produto_form_novo' %}"
+                    data-produto-titulo="Novo produto">
               + Novo produto
-            </a>
+            </button>
           </td>
         </tr>
       {% endfor %}
@@ -109,10 +122,9 @@
 <div class="alert alert--info" style="margin-top:var(--s-5)">
   <svg width="16" height="16"><use href="#i-info"></use></svg>
   <span>
-    Preço, estoque e publicação você edita direto aqui. Para foto, descrição,
-    espécies indicadas e preço de assinatura, abra o produto no
-    <a href="/admin/catalog/produto/">cadastro completo</a>.
-    Todo ajuste de estoque fica registrado no histórico de movimentações.
+    Preço, estoque e publicação você edita direto na linha. Clique no nome do
+    produto para abrir o cadastro completo — inclusive as fotos, que no celular
+    saem direto da câmera. Todo ajuste de estoque fica registrado no histórico.
   </span>
 </div>
 {% endblock %}

@@ -103,7 +103,13 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .flash__inner { padding: var(--s-6); }
   .countdown { flex-wrap: wrap; }
 
-  .toast-stack { left: var(--s-4); right: var(--s-4); bottom: var(--s-4); max-width: none; }
+  /* No celular o toast ia no rodape e cobria os botoes de acao — em modal
+     com "Continuar"/"Salvar" embaixo, isso trava o fluxo. Sobe para o topo. */
+  .toast-stack {
+    left: var(--s-3); right: var(--s-3); top: var(--s-3);
+    bottom: auto; max-width: none;
+    z-index: 1300;                    /* acima do modal (1200) */
+  }
 
   .gallery__thumbs { grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
 

@@ -171,6 +171,17 @@
   to { opacity: 0; transform: translateX(28px) scale(.96); }
 }
 
+/* no mobile a pilha fica no topo: a entrada desce em vez de vir da direita */
+@media (max-width: 620px) {
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-20px) scale(.96); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateY(-20px) scale(.96); }
+  }
+}
+
 /* ================================================================== drawers */
 .overlay {
   position: fixed; inset: 0; z-index: 1000;

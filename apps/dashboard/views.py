@@ -5,6 +5,7 @@ from urllib.parse import quote
 
 from django.contrib import messages
 from django.db.models import Avg, Count, F, Sum
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -335,14 +336,27 @@ def assinaturas(request):
 
 @operador_requerido
 def configuracoes(request):
-    """Atalho para a configuração da Stone."""
+    """Tudo que o lojista edita, sem passar pelo admin do Django."""
+    from apps.core.models import SiteConfig
+
+    from . import forms as formularios
+
+    config = SiteConfig.load()
+    provedor = ProvedorPagamento.ativo_padrao()
     return render(
         request,
         "dashboard/configuracoes.html",
         {
             "secao": "config",
+            "aba": request.GET.get("aba", "aparencia"),
+            "config": config,
+            "form_aparencia": formularios.AparenciaForm(instance=config),
+            "form_contato": formularios.ContatoForm(instance=config),
+            "form_regras": formularios.RegrasForm(instance=config),
+            "form_firebase": formularios.FirebaseForm(instance=config),
+            "form_provedor": formularios.ProvedorPagamentoForm(instance=provedor),
             "provedores": ProvedorPagamento.objects.all(),
-            "provedor": ProvedorPagamento.ativo_padrao(),
+            "provedor": provedor,
             "metricas": _metricas(),
         },
     )
@@ -355,3 +369,129 @@ def marcar_notificacoes_lidas(request):
         publico=Notificacao.Publico.LOJISTA, lida_em__isnull=True
     ).update(lida_em=timezone.now())
     return redirect(request.META.get("HTTP_REFERER", "dashboard:painel"))
+
+
+# ═══════════════════════════════════════════════ produto: wizard em modal
+@operador_requerido
+def produto_form(request, produto_id=None):
+    """Devolve o formulário do wizard (fragmento carregado dentro do modal)."""
+    from .forms import ProdutoForm
+
+    produto = get_object_or_404(Produto, pk=produto_id) if produto_id else None
+    return render(
+        request,
+        "dashboard/_produto_form.html",
+        {"form": ProdutoForm(instance=produto), "produto": produto},
+    )
+
+
+@operador_requerido
+@require_POST
+def produto_salvar(request, produto_id=None):
+    """Salva o wizard. Responde JSON — o modal não recarrega a página."""
+    from django.template.loader import render_to_string
+
+    from apps.catalog.models import ProdutoImagem
+
+    from .forms import ProdutoForm
+
+    produto = get_object_or_404(Produto, pk=produto_id) if produto_id else None
+    form = ProdutoForm(request.POST, instance=produto)
+
+    if not form.is_valid():
+        return JsonResponse(
+            {
+                "ok": False,
+                "erros": {c: [str(e) for e in erros] for c, erros in form.errors.items()},
+                "html": render_to_string(
+                    "dashboard/_produto_form.html",
+                    {"form": form, "produto": produto},
+                    request=request,
+                ),
+            },
+            status=400,
+        )
+
+    produto = form.save()
+
+    # fotos vêm no mesmo POST — câmera do celular ou galeria
+    for arquivo in request.FILES.getlist("fotos"):
+        ProdutoImagem.objects.create(produto=produto, imagem=arquivo)
+
+    remover = request.POST.getlist("remover_imagem")
+    if remover:
+        ProdutoImagem.objects.filter(produto=produto, pk__in=remover).delete()
+
+    return JsonResponse({
+        "ok": True,
+        "id": produto.pk,
+        "nome": produto.nome,
+        "criado": produto_id is None,
+        "url": produto.get_absolute_url(),
+    })
+
+
+@operador_requerido
+@require_POST
+def produto_remover_foto(request, imagem_id):
+    from apps.catalog.models import ProdutoImagem
+
+    ProdutoImagem.objects.filter(pk=imagem_id).delete()
+    return JsonResponse({"ok": True})
+
+
+# ═══════════════════════════════════════════════ configurações por seção
+SECOES_CONFIG = {
+    "aparencia": ("AparenciaForm", "Aparência da loja"),
+    "contato": ("ContatoForm", "Contato e rodapé"),
+    "regras": ("RegrasForm", "Regras da loja"),
+    "firebase": ("FirebaseForm", "Notificações push"),
+}
+
+
+@operador_requerido
+@require_POST
+def salvar_config(request, secao):
+    """Salva uma seção da configuração da loja."""
+    from apps.core.models import SiteConfig
+
+    from . import forms as formularios
+
+    if secao not in SECOES_CONFIG:
+        messages.error(request, "Seção desconhecida.")
+        return redirect("dashboard:configuracoes")
+
+    nome_form, rotulo = SECOES_CONFIG[secao]
+    form = getattr(formularios, nome_form)(
+        request.POST, request.FILES, instance=SiteConfig.load()
+    )
+
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"{rotulo} atualizada.")
+    else:
+        for campo, erros in form.errors.items():
+            prefixo = "" if campo == "__all__" else f"{form.fields[campo].label}: "
+            messages.error(request, f"{prefixo}{' '.join(erros)}")
+
+    return redirect(f"{reverse('dashboard:configuracoes')}?aba={secao}")
+
+
+@operador_requerido
+@require_POST
+def salvar_provedor(request, provedor_id):
+    """Credenciais da Stone e regras de cobrança, direto no painel."""
+    from .forms import ProvedorPagamentoForm
+
+    provedor = get_object_or_404(ProvedorPagamento, pk=provedor_id)
+    form = ProvedorPagamentoForm(request.POST, instance=provedor)
+
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Provedor de pagamento atualizado.")
+    else:
+        for campo, erros in form.errors.items():
+            prefixo = "" if campo == "__all__" else f"{form.fields[campo].label}: "
+            messages.error(request, f"{prefixo}{' '.join(erros)}")
+
+    return redirect(f"{reverse('dashboard:configuracoes')}?aba=pagamentos")

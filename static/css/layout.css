@@ -502,3 +502,161 @@
 @media (max-width: 620px) {
   .pwa-convite { left: var(--s-3); right: var(--s-3); bottom: var(--s-3); width: auto; }
 }
+
+/* ═══════════════════════════════════════════════ modal (wizard, edição) */
+.modal {
+  position: fixed; inset: 0; z-index: 1200;
+  display: grid; place-items: center;
+  padding: var(--s-5);
+  background: rgba(34, 24, 18, .55);
+  backdrop-filter: blur(3px);
+  opacity: 0; visibility: hidden;
+  transition: opacity .26s var(--ease-quick), visibility .26s;
+}
+.modal.is-open { opacity: 1; visibility: visible; }
+
+.modal__caixa {
+  width: min(720px, 100%);
+  max-height: min(88vh, 900px);
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-4);
+  transform: translateY(18px) scale(.98);
+  transition: transform .3s var(--ease-out);
+  overflow: hidden;
+}
+.modal.is-open .modal__caixa { transform: none; }
+
+.modal__topo {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-5); border-bottom: 1px solid var(--line); flex: none;
+}
+.modal__topo h2 { font-size: var(--fs-lg); flex: 1; }
+.modal__corpo { flex: 1; overflow-y: auto; padding: var(--s-5); }
+
+/* ─────────────────────────────────────────────────────── wizard */
+.wizard__passos {
+  display: flex; gap: var(--s-2); list-style: none; margin: 0 0 var(--s-6);
+  padding: 0; overflow-x: auto; scrollbar-width: none;
+}
+.wizard__passos::-webkit-scrollbar { display: none; }
+.wizard__passo {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3); border-radius: var(--r-full);
+  background: var(--cream-warm); color: var(--muted);
+  font-size: var(--fs-xs); font-weight: 600; white-space: nowrap;
+  transition: background-color .2s ease, color .2s ease;
+}
+.wizard__passo span {
+  width: 20px; height: 20px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--surface); color: var(--muted); font-size: 10px;
+}
+.wizard__passo.is-atual { background: var(--red); color: #fff; }
+.wizard__passo.is-atual span { background: rgba(255,255,255,.25); color: #fff; }
+.wizard__passo.is-feito { background: var(--green-wash); color: var(--green-deep); }
+.wizard__passo.is-feito span { background: var(--green); color: #fff; }
+
+.wizard__tela { animation: fade-up .3s var(--ease-out) both; }
+.wizard__rodape {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding-top: var(--s-5); margin-top: var(--s-6);
+  border-top: 1px solid var(--line); flex-wrap: wrap;
+}
+
+/* ──────────────────────────────────────────────────── fotos */
+.foto-acoes { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+.foto-acoes .btn { cursor: pointer; }
+
+.foto-grade {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--s-3); margin-top: var(--s-5);
+}
+.foto-item {
+  position: relative; margin: 0; aspect-ratio: 1;
+  border-radius: var(--r-md); overflow: hidden;
+  border: 1px solid var(--line); background: var(--cream-warm);
+  animation: pop-in .3s var(--ease-spring) both;
+}
+.foto-item img { width: 100%; height: 100%; object-fit: cover; }
+.foto-item.is-removida { opacity: .35; filter: grayscale(1); }
+.foto-item__remover {
+  position: absolute; top: 5px; right: 5px;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.94); color: var(--red);
+  box-shadow: var(--sh-2);
+}
+.foto-item figcaption {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: rgba(34,24,18,.78); color: #fff;
+  font-size: 10px; font-weight: 700; text-align: center; padding: 3px;
+}
+
+/* ───────────────────────────────────────── abas das configurações */
+.abas {
+  display: flex; gap: var(--s-1); margin-bottom: var(--s-6);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: none;
+}
+.abas::-webkit-scrollbar { display: none; }
+.aba {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-sm); font-weight: 600; color: var(--muted);
+  white-space: nowrap; position: relative;
+  transition: color .18s ease;
+}
+.aba:hover { color: var(--ink); }
+.aba.is-atual { color: var(--red); }
+.aba.is-atual::after {
+  content: ''; position: absolute; left: var(--s-3); right: var(--s-3); bottom: -1px;
+  height: 2.5px; border-radius: 2px; background: var(--red);
+}
+
+/* ────────────────────────────────── pré-visualização da aparência */
+.previa {
+  position: sticky; top: var(--s-5);
+  border-radius: var(--r-lg); overflow: hidden;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.previa__rotulo {
+  padding: var(--s-2) var(--s-4); background: var(--cream-deep);
+  font-size: var(--fs-xs); font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.previa__topbar {
+  background: var(--ink); color: var(--yellow);
+  font-size: 10px; font-weight: 600; padding: 5px var(--s-4);
+}
+.previa__header {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--line);
+}
+.previa__header img { height: 26px; width: auto; }
+.previa__hero {
+  background: linear-gradient(135deg, var(--red), var(--red-dark));
+  color: #fff; padding: var(--s-5) var(--s-4);
+  position: relative; min-height: 150px; overflow: hidden;
+}
+.previa__hero h3 { color: #fff; font-size: var(--fs-base); max-width: 62%; }
+.previa__hero p { color: #FFE3D6; font-size: 10px; max-width: 62%; margin: 4px 0 0; }
+.previa__figura {
+  position: absolute; right: 6px; bottom: 0; height: 88%; width: auto;
+  max-width: none;
+}
+
+@media (max-width: 620px) {
+  .modal { padding: 0; align-items: stretch; }
+  .modal__caixa { width: 100%; max-height: 100vh; border-radius: 0; }
+  .wizard__rodape .btn { flex: 1 1 auto; justify-content: center; }
+  .foto-grade { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+}
+
+/* nome do produto no painel abre o modal; parece link, é botão */
+.link-produto {
+  font-weight: 600; color: var(--ink); text-align: left;
+  padding: 0; font-size: inherit; line-height: inherit;
+}
+.link-produto:hover { color: var(--red); text-decoration: underline; }
