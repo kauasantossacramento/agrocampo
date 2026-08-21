@@ -216,7 +216,39 @@ Também: `catalogo/categorias|marcas|especies`, `carrinho/`, `pedidos/`
 
 ---
 
-## Deploy em VPS (Ubuntu/Debian)
+## Produção
+
+Em ar: **https://agrocampo.online**
+
+O host de destino já roda um Traefik (provider `file`, sem provider docker) e
+outros serviços. Por isso o AgroCampo sobe como um stack Docker **isolado**,
+em `/opt/agrocampo`, com rede interna, volumes e teto de CPU/RAM próprios —
+uma VPS dentro do dedicado. A única ponte é o nginx de borda, o único
+container que enxerga a rede do Traefik.
+
+```bash
+git clone https://github.com/kauasantossacramento/agrocampo.git /opt/agrocampo
+cd /opt/agrocampo
+cp .env.example .env      # preencha DJANGO_SECRET_KEY e POSTGRES_PASSWORD
+docker compose up -d --build
+# e publique a rota, um arquivo NOVO no dynamic do Traefik:
+cp deploy/traefik-agrocampo.yml /caminho/do/traefik/dynamic/agrocampo.yml
+```
+
+| Serviço | Limite | Papel |
+|---|---|---|
+| `agrocampo-nginx` | 0.5 CPU / 256 MB | borda: static, media e proxy |
+| `agrocampo-web` | 2 CPU / 2 GB | Gunicorn (3 workers) |
+| `agrocampo-db` | 1 CPU / 1 GB | PostgreSQL 16 |
+| `agrocampo-cron` | 0.5 CPU / 512 MB | assinaturas, diariamente às 6h |
+
+O TLS termina no Traefik, que emite e renova o Let's Encrypt. Por isso o
+container roda com `DJANGO_SECURE_SSL_REDIRECT=False` — se o Django também
+redirecionasse, viraria laço infinito.
+
+---
+
+## Deploy em VPS sem Docker (Ubuntu/Debian)
 
 Um script faz tudo: pergunta o domínio, instala as dependências do sistema,
 cria o Postgres, o venv, roda as migrações, sobe o Gunicorn atrás do Nginx e
