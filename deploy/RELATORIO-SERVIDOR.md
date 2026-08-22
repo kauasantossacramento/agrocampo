@@ -328,3 +328,18 @@ gunzip -c /root/backup-agrocampo-20260822-1142.sql.gz \
 
 As migrações são aditivas, então voltar só o código já funciona; restaurar o
 dump só é necessário se houver dados novos a descartar.
+
+### 10.1 Segunda entrega do mesmo dia (22/08, à tarde)
+
+Mesmo procedimento: backup, `git pull`, `build web`, `migrate` em container
+descartável, `up -d --no-deps web`.
+
+- Migração aplicada: `core.0009_banner_video_alter_banner_posicao`
+  (campo `video` no banner e nova posição "Apresentação").
+- Backup: `/root/backup-agrocampo-20260822-*.sql.gz`.
+- Dado alterado à mão: as quatro fichas de produto receberam uma linha
+  (Ouro/Prata/Bronze) **como exemplo**, distribuídas por preço, para as três
+  vitrines da home não aparecerem vazias. É classificação comercial — o
+  lojista troca no cadastro do produto quando quiser.
+- Conferência: md5 do conjunto de arquivos do Traefik inalterado, 15
+  containers `nuvem-*` sem reinício, `nuvem.center` respondendo 200.
