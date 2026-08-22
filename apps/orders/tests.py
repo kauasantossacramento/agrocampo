@@ -726,3 +726,37 @@ class PrecoComVariacaoTests(BasePedido):
     def test_assinatura_segue_o_preco_da_variacao(self):
         self.assertEqual(self.var.preco_assinatura, Decimal("270.00"))
         self.assertEqual(self.var.economia_assinatura, Decimal("30.00"))
+
+
+class LinhasDeExemploTests(TestCase):
+    """O seed distribui as linhas para as vitrines não nascerem vazias."""
+
+    def test_seed_classifica_todos_os_produtos(self):
+        from django.core.management import call_command
+
+        from apps.catalog.models import Produto
+
+        call_command("seed", verbosity=0)
+
+        self.assertFalse(Produto.objects.filter(linha="").exists())
+        for valor, _ in Produto.Linha.choices:
+            self.assertTrue(
+                Produto.objects.da_linha(valor).exists(),
+                f"nenhum produto na linha {valor}",
+            )
+
+    def test_nao_reescreve_a_linha_definida_pelo_lojista(self):
+        from django.core.management import call_command
+
+        from apps.catalog.models import Categoria, Produto
+
+        categoria = Categoria.objects.create(nome="Ração")
+        meu = Produto.objects.create(
+            sku="AGC-9999", nome="Escolha do lojista", categoria=categoria,
+            preco=Decimal("999.00"), estoque=1, linha=Produto.Linha.BRONZE,
+        )
+        call_command("seed", verbosity=0)
+
+        meu.refresh_from_db()
+        # o mais caro do catálogo, mas o lojista disse Bronze
+        self.assertEqual(meu.linha, Produto.Linha.BRONZE)

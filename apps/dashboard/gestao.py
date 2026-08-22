@@ -24,8 +24,8 @@ from .forms import CLASSE, _EstilizadoMixin
 class BannerForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Banner
-        fields = ("selo", "titulo", "subtitulo", "imagem", "cor_fundo",
-                  "texto_botao", "link", "posicao", "produtos", "ordem", "publicado")
+        fields = ("posicao", "selo", "titulo", "subtitulo", "imagem", "video",
+                  "cor_fundo", "texto_botao", "link", "produtos", "ordem", "publicado")
         widgets = {
             "subtitulo": forms.Textarea(attrs={"rows": 2}),
             "cor_fundo": forms.TextInput(attrs={"type": "color"}),
@@ -42,8 +42,37 @@ class BannerForm(_EstilizadoMixin, forms.ModelForm):
         )
         self.fields["produtos"].help_text = (
             "Segure Ctrl (ou toque em vários no celular) para escolher mais de um. "
-            "Só vale para a posição “Faixa de produtos”."
+            "Na faixa de produtos vira uma foto por produto; na apresentação, "
+            "o primeiro define para onde o slide leva quando não há link."
         )
+        self.fields["posicao"].help_text = (
+            "“Apresentação” é o bloco de vídeo/foto no topo da home — é o que "
+            "o cliente vê primeiro no celular."
+        )
+        self.fields["imagem"].help_text = (
+            "Na apresentação com vídeo, esta imagem é o quadro que aparece "
+            "enquanto o vídeo carrega."
+        )
+
+    def clean(self):
+        dados = super().clean()
+        posicao = dados.get("posicao")
+
+        if posicao == Banner.Posicao.APRESENTACAO:
+            # sem mídia o slide sairia como um retângulo preto
+            tem_midia = dados.get("video") or dados.get("imagem") or self.instance.tem_midia
+            if not tem_midia:
+                self.add_error(
+                    "imagem",
+                    "A apresentação precisa de um vídeo ou de uma foto para exibir.",
+                )
+
+        if posicao == Banner.Posicao.PRODUTOS and not (
+            dados.get("produtos") or self.instance.pk
+        ):
+            self.add_error("produtos", "Escolha ao menos um produto para a faixa.")
+
+        return dados
 
 
 class DiferencialForm(_EstilizadoMixin, forms.ModelForm):
@@ -242,7 +271,10 @@ SECOES: dict[str, Secao] = {
     "banners": Secao(
         slug="banners", titulo="Banners da home", singular="banner",
         model=Banner, form=BannerForm, icone="i-imagem",
-        descricao="Os quadros do carrossel principal — texto, imagem e botão.",
+        descricao=(
+            "O topo da home. A “Apresentação” é o bloco de vídeo ou foto que "
+            "aparece primeiro no celular; sem ela, entra o banner clássico."
+        ),
         ordenacao=("ordem", "-criado_em"),
         busca=("titulo", "subtitulo"),
         colunas=[
@@ -250,7 +282,7 @@ SECOES: dict[str, Secao] = {
             ("Selo", lambda o: o.selo or "—"),
             ("Posição", lambda o: o.get_posicao_display()),
             ("Produtos", lambda o: o.produtos.count() or "—"),
-            ("Imagem", lambda o: _sim_nao(o.imagem)),
+            ("Mídia", lambda o: ("vídeo" if o.video else "foto" if o.imagem else "—")),
             ("Ordem", lambda o: o.ordem),
             ("No ar", lambda o: o.publicado),
         ],

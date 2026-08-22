@@ -59,6 +59,30 @@
     document.body.style.overflow = '';
   }
 
+  /* ══════════════════ campos de imagem das configurações */
+  function iniciarCamposImagem() {
+    document.addEventListener('change', function (e) {
+      const campo = e.target;
+      if (campo.type !== 'file' || !campo.closest('.campo-imagem')) return;
+
+      // confirma para o lojista que o arquivo entrou: antes o botão dizia
+      // "Enviar" mesmo depois de escolher, e parecia que nada aconteceu
+      const rotulo = campo.closest('label').querySelector('[data-nome-arquivo]');
+      if (rotulo && campo.files.length) rotulo.textContent = campo.files[0].name;
+
+      const previa = campo.closest('.campo-imagem').querySelector('.campo-imagem__previa');
+      if (previa && campo.files.length) {
+        const url = URL.createObjectURL(campo.files[0]);
+        previa.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.onload = function () { URL.revokeObjectURL(url); };
+        previa.appendChild(img);
+      }
+    });
+  }
+
   /* ═══════════════════════════════════════ wizard de produto */
   function iniciarWizardProduto() {
     document.addEventListener('click', async function (e) {
@@ -255,13 +279,29 @@
       // então nem aparece aqui — só as linhas realmente adicionadas entram
       $$('input, select, textarea', wizard).forEach(function (campo) {
         if (!campo.name) return;
+
         if (campo.type === 'file') {
-          // fotos dos tamanhos vão pelo próprio nome indexado
-          if (campo.name.indexOf('var-') === 0 && campo.files.length) {
-            dados.append(campo.name, campo.files[0]);
-          }
+          // as fotos do produto já foram para `novasFotos`; mandar de novo
+          // criaria a mesma imagem duas vezes
+          if (campo.hasAttribute('data-foto-input')) return;
+          // qualquer outro arquivo — logo, vídeo do banner, foto do tamanho —
+          // segue pelo próprio nome. Antes todo input de arquivo era
+          // descartado aqui, e o lojista não conseguia subir imagem de banner.
+          Array.prototype.forEach.call(campo.files, function (arquivo) {
+            dados.append(campo.name, arquivo);
+          });
           return;
         }
+
+        // <select multiple>: `campo.value` devolve só a primeira opção, e a
+        // faixa de produtos ficava sempre com um item só
+        if (campo.multiple && campo.tagName === 'SELECT') {
+          Array.prototype.forEach.call(campo.selectedOptions, function (opcao) {
+            dados.append(campo.name, opcao.value);
+          });
+          return;
+        }
+
         if ((campo.type === 'checkbox' || campo.type === 'radio') && !campo.checked) return;
         dados.append(campo.name, campo.value);
       });
@@ -371,6 +411,7 @@
 
   function iniciar() {
     iniciarWizardProduto();
+    iniciarCamposImagem();
     iniciarAbas();
     iniciarPreviaAparencia();
   }

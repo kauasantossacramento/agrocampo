@@ -114,7 +114,26 @@ class ProdutoImagemForm(forms.ModelForm):
 
 # ══════════════════════════════════════════════════════ configurações
 class AparenciaForm(_EstilizadoMixin, forms.ModelForm):
-    """Identidade visual e textos da capa."""
+    """Identidade visual e textos da capa.
+
+    Cada campo de imagem tem uma caixa "Remover" (`<campo>-clear`), porque
+    trocar exigia sempre subir outra no lugar — não havia como voltar ao
+    padrão do tema.
+    """
+
+    IMAGENS = ("logo", "logo_claro", "favicon", "imagem_capa")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            return
+        # Marcar "Remover" e escolher outra imagem no mesmo envio: o Django
+        # trata como contradição e mantém a antiga. Enviar arquivo é intenção
+        # clara de substituir, então a caixa perde a vez.
+        for campo in self.IMAGENS:
+            if self.files.get(campo) and self.data.get(f"{campo}-clear"):
+                self.data = self.data.copy()
+                self.data.pop(f"{campo}-clear", None)
 
     class Meta:
         model = SiteConfig
@@ -127,8 +146,24 @@ class AparenciaForm(_EstilizadoMixin, forms.ModelForm):
             "chamada": forms.TextInput(attrs={"placeholder": "Frase principal do banner"}),
             "descricao": forms.Textarea(attrs={"rows": 3}),
             "topbar_mensagem": forms.TextInput(attrs={"placeholder": "Vazio esconde a faixa"}),
+            "logo": forms.ClearableFileInput(attrs={"accept": "image/*", "hidden": True}),
+            "logo_claro": forms.ClearableFileInput(attrs={"accept": "image/*", "hidden": True}),
+            "favicon": forms.ClearableFileInput(attrs={"accept": "image/*", "hidden": True}),
+            "imagem_capa": forms.ClearableFileInput(attrs={"accept": "image/*", "hidden": True}),
             "topbar_icone": forms.TextInput(attrs={"placeholder": "🚚", "maxlength": 8}),
         }
+
+    def save(self, commit=True):
+        config = super().save(commit=False)
+        for campo in self.IMAGENS:
+            # o widget nativo do Django usa "<campo>-clear"; o template
+            # desenha a caixa à mão para caber no cartão de pré-visualização
+            if self.data.get(f"{campo}-clear") and not self.files.get(campo):
+                getattr(config, campo).delete(save=False)
+                setattr(config, campo, "")
+        if commit:
+            config.save()
+        return config
 
 
 class ContatoForm(_EstilizadoMixin, forms.ModelForm):

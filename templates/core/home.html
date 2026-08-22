@@ -9,7 +9,11 @@
   HERO — cada banner traz o próprio texto e a própria imagem de capa. Sem
   imagem no banner, cai na capa padrão da loja; sem nenhuma, na figura do tema.
 {% endcomment %}
-<section class="hero" data-hero>
+{% if apresentacao %}
+  {% include 'partials/apresentacao.html' %}
+{% endif %}
+
+<section class="hero {% if apresentacao %}hero--secundario{% else %}hero--compacto-movel{% endif %}" data-hero>
   <div class="wrap">
     {% for banner in banners %}
       <div class="hero__inner" data-hero-slide {% if not forloop.first %}hidden{% endif %}

@@ -207,6 +207,58 @@
     iniciar();
   }
 
+  /* ------------------------------------ banner de apresentação (topo) */
+  function iniciarApresentacao() {
+    const caixa = $('[data-apresentacao]');
+    if (!caixa) return;
+
+    const slides = $$('[data-apresentacao-slide]', caixa);
+    const pontos = $$('[data-apresentacao-dot]', caixa);
+    if (slides.length < 2) return;
+
+    let atual = 0;
+    let timer = null;
+
+    const mostrar = (indice) => {
+      slides.forEach((slide, i) => {
+        const visivel = i === indice;
+        slide.hidden = !visivel;
+
+        // vídeo fora de cena não precisa continuar decodificando quadros:
+        // no celular isso é bateria e dados do cliente
+        const video = slide.querySelector('video');
+        if (video) {
+          if (visivel) {
+            const talvez = video.play();
+            if (talvez && talvez.catch) talvez.catch(() => {});
+          } else {
+            video.pause();
+          }
+        }
+      });
+      pontos.forEach((p, i) => p.classList.toggle('is-active', i === indice));
+      atual = indice;
+    };
+
+    const proximo = () => mostrar((atual + 1) % slides.length);
+    const iniciar = () => { if (!reduzido) timer = setInterval(proximo, 7000); };
+    const parar = () => clearInterval(timer);
+
+    pontos.forEach((p, i) =>
+      p.addEventListener('click', () => { parar(); mostrar(i); iniciar(); })
+    );
+    caixa.addEventListener('mouseenter', parar);
+    caixa.addEventListener('mouseleave', iniciar);
+
+    // com a aba escondida o intervalo continuaria trocando slides à toa
+    document.addEventListener('visibilitychange', () =>
+      document.hidden ? parar() : iniciar()
+    );
+
+    mostrar(0);
+    iniciar();
+  }
+
   /* --------------------------------------------------------- contagem regressiva */
   function iniciarContadores() {
     const contadores = $$('[data-countdown]');
@@ -589,6 +641,7 @@
     iniciarContadores();
     iniciarCarrinho();
     iniciarOpcoes();
+    iniciarApresentacao();
     iniciarGaleria();
     iniciarTamanhos();
     iniciarQuantidade();

@@ -50,6 +50,13 @@ def home(request):
         {
             "vitrines_linha": vitrines,
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
+            # com apresentação cadastrada ela assume o topo; sem ela, o hero
+            # antigo entra em versão compacta no celular
+            "apresentacao": (
+                Banner.objects.publicados()
+                .filter(posicao=Banner.Posicao.APRESENTACAO)
+                .prefetch_related("produtos")
+            ),
             "faixas_produto": (
                 Banner.objects.publicados()
                 .filter(posicao=Banner.Posicao.PRODUTOS)

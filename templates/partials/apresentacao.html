@@ -1,0 +1,59 @@
+{% comment %}
+  Banner de apresentação: vídeo ou foto ocupando a largura, cada slide
+  levando direto ao produto. É o topo da home quando existe — no celular ele
+  substitui o hero alto, que empurrava a loja para baixo da dobra.
+
+  O vídeo entra mudo, em loop e com `playsinline`: com som ou em tela cheia o
+  iOS recusa o autoplay e o cliente vê um retângulo preto.
+{% endcomment %}
+<section class="apresentacao" data-apresentacao aria-label="Destaques">
+  <div class="apresentacao__palco">
+    {% for banner in apresentacao %}
+      {% if banner.tem_midia %}
+        <{% if banner.destino %}a href="{{ banner.destino }}"{% else %}div{% endif %}
+           class="apresentacao__slide" data-apresentacao-slide
+           {% if not forloop.first %}hidden{% endif %}
+           {% if banner.destino %}aria-label="{{ banner.titulo }}"{% endif %}>
+
+          {% if banner.video %}
+            <video class="apresentacao__midia" autoplay muted loop playsinline
+                   preload="metadata"
+                   {% if banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
+              <source src="{{ banner.video.url }}">
+            </video>
+          {% else %}
+            <img class="apresentacao__midia" src="{{ banner.imagem.url }}"
+                 alt="{{ banner.titulo }}"
+                 {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+          {% endif %}
+
+          {% if banner.titulo or banner.selo %}
+            <div class="apresentacao__texto">
+              {% if banner.selo %}<span class="apresentacao__selo">{{ banner.selo }}</span>{% endif %}
+              <strong>{{ banner.titulo }}</strong>
+              {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
+              {% if banner.destino %}
+                <span class="apresentacao__cta">
+                  {{ banner.texto_botao|default:"Ver produto" }}
+                  <svg width="14" height="14" aria-hidden="true"><use href="#i-seta-dir"></use></svg>
+                </span>
+              {% endif %}
+            </div>
+          {% endif %}
+        </{% if banner.destino %}a{% else %}div{% endif %}>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  {% if apresentacao|length > 1 %}
+    <div class="apresentacao__dots">
+      {% for banner in apresentacao %}
+        {% if banner.tem_midia %}
+          <button type="button" data-apresentacao-dot
+                  class="apresentacao__dot {% if forloop.first %}is-active{% endif %}"
+                  aria-label="Destaque {{ forloop.counter }}"></button>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>

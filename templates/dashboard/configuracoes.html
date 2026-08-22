@@ -60,28 +60,18 @@
       <hr class="divider">
       <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Imagens</h3>
       <div class="grid grid--2" style="gap:var(--s-4)">
-        <div class="field">
-          <label for="{{ form_aparencia.logo.id_for_label }}">Logo</label>
-          {{ form_aparencia.logo }}
-        </div>
-        <div class="field">
-          <label for="{{ form_aparencia.logo_claro.id_for_label }}">Logo para fundo escuro</label>
-          {{ form_aparencia.logo_claro }}
-        </div>
+        {% include 'dashboard/_campo_imagem.html' with campo=form_aparencia.logo rotulo="Logo" ajuda="PNG com fundo transparente. Aparece no cabeçalho da loja." %}
+        {% include 'dashboard/_campo_imagem.html' with campo=form_aparencia.logo_claro rotulo="Logo para fundo escuro" ajuda="Usada no rodapé. Sem ela, o rodapé usa a logo normal." escuro=1 %}
         <div class="field">
           <label for="{{ form_aparencia.logo_altura.id_for_label }}">Altura da logo (px)</label>
           {{ form_aparencia.logo_altura }}
           <span class="help">{{ form_aparencia.logo_altura.help_text }}</span>
+          {% if form_aparencia.logo_altura.errors %}
+            <span class="error-text">{{ form_aparencia.logo_altura.errors|join:" " }}</span>
+          {% endif %}
         </div>
-        <div class="field">
-          <label for="{{ form_aparencia.favicon.id_for_label }}">Ícone do navegador</label>
-          {{ form_aparencia.favicon }}
-        </div>
-        <div class="field">
-          <label for="{{ form_aparencia.imagem_capa.id_for_label }}">Imagem de capa</label>
-          {{ form_aparencia.imagem_capa }}
-          <span class="help">PNG com fundo transparente fica melhor.</span>
-        </div>
+        {% include 'dashboard/_campo_imagem.html' with campo=form_aparencia.favicon rotulo="Ícone do navegador" ajuda="Quadrado, 32x32 ou maior." %}
+        {% include 'dashboard/_campo_imagem.html' with campo=form_aparencia.imagem_capa rotulo="Imagem de capa" ajuda="PNG com fundo transparente fica melhor." %}
       </div>
 
       <hr class="divider">

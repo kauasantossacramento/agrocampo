@@ -109,10 +109,14 @@ PRODUTOS = [
      "Fonte natural de cálcio para a formação da casca do ovo e do bico."),
 ]
 
+# Nada de porcentagem escrita à mão aqui. "5% de desconto à vista" ficou na
+# faixa enquanto o checkout cobrava o total cheio — a loja anunciava um
+# desconto que não dava. Os números que aparecem vêm de `SiteConfig`, e o
+# texto do Pix só é escrito quando o desconto está realmente ligado.
 DIFERENCIAIS = [
     ("Frete para toda zona rural", "Entregamos onde outros não chegam", "caminhao"),
-    ("Pix aprovado na hora", "5% de desconto à vista", "raio"),
-    ("Assinatura com 10% OFF", "Nunca falta o essencial", "refresh"),
+    ("Pix aprovado na hora", "Aprovação imediata, sem espera", "raio"),
+    ("Assinatura", "Nunca falta o essencial", "refresh"),
     ("Compra 100% garantida", "Ambiente seguro e criptografado", "escudo"),
 ]
 
@@ -366,7 +370,41 @@ class Command(BaseCommand):
                             imagem=File(arquivo, name=imagem),
                             legenda=nome,
                         )
+        self._classificar_linhas()
         self.stdout.write(f"  {Produto.objects.count()} produtos")
+
+    def _classificar_linhas(self):
+        """Distribui os produtos em Ouro, Prata e Bronze como exemplo.
+
+        A classificação é decisão comercial do lojista — aqui ela serve só
+        para as três vitrines da home não nascerem vazias. O critério é o
+        preço, que é o palpite mais defensável sem conhecer as margens:
+        o terço mais caro vira Ouro, o do meio Prata, o mais barato Bronze.
+        Trocar é um clique no cadastro do produto.
+        """
+        sem_linha = list(
+            Produto.objects.filter(linha="").order_by("-preco").values_list("pk", "preco")
+        )
+        if not sem_linha:
+            return
+
+        total = len(sem_linha)
+        corte_ouro = max(1, total // 3)
+        corte_prata = max(corte_ouro + 1, (total * 2) // 3)
+
+        faixas = {
+            Produto.Linha.OURO: sem_linha[:corte_ouro],
+            Produto.Linha.PRATA: sem_linha[corte_ouro:corte_prata],
+            Produto.Linha.BRONZE: sem_linha[corte_prata:],
+        }
+        for linha, itens in faixas.items():
+            if itens:
+                Produto.objects.filter(pk__in=[pk for pk, _ in itens]).update(linha=linha)
+
+        self.stdout.write(
+            "  linhas de exemplo: "
+            + ", ".join(f"{len(v)} {k}" for k, v in faixas.items() if v)
+        )
 
     def _banners(self):
         dados = [
@@ -388,7 +426,15 @@ class Command(BaseCommand):
         self.stdout.write(f"  {Banner.objects.count()} banners")
 
     def _diferenciais(self):
+        config = SiteConfig.load()
         for ordem, (titulo, descricao, icone) in enumerate(DIFERENCIAIS):
+            # os percentuais entram a partir do que está configurado, e só
+            # quando forem maiores que zero
+            if icone == "raio" and config.desconto_pix:
+                descricao = f"{config.desconto_pix}% de desconto à vista"
+            if icone == "refresh" and config.desconto_assinatura_padrao:
+                titulo = f"Assinatura com {config.desconto_assinatura_padrao}% OFF"
+
             Diferencial.objects.get_or_create(
                 titulo=titulo, defaults={"descricao": descricao, "icone": icone, "ordem": ordem}
             )

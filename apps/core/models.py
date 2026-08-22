@@ -1,7 +1,11 @@
 """Modelos-base reutilizaveis e conteudo institucional da loja."""
 from decimal import Decimal
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import (
+    FileExtensionValidator,
+    MaxValueValidator,
+    MinValueValidator,
+)
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -327,11 +331,22 @@ class Banner(TimeStampedModel):
         FAIXA = "faixa", "Faixa promocional"
         SECUNDARIO = "secundario", "Banner secundário"
         PRODUTOS = "produtos", "Faixa de produtos (fotos com link)"
+        APRESENTACAO = "apresentacao", "Apresentação (vídeo ou foto no topo)"
 
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=220, blank=True)
     selo = models.CharField(max_length=60, blank=True, help_text="Etiqueta acima do título.")
     imagem = models.ImageField(upload_to="banners/", blank=True)
+    video = models.FileField(
+        "vídeo",
+        upload_to="banners/video/",
+        blank=True,
+        validators=[FileExtensionValidator(["mp4", "webm", "ogv"])],
+        help_text=(
+            "MP4 ou WebM, curto e sem som — ele toca sozinho e em silêncio. "
+            "Acima de ~5 MB a página fica lenta no 4G."
+        ),
+    )
     cor_fundo = models.CharField(max_length=20, default="#D62B20")
     texto_botao = models.CharField(max_length=40, blank=True, default="Ver catálogo")
     link = models.CharField(max_length=300, blank=True)
@@ -358,6 +373,18 @@ class Banner(TimeStampedModel):
 
     def __str__(self):
         return self.titulo
+
+    @property
+    def tem_midia(self) -> bool:
+        return bool(self.video or self.imagem)
+
+    @property
+    def destino(self) -> str:
+        """Para onde o slide leva. Vazio não vira link — clique morto irrita."""
+        if self.link:
+            return self.link
+        primeiro = self.produtos.filter(publicado=True).first()
+        return primeiro.get_absolute_url() if primeiro else ""
 
     @property
     def produtos_visiveis(self):

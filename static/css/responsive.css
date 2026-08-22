@@ -83,6 +83,34 @@ pre, code { overflow-x: auto; max-width: 100%; }
   }
   .hero .wrap { display: flex; flex-direction: column; }
   .hero__inner { order: 1; }
+
+  /* ── Topo da home no celular ──────────────────────────────────────
+     Com apresentação cadastrada, ela é o topo e o hero some daqui: os
+     dois juntos empurravam os produtos para bem abaixo da dobra.
+     Sem apresentação, o hero antigo continua, mas achatado num
+     retângulo — texto e botões, sem a figura de meia tela. */
+  .hero--secundario { display: none; }
+
+  .apresentacao__palco { aspect-ratio: 16 / 9; max-height: 46vh; }
+  .apresentacao__texto { padding: var(--s-6) var(--s-4) var(--s-4); }
+  .apresentacao__texto strong { font-size: var(--fs-lg); }
+  /* alvo de toque do ponto: 8px de bolinha, 28px de área */
+  .apresentacao__dot { padding: 10px 0; background-clip: content-box; }
+  .apresentacao__dots { gap: var(--s-3); }
+
+  .hero--compacto-movel .hero__inner { padding-block: var(--s-6); }
+  .hero--compacto-movel .hero__content h1 { font-size: var(--fs-2xl); }
+  .hero--compacto-movel .hero__content p {
+    font-size: var(--fs-sm);
+    /* três linhas bastam para a promessa; o resto é rolagem perdida */
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hero--compacto-movel .hero__art,
+  .hero--compacto-movel .hero__figura { display: none; }
+  .hero--compacto-movel .hero__dots {
+    background: none; padding-block: var(--s-3);
+  }
 }
 
 /* ========================================================= ≤ 620px */

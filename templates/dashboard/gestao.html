@@ -20,6 +20,16 @@
 <div class="row row--between" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:var(--s-3)">
   <div style="flex:1;min-width:220px">
     <p class="small muted" style="margin:0">{{ secao_atual.descricao }}</p>
+    {% if secao_atual.slug == 'banners' %}
+      <ul class="small muted" style="margin:var(--s-3) 0 0;padding-left:var(--s-5);line-height:1.7">
+        <li><strong>Apresentação</strong> — vídeo ou foto ocupando o topo da home.
+            É o primeiro bloco no celular e substitui o banner clássico ali.</li>
+        <li><strong>Carrossel principal</strong> — o banner com texto e botões.
+            Sem apresentação cadastrada, ele aparece no celular em versão baixa.</li>
+        <li><strong>Faixa de produtos</strong> — uma fita de fotos que rola com o
+            dedo, cada uma levando ao produto.</li>
+      </ul>
+    {% endif %}
   </div>
   <button type="button" class="btn btn--primary btn--sm nowrap"
           data-produto-modal="{% url 'dashboard:gestao_form_novo' secao_atual.slug %}"

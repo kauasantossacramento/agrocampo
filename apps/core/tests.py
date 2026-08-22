@@ -760,3 +760,197 @@ class WizardDeTamanhosTests(TestCase):
         # sem padrão a vitrine não teria preço para mostrar
         self.assertIsNotNone(produto.variacao_padrao)
         self.assertTrue(produto.variacoes.filter(padrao=True).exists())
+
+
+class BannerDeApresentacaoTests(TestCase):
+    """O topo da home: vídeo/foto com link, e o hero compacto sem ele."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.core.models import Banner
+
+        cls.Banner = Banner
+
+    def test_sem_apresentacao_o_hero_entra_compacto_no_celular(self):
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        self.assertIn("hero--compacto-movel", html)
+        self.assertNotIn("apresentacao__palco", html)
+
+    def test_com_apresentacao_ela_assume_o_topo(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.Banner.objects.create(
+            titulo="Chegou a linha nova",
+            posicao=self.Banner.Posicao.APRESENTACAO,
+            link="/catalogo/",
+            imagem=SimpleUploadedFile("capa.jpg", b"fake", content_type="image/jpeg"),
+        )
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        self.assertIn("apresentacao__palco", html)
+        self.assertIn("Chegou a linha nova", html)
+        # o hero deixa de disputar o topo no celular
+        self.assertIn("hero--secundario", html)
+
+    def test_slide_sem_midia_nao_vira_retangulo_preto(self):
+        self.Banner.objects.create(
+            titulo="Sem foto nenhuma",
+            posicao=self.Banner.Posicao.APRESENTACAO,
+        )
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        self.assertNotIn("Sem foto nenhuma", html)
+
+    def test_destino_cai_no_produto_quando_nao_ha_link(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.catalog.models import Categoria, Produto
+
+        produto = Produto.objects.create(
+            sku="AP-1", nome="Ração destaque",
+            categoria=Categoria.objects.create(nome="Ração"),
+            preco="100.00", estoque=5, publicado=True,
+        )
+        banner = self.Banner.objects.create(
+            titulo="Destaque", posicao=self.Banner.Posicao.APRESENTACAO,
+            imagem=SimpleUploadedFile("c.jpg", b"fake", content_type="image/jpeg"),
+        )
+        banner.produtos.add(produto)
+
+        self.assertEqual(banner.destino, produto.get_absolute_url())
+
+    def test_apresentacao_sem_midia_e_recusada_no_painel(self):
+        from apps.dashboard.gestao import BannerForm
+
+        form = BannerForm(data={
+            "posicao": self.Banner.Posicao.APRESENTACAO,
+            "titulo": "Sem mídia", "cor_fundo": "#D62B20",
+            "texto_botao": "Ver", "ordem": 0, "publicado": "on",
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn("imagem", form.errors)
+
+
+class LogoNasConfiguracoesTests(TestCase):
+    """Trocar e remover a logo tem que funcionar pela tela do lojista."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.accounts.models import User
+
+        cls.lojista = User.objects.create_user(
+            email="lojista-logo@agrocampo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.lojista)
+
+    def _png(self, nome="logo.png"):
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        buf = io.BytesIO()
+        Image.new("RGBA", (320, 96), (214, 43, 32, 255)).save(buf, format="PNG")
+        return SimpleUploadedFile(nome, buf.getvalue(), content_type="image/png")
+
+    def _base(self, **extra):
+        base = {
+            "nome_loja": "AgroCampo", "chamada": "c", "descricao": "d",
+            "topbar_icone": "", "topbar_mensagem": "", "topbar_link_texto": "",
+            "topbar_link_url": "", "logo_altura": 46,
+        }
+        base.update(extra)
+        return base
+
+    def test_enviar_logo_pela_tela(self):
+        from apps.core.models import SiteConfig
+
+        self.client.post(
+            reverse("dashboard:salvar_config", args=["aparencia"]),
+            self._base(logo=self._png("nova.png"), logo_altura=58),
+        )
+        config = SiteConfig.load()
+        self.assertTrue(config.logo.name)
+        self.assertEqual(config.logo_altura, 58)
+
+    def test_caixa_remover_apaga_a_logo(self):
+        from apps.core.models import SiteConfig
+
+        self.client.post(
+            reverse("dashboard:salvar_config", args=["aparencia"]),
+            self._base(logo=self._png()),
+        )
+        self.assertTrue(SiteConfig.load().logo.name)
+
+        self.client.post(
+            reverse("dashboard:salvar_config", args=["aparencia"]),
+            self._base(**{"logo-clear": "1"}),
+        )
+        self.assertEqual(SiteConfig.load().logo.name, "")
+
+    def test_enviar_junto_com_remover_mantem_o_arquivo_novo(self):
+        """Marcar remover e escolher outra no mesmo envio não pode apagar."""
+        from apps.core.models import SiteConfig
+
+        self.client.post(
+            reverse("dashboard:salvar_config", args=["aparencia"]),
+            self._base(logo=self._png("primeira.png")),
+        )
+        self.client.post(
+            reverse("dashboard:salvar_config", args=["aparencia"]),
+            self._base(logo=self._png("segunda.png"), **{"logo-clear": "1"}),
+        )
+        self.assertIn("segunda", SiteConfig.load().logo.name)
+
+    def test_tela_mostra_a_logo_que_esta_no_ar(self):
+        self.client.post(
+            reverse("dashboard:salvar_config", args=["aparencia"]),
+            self._base(logo=self._png("visivel.png")),
+        )
+        html = self.client.get(reverse("dashboard:configuracoes")).content.decode()
+
+        self.assertIn("campo-imagem__previa", html)
+        self.assertIn("visivel", html)
+        self.assertIn("logo-clear", html)
+
+
+class SemPromessaDeDescontoInexistenteTests(TestCase):
+    """A faixa da home não pode anunciar desconto que o checkout não dá."""
+
+    def test_pix_sem_desconto_nao_anuncia_porcentagem(self):
+        from django.core.management import call_command
+
+        from apps.core.models import Diferencial, SiteConfig
+
+        config = SiteConfig.load()
+        config.desconto_pix = 0
+        config.save(update_fields=["desconto_pix"])
+
+        call_command("seed", verbosity=0)
+
+        textos = " ".join(
+            f"{d.titulo} {d.descricao}" for d in Diferencial.objects.all()
+        )
+        self.assertNotIn("% de desconto à vista", textos)
+
+    def test_com_desconto_ligado_a_porcentagem_bate_com_a_configurada(self):
+        from django.core.management import call_command
+
+        from apps.core.models import Diferencial, SiteConfig
+
+        config = SiteConfig.load()
+        config.desconto_pix = 7
+        config.save(update_fields=["desconto_pix"])
+
+        Diferencial.objects.all().delete()
+        call_command("seed", verbosity=0)
+
+        textos = " ".join(
+            f"{d.titulo} {d.descricao}" for d in Diferencial.objects.all()
+        )
+        self.assertIn("7% de desconto à vista", textos)
+        self.assertNotIn("5% de desconto", textos)

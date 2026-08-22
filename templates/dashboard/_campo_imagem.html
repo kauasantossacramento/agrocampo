@@ -1,0 +1,40 @@
+{% comment %}
+  Campo de imagem com o que está no ar à vista.
+
+  Antes era só um <input type=file> nu: o lojista não via qual logo estava
+  valendo, nem se o envio deu certo. Agora a imagem atual aparece ao lado, o
+  nome do arquivo escolhido substitui o rótulo do botão, e há uma caixa para
+  remover sem precisar subir outra no lugar.
+
+  Espera: campo (BoundField), rotulo, ajuda (opcional), escuro (opcional).
+{% endcomment %}
+<div class="field campo-imagem">
+  <label for="{{ campo.id_for_label }}">{{ rotulo }}</label>
+
+  <div class="campo-imagem__linha">
+    <div class="campo-imagem__previa {% if escuro %}campo-imagem__previa--escura{% endif %}">
+      {% if campo.value %}
+        <img src="{{ campo.value.url }}" alt="{{ rotulo }} atual">
+      {% else %}
+        <span class="campo-imagem__vazio">nenhuma</span>
+      {% endif %}
+    </div>
+
+    <div class="campo-imagem__acoes">
+      <label class="btn btn--ghost btn--sm">
+        <svg width="15" height="15"><use href="#i-imagem"></use></svg>
+        <span data-nome-arquivo>{% if campo.value %}Trocar{% else %}Enviar{% endif %}</span>
+        {{ campo }}
+      </label>
+      {% if campo.value %}
+        <label class="switch-row switch-row--inline xs">
+          <input type="checkbox" name="{{ campo.html_name }}-clear" value="1">
+          Remover
+        </label>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if ajuda %}<span class="help">{{ ajuda }}</span>{% endif %}
+  {% if campo.errors %}<span class="error-text">{{ campo.errors|join:" " }}</span>{% endif %}
+</div>
