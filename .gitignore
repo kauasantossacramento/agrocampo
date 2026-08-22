@@ -29,3 +29,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# arquivos de diagnostico temporarios
+diag_tmp.py
+*_tmp.py
