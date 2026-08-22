@@ -144,23 +144,6 @@
   {% endwith %}
 {% endfor %}
 
-{# ===================================================== MAIS VENDIDOS #}
-{% if mais_vendidos %}
-<section class="section section--tight wrap">
-  <div class="section-head" data-reveal>
-    <div class="section-head__title">
-      <h2>Mais vendidos</h2>
-      <p>O que sai todo dia da nossa loja</p>
-      <span class="rule"></span>
-    </div>
-    <a href="{% url 'catalog:catalogo' %}?ordem=mais-vendidos" class="small strong link-underline">Ver tudo →</a>
-  </div>
-  <div class="grid grid--4" data-stagger>
-    {% for produto in mais_vendidos %}{% include 'partials/product_card.html' %}{% endfor %}
-  </div>
-</section>
-{% endif %}
-
 {# ============================= VITRINES POR LINHA (ouro/prata/bronze) #}
 {% for vitrine in vitrines_linha %}
 <section class="section section--tight wrap vitrine-linha vitrine-linha--{{ vitrine.classe }}">
@@ -179,6 +162,23 @@
   </div>
 </section>
 {% endfor %}
+
+{# ===================================================== MAIS VENDIDOS #}
+{% if mais_vendidos %}
+<section class="section section--tight wrap">
+  <div class="section-head" data-reveal>
+    <div class="section-head__title">
+      <h2>Mais vendidos</h2>
+      <p>O que sai todo dia da nossa loja</p>
+      <span class="rule"></span>
+    </div>
+    <a href="{% url 'catalog:catalogo' %}?ordem=mais-vendidos" class="small strong link-underline">Ver tudo →</a>
+  </div>
+  <div class="grid grid--4" data-stagger>
+    {% for produto in mais_vendidos %}{% include 'partials/product_card.html' %}{% endfor %}
+  </div>
+</section>
+{% endif %}
 
 {# ================================================== OFERTA RELÂMPAGO #}
 {% if oferta_relampago %}

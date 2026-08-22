@@ -380,10 +380,16 @@ class Banner(TimeStampedModel):
 
     @property
     def destino(self) -> str:
-        """Para onde o slide leva. Vazio não vira link — clique morto irrita."""
+        """Para onde o slide leva. Vazio não vira link — clique morto irrita.
+
+        Sem link escrito, cai no produto vinculado. Com vários vinculados a
+        escolha é por ordem alfabética, e não "o que eu marquei primeiro":
+        a ordem de marcação não fica guardada em lugar nenhum, e deixar o
+        banco decidir daria um destino diferente a cada consulta.
+        """
         if self.link:
             return self.link
-        primeiro = self.produtos.filter(publicado=True).first()
+        primeiro = self.produtos.filter(publicado=True).order_by("nome").first()
         return primeiro.get_absolute_url() if primeiro else ""
 
     @property

@@ -51,12 +51,16 @@ def home(request):
             "vitrines_linha": vitrines,
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
             # com apresentação cadastrada ela assume o topo; sem ela, o hero
-            # antigo entra em versão compacta no celular
-            "apresentacao": (
-                Banner.objects.publicados()
+            # antigo entra em versão compacta no celular.
+            # Só entram os que têm vídeo ou foto: um banner sem mídia não
+            # rende slide, mas contaria para a barra de pontos.
+            "apresentacao": [
+                b
+                for b in Banner.objects.publicados()
                 .filter(posicao=Banner.Posicao.APRESENTACAO)
                 .prefetch_related("produtos")
-            ),
+                if b.tem_midia
+            ],
             "faixas_produto": (
                 Banner.objects.publicados()
                 .filter(posicao=Banner.Posicao.PRODUTOS)

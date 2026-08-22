@@ -99,12 +99,18 @@
         const resposta = await fetch(gatilho.dataset.produtoModal, {
           headers: { 'X-Requested-With': 'XMLHttpRequest' },
         });
+        if (!resposta.ok) throw new Error('HTTP ' + resposta.status);
         $('[data-modal-corpo]').innerHTML = await resposta.text();
-        prepararWizard();
       } catch (erro) {
         $('[data-modal-corpo]').innerHTML =
           '<div class="alert alert--error">Não consegui carregar o formulário. Tente de novo.</div>';
+        return;
       }
+
+      // fora do try de propósito: com `prepararWizard` lá dentro, qualquer
+      // erro de JS trocava o formulário já carregado pela mensagem de falha —
+      // o lojista via "não consegui carregar" com o servidor respondendo 200
+      prepararWizard();
     });
   }
 
@@ -129,9 +135,9 @@
         p.classList.toggle('is-atual', i === atual);
         p.classList.toggle('is-feito', i < atual);
       });
-      btVoltar.hidden = atual === 0;
-      btAvancar.hidden = atual === telas.length - 1;
-      btSalvar.hidden = atual !== telas.length - 1;
+      if (btVoltar) btVoltar.hidden = atual === 0;
+      if (btAvancar) btAvancar.hidden = atual === telas.length - 1;
+      if (btSalvar) btSalvar.hidden = atual !== telas.length - 1;
       const corpo = $('.modal__corpo');
       if (corpo) corpo.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -154,18 +160,23 @@
       return true;
     }
 
-    btAvancar.addEventListener('click', function () {
-      if (telaValida()) mostrar(atual + 1);
-    });
-    btVoltar.addEventListener('click', function () { mostrar(atual - 1); });
-    $('[data-wizard-cancelar]', wizard).addEventListener('click', fecharModal);
+    if (btAvancar) {
+      btAvancar.addEventListener('click', function () {
+        if (telaValida()) mostrar(atual + 1);
+      });
+    }
+    if (btVoltar) {
+      btVoltar.addEventListener('click', function () { mostrar(atual - 1); });
+    }
+    const btCancelar = $('[data-wizard-cancelar]', wizard);
+    if (btCancelar) btCancelar.addEventListener('click', fecharModal);
 
     /* -------------------------------------------------------- fotos */
     const grade = $('[data-foto-previa]', wizard);
     const vazio = $('[data-foto-vazio]', wizard);
 
     function atualizarVazio() {
-      if (vazio) vazio.hidden = grade.children.length > 0;
+      if (vazio && grade) vazio.hidden = grade.children.length > 0;
     }
 
     $$('[data-foto-input]', wizard).forEach(function (input) {
@@ -197,7 +208,7 @@
 
           figura.appendChild(img);
           figura.appendChild(botao);
-          grade.appendChild(figura);
+          if (grade) grade.appendChild(figura);
         });
         input.value = '';   // permite reescolher o mesmo arquivo
         atualizarVazio();
@@ -224,8 +235,11 @@
     const modeloVariacao = $('[data-variacao-modelo]', wizard);
     const vazioVariacao = $('[data-variacao-vazio]', wizard);
     // o índice nunca é reaproveitado: reindexar linhas existentes trocaria
-    // o arquivo de foto de uma pela da outra
-    let proximoIndice = $$('[data-variacao]', caixaVariacoes).length;
+    // o arquivo de foto de uma pela da outra. `caixaVariacoes` é nulo em todo
+    // modal que não seja o de produto — banners, cidades, cupons.
+    let proximoIndice = caixaVariacoes
+      ? $$('[data-variacao]', caixaVariacoes).length
+      : 0;
 
     function atualizarVazioVariacao() {
       if (vazioVariacao) {
@@ -271,9 +285,14 @@
     }
 
     /* ------------------------------------------------------- salvar */
+    if (!btSalvar) return;
+
     btSalvar.addEventListener('click', async function () {
       if (!telaValida()) return;
 
+      // quando o servidor devolve o formulário com erros, ele precisa ser
+      // religado — mas fora do try, senão um erro de JS apagaria a tela
+      let recarregado = false;
       const dados = new FormData();
       // o conteúdo do <template> dos tamanhos vive num fragmento à parte,
       // então nem aparece aqui — só as linhas realmente adicionadas entram
@@ -329,7 +348,7 @@
 
         // devolve o formulário com os erros, sem perder o que já foi digitado
         $('[data-modal-corpo]').innerHTML = json.html;
-        prepararWizard();
+        recarregado = true;
         toast('Confira os campos destacados.', 'error');
       } catch (erro) {
         toast('Não consegui salvar. Verifique a conexão.', 'error');
@@ -337,6 +356,8 @@
         btSalvar.classList.remove('is-loading');
         btSalvar.innerHTML = textoOriginal;
       }
+
+      if (recarregado) prepararWizard();
     });
 
     mostrar(0);

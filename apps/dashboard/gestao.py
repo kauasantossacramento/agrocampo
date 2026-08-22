@@ -42,8 +42,9 @@ class BannerForm(_EstilizadoMixin, forms.ModelForm):
         )
         self.fields["produtos"].help_text = (
             "Segure Ctrl (ou toque em vários no celular) para escolher mais de um. "
-            "Na faixa de produtos vira uma foto por produto; na apresentação, "
-            "o primeiro define para onde o slide leva quando não há link."
+            "Na faixa de produtos vira uma foto por produto. Na apresentação, "
+            "sem link escrito o slide leva ao primeiro em ordem alfabética — "
+            "para um destino certo, prefira preencher o link."
         )
         self.fields["posicao"].help_text = (
             "“Apresentação” é o bloco de vídeo/foto no topo da home — é o que "

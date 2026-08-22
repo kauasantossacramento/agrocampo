@@ -9,7 +9,6 @@
 <section class="apresentacao" data-apresentacao aria-label="Destaques">
   <div class="apresentacao__palco">
     {% for banner in apresentacao %}
-      {% if banner.tem_midia %}
         <{% if banner.destino %}a href="{{ banner.destino }}"{% else %}div{% endif %}
            class="apresentacao__slide" data-apresentacao-slide
            {% if not forloop.first %}hidden{% endif %}
@@ -41,18 +40,15 @@
             </div>
           {% endif %}
         </{% if banner.destino %}a{% else %}div{% endif %}>
-      {% endif %}
     {% endfor %}
   </div>
 
   {% if apresentacao|length > 1 %}
     <div class="apresentacao__dots">
       {% for banner in apresentacao %}
-        {% if banner.tem_midia %}
-          <button type="button" data-apresentacao-dot
-                  class="apresentacao__dot {% if forloop.first %}is-active{% endif %}"
-                  aria-label="Destaque {{ forloop.counter }}"></button>
-        {% endif %}
+        <button type="button" data-apresentacao-dot
+                class="apresentacao__dot {% if forloop.first %}is-active{% endif %}"
+                aria-label="Destaque {{ forloop.counter }}"></button>
       {% endfor %}
     </div>
   {% endif %}

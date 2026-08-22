@@ -281,6 +281,9 @@ button { cursor: pointer; border: none; background: none; }
   background: repeating-linear-gradient(45deg, var(--cream-warm) 0 12px, #FDE8D4 12px 24px);
 }
 
+/* invólucro dos selos: invisível ao layout no computador */
+.product__selos { display: contents; }
+
 .product__flags {
   position: absolute; top: var(--s-3); left: var(--s-3);
   display: flex; flex-direction: column; align-items: flex-start;

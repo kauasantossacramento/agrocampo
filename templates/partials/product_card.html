@@ -1,17 +1,25 @@
 {# Card de produto reutilizado em toda a vitrine. Espera `produto`. #}
 <article class="product {% if produto.linha %}product--{{ produto.linha }}{% endif %}">
-  {% if produto.linha %}
-    <span class="linha-selo linha-selo--{{ produto.linha }}">
-      <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
-      {{ produto.get_linha_display }}
-    </span>
-  {% endif %}
+  {% comment %}
+    Os selos ficam num invólucro `display:contents`: no computador ele some do
+    layout e cada selo continua flutuando sobre a foto, como sempre foi. No
+    celular o invólucro vira uma faixa abaixo da imagem — três selos sobre um
+    card de 170px escondiam o produto que o cliente foi ver.
+  {% endcomment %}
+  <div class="product__selos">
+    {% if produto.linha %}
+      <span class="linha-selo linha-selo--{{ produto.linha }}">
+        <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
+        {{ produto.get_linha_display }}
+      </span>
+    {% endif %}
 
-  <div class="product__flags">
-    {% if produto.promocao_vigente %}<span class="badge badge--sale">−{{ produto.percentual_desconto }}%</span>{% endif %}
-    {% if produto.permite_assinatura %}<span class="badge badge--sub">ASSINATURA −{{ produto.desconto_assinatura }}%</span>{% endif %}
-    {% if produto.lancamento %}<span class="badge badge--new">NOVO</span>{% endif %}
-    {% if not produto.em_estoque %}<span class="badge badge--gray">ESGOTADO</span>{% endif %}
+    <div class="product__flags">
+      {% if produto.promocao_vigente %}<span class="badge badge--sale">−{{ produto.percentual_desconto }}%</span>{% endif %}
+      {% if produto.permite_assinatura %}<span class="badge badge--sub">ASSINATURA −{{ produto.desconto_assinatura }}%</span>{% endif %}
+      {% if produto.lancamento %}<span class="badge badge--new">NOVO</span>{% endif %}
+      {% if not produto.em_estoque %}<span class="badge badge--gray">ESGOTADO</span>{% endif %}
+    </div>
   </div>
 
   {% if user.is_authenticated %}

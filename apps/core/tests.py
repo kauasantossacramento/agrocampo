@@ -954,3 +954,135 @@ class SemPromessaDeDescontoInexistenteTests(TestCase):
         )
         self.assertIn("7% de desconto à vista", textos)
         self.assertNotIn("5% de desconto", textos)
+
+
+class OrdemDasVitrinesTests(TestCase):
+    """Ouro abre a home; Prata e Bronze na sequência."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from decimal import Decimal
+
+        from apps.catalog.models import Categoria, Produto
+
+        categoria = Categoria.objects.create(nome="Ração")
+        for linha, preco in (("ouro", "300"), ("prata", "200"), ("bronze", "100")):
+            Produto.objects.create(
+                sku=f"L-{linha}", nome=f"Produto {linha}", categoria=categoria,
+                preco=Decimal(preco), estoque=5, publicado=True,
+                linha=linha, destaque=True,
+            )
+
+    def test_ouro_prata_bronze_nesta_ordem(self):
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        ouro = html.index("Linha Ouro")
+        prata = html.index("Linha Prata")
+        bronze = html.index("Linha Bronze")
+
+        self.assertLess(ouro, prata)
+        self.assertLess(prata, bronze)
+
+    def test_linha_ouro_vem_antes_do_mais_vendidos_geral(self):
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        ouro = html.index("Linha Ouro")
+        geral = html.index("O que sai todo dia da nossa loja")
+
+        self.assertLess(ouro, geral)
+
+
+class ModalDeConteudoTests(TestCase):
+    """O modal genérico de conteúdo — banners, cidades, cupons.
+
+    Ele quebrou quando o wizard de produto ganhou a etapa de tamanhos: o JS
+    procurava a caixa de tamanhos em todo modal e estourava nos que não a
+    têm. Pior, o `prepararWizard()` estava dentro do `try` do fetch, então o
+    erro de JS trocava o formulário já carregado pela mensagem "não consegui
+    carregar" — com o servidor respondendo 200.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.accounts.models import User
+
+        cls.lojista = User.objects.create_user(
+            email="lojista-modal@agrocampo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.lojista)
+
+    def test_todas_as_secoes_abrem_o_formulario(self):
+        from apps.dashboard.gestao import SECOES
+
+        for slug in SECOES:
+            with self.subTest(secao=slug):
+                resposta = self.client.get(
+                    reverse("dashboard:gestao_form_novo", args=[slug])
+                )
+                self.assertEqual(resposta.status_code, 200)
+                html = resposta.content.decode()
+                self.assertIn("data-wizard", html)
+                self.assertIn("<input", html + "<select")
+
+    def test_o_js_do_painel_nao_supoe_a_caixa_de_tamanhos(self):
+        """Guarda contra a regressão exata: `$$(sel, null)` estoura."""
+        import pathlib
+
+        js = (
+            pathlib.Path(__file__).resolve().parents[2]
+            / "static" / "js" / "painel.js"
+        ).read_text(encoding="utf-8")
+
+        # a leitura do índice só pode acontecer com a caixa existindo
+        self.assertIn("caixaVariacoes\n      ? $$('[data-variacao]', caixaVariacoes).length", js)
+        # e `prepararWizard` precisa ficar fora do try do fetch
+        posicao_catch = js.index("Não consegui carregar o formulário")
+        posicao_preparar = js.index("prepararWizard();")
+        self.assertGreater(posicao_preparar, posicao_catch)
+
+    def test_banner_de_apresentacao_salva_com_imagem_e_produtos(self):
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        from apps.catalog.models import Categoria, Produto
+        from apps.core.models import Banner
+
+        categoria = Categoria.objects.create(nome="Ração")
+        produtos = [
+            Produto.objects.create(
+                sku=f"B-{i}", nome=f"Produto {i}", categoria=categoria,
+                preco="50.00", estoque=3, publicado=True,
+            )
+            for i in range(2)
+        ]
+
+        buf = io.BytesIO()
+        Image.new("RGB", (1200, 460), (32, 90, 160)).save(buf, format="PNG")
+
+        resposta = self.client.post(
+            reverse("dashboard:gestao_salvar_novo", args=["banners"]),
+            {
+                "posicao": Banner.Posicao.APRESENTACAO,
+                "selo": "", "titulo": "Chegou a linha nova", "subtitulo": "confira",
+                "cor_fundo": "#D62B20", "texto_botao": "Ver", "link": "",
+                "produtos": [p.id for p in produtos],
+                "ordem": 0, "publicado": "on",
+                "imagem": SimpleUploadedFile(
+                    "capa.png", buf.getvalue(), content_type="image/png"
+                ),
+            },
+        )
+        self.assertEqual(resposta.status_code, 200, resposta.content[:400])
+
+        banner = Banner.objects.get(titulo="Chegou a linha nova")
+        self.assertTrue(banner.imagem.name)
+        self.assertEqual(banner.produtos.count(), 2)
+        # sem link escrito, o destino é o primeiro em ordem alfabética —
+        # determinístico, em vez de "o que o banco devolver"
+        self.assertEqual(banner.destino, produtos[0].get_absolute_url())
+        self.assertEqual(banner.destino, banner.destino)

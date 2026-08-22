@@ -119,6 +119,33 @@ pre, code { overflow-x: auto; max-width: 100%; }
 
   .wrap { padding-inline: var(--s-4); }
 
+  /* ── Selos do card fora da foto ───────────────────────────────────
+     Com dois selos por card de ~170px, "ASSINATURA −10%" e "LINHA OURO"
+     cobriam quase toda a imagem. Aqui eles descem para uma faixa própria,
+     logo abaixo da foto, e a foto volta a ser a foto. */
+  .product__selos {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+    order: 2; padding: var(--s-3) var(--s-3) 0;
+  }
+  .product__selos:empty { display: none; }
+  .product__media { order: 1; }
+  .product__body { order: 3; }
+  .product__actions { order: 4; }
+
+  .product__selos .linha-selo,
+  .product__selos .product__flags {
+    position: static; top: auto; right: auto; left: auto;
+    box-shadow: none;
+  }
+  .product__flags {
+    flex-direction: row; flex-wrap: wrap; gap: 4px; max-width: none;
+  }
+  .product__flags:empty { display: none; }
+  /* o coração volta para o canto da foto, sozinho e sem disputar espaço */
+  .product--ouro .product__wish,
+  .product--prata .product__wish,
+  .product--bronze .product__wish { top: var(--s-3); }
+
   /* no celular o balão vira só o ícone: o texto roubava a tela do produto */
   .zap { right: var(--s-4); bottom: var(--s-4); width: 54px; height: 54px; padding: 0;
          justify-content: center; }
