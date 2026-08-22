@@ -229,3 +229,102 @@ nenhum foi alterado.
 5. **Modo simulado de pagamento.** Enquanto as credenciais da Stone não
    forem cadastradas em `/painel/configuracoes/`, nenhuma transação real
    acontece — a loja aceita pedidos, mas não movimenta dinheiro.
+
+---
+
+## 10. Atualização de 22/08/2026 — entrega, tamanhos e linhas
+
+Segunda intervenção no servidor. Mesmo princípio da primeira: **nada fora de
+`/opt/agrocampo` foi tocado**.
+
+### O que foi executado, na ordem
+
+```bash
+# 1. backup do banco antes de qualquer migração
+docker exec agrocampo-db pg_dump -U agrocampo agrocampo \
+  | gzip > /root/backup-agrocampo-20260822-1142.sql.gz     # 26 KB
+
+# 2. código novo
+cd /opt/agrocampo && git pull --ff-only origin main        # 5226d32 -> a03d719
+
+# 3. imagem da aplicação (só o serviço web)
+docker compose build web
+
+# 4. migrações, em container descartável e sem subir dependências
+docker compose run --rm --no-deps web python manage.py migrate
+
+# 5. troca só do container da aplicação
+docker compose up -d --no-deps web
+```
+
+### Migrações aplicadas
+
+| App | Migração |
+|---|---|
+| shipping | `0001_initial` (app novo: Cidade, Localidade, RegraEntrega) |
+| accounts | `0002_endereco_cidade_atendida_endereco_localidade_and_more` |
+| catalog | `0007_produto_linha_alter_produto_unidade_variacaoproduto` |
+| cart | `0003_alter_itemcarrinho_unique_together_and_more` |
+| core | `0006_siteconfig_aviso_entrega_and_more` |
+| core | `0007_banner_produtos_alter_banner_posicao` |
+| core | `0008_siteconfig_logo_altura` |
+| orders | `0004_itempedido_variacao_itempedido_variacao_rotulo_and_more` |
+
+Todas aditivas: campos e tabelas novas. Nenhuma coluna removida ou renomeada,
+nenhum dado existente reescrito pelas migrações.
+
+### Dados alterados à mão (só dois comandos)
+
+1. **`SiteConfig.horario_atendimento` esvaziado.** O valor `"Seg a sex, 8h às
+   18h · Sáb, 8h às 12h"` era invenção minha da primeira rodada, remanescente
+   da limpeza anterior. A loja informa o horário real pelo painel.
+2. **Ordem das espécies.** Cão e Gato estavam nas posições 20 e 21 e o corte
+   da vitrine era 14, então nunca apareciam na home. Reordenados conforme a
+   lista do `seed.py`. O comando só fez `UPDATE ordem, destaque_home` em
+   registros já existentes — não criou, não apagou, não renomeou nada.
+
+### Verificação depois do deploy
+
+| Item | Antes | Depois |
+|---|---|---|
+| `md5sum` dos 7 arquivos em `traefik/dynamic/` | — | **idênticos** |
+| Containers `nuvem-*` | 15 no ar | 15 no ar, **sem reinício** |
+| `https://nuvem.center/` | — | 200 |
+| `https://conmac.nuvem.center/` | — | 302 (comportamento normal) |
+| `agrocampo-db`, `-nginx`, `-cron` | up 35h | **up 35h** (não recriados) |
+| `agrocampo-web` | up 23h | recriado, `healthy` |
+
+Rotas conferidas em produção: `/`, `/catalogo/`, `/catalogo/?linha=ouro`,
+`/carrinho/`, `/conta/cadastrar/`, `/entrega/onde-entregamos/` → todas 200;
+`/painel/` → 302 para o login, como esperado.
+
+### Estado dos dados após a atualização
+
+Nada foi pré-preenchido. O lojista configura tudo pelo painel:
+
+- Cidades atendidas: **0** — até cadastrar a primeira, o frete continua sendo
+  o valor global de `SiteConfig.frete_valor`.
+- Localidades e avisos de entrega: **0**.
+- `entrega_a_partir_de`: **vazio**.
+- Produtos com linha (Ouro/Prata/Bronze): **0** — as três vitrines da home só
+  aparecem quando houver produto em cada linha.
+- Variações (tamanhos): **0**.
+- Telefone, WhatsApp, endereço, e-mail e horário: **todos vazios**.
+
+> O `seed.py` cria a cidade de Valença/BA **desativada e com frete 0,00**, de
+> propósito: uma cidade ativa com frete zero anunciaria entrega grátis, um
+> preço que ninguém combinou. Em produção o seed não roda de novo (o
+> entrypoint detecta catálogo populado), então nem essa cidade existe lá.
+
+### Rollback desta atualização
+
+```bash
+cd /opt/agrocampo
+git checkout 5226d32
+docker compose build web && docker compose up -d --no-deps web
+gunzip -c /root/backup-agrocampo-20260822-1142.sql.gz \
+  | docker exec -i agrocampo-db psql -U agrocampo agrocampo
+```
+
+As migrações são aditivas, então voltar só o código já funciona; restaurar o
+dump só é necessário se houver dados novos a descartar.
