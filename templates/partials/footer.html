@@ -33,6 +33,7 @@
           {% for p in paginas_rodape %}
             <a href="{{ p.get_absolute_url }}">{{ p.nome }}</a>
           {% endfor %}
+          <a href="{% url 'shipping:onde_entregamos' %}">Onde entregamos</a>
           {% if site.blog_ativo %}<a href="{% url 'blog:lista' %}">Blog</a>{% endif %}
         </div>
       </div>

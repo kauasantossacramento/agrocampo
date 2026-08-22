@@ -331,6 +331,63 @@
     principal.style.transition = 'opacity .13s ease';
   }
 
+  /* --------------------------------- tamanhos (variações) do produto */
+  function iniciarTamanhos() {
+    const grupo = $('[data-tamanhos]');
+    if (!grupo) return;
+
+    const precoAtual = $('[data-preco-atual]');
+    const precoAntigo = $('[data-preco-antigo]');
+    const rotuloEstoque = $('[data-estoque-rotulo]');
+    const campoQtd = $('[data-qty-input]');
+    const imagem = $('[data-gallery-main]');
+
+    function aplicar(opcao) {
+      const d = opcao.dataset;
+      if (precoAtual) precoAtual.textContent = d.preco || precoAtual.textContent;
+
+      if (precoAntigo) {
+        precoAntigo.textContent = d.precoCheio || '';
+        precoAntigo.hidden = !d.precoCheio;
+      }
+
+      if (rotuloEstoque && d.rotuloEstoque) {
+        rotuloEstoque.textContent = d.rotuloEstoque;
+        rotuloEstoque.style.color = Number(d.estoque) > 0 ? 'var(--green)' : 'var(--red)';
+      }
+
+      if (campoQtd && d.estoque) {
+        campoQtd.max = d.estoque;
+        // o carrinho recusaria mais do que existe deste tamanho
+        if (Number(campoQtd.value) > Number(d.estoque)) campoQtd.value = d.estoque || 1;
+      }
+
+      // o bloco de assinatura precisa seguir junto: prometer o desconto do
+      // 15kg enquanto o cliente escolheu o 2kg é anunciar preço errado
+      const unico = $('[data-preco-unico]');
+      if (unico && d.preco) unico.textContent = d.preco;
+      $$('[data-preco-assinatura]').forEach((el) => {
+        if (d.assinatura) el.textContent = d.assinatura;
+      });
+      $$('[data-economia-assinatura]').forEach((el) => {
+        if (d.economia) el.textContent = d.economia;
+      });
+
+      if (imagem && d.imagem) {
+        imagem.style.opacity = '0';
+        setTimeout(() => { imagem.src = d.imagem; imagem.style.opacity = '1'; }, 130);
+      }
+    }
+
+    grupo.addEventListener('change', (e) => {
+      const opcao = e.target.closest('input[name=variacao]');
+      if (opcao && opcao.checked) aplicar(opcao);
+    });
+
+    const inicial = $('input[name=variacao]:checked', grupo);
+    if (inicial) aplicar(inicial);
+  }
+
   /* ------------------------------------------------------- quantidade +/- */
   function iniciarQuantidade() {
     document.addEventListener('click', (e) => {
@@ -533,6 +590,7 @@
     iniciarCarrinho();
     iniciarOpcoes();
     iniciarGaleria();
+    iniciarTamanhos();
     iniciarQuantidade();
     iniciarCopiar();
     iniciarPixPolling();

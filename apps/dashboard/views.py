@@ -120,7 +120,8 @@ def pedidos(request):
 @operador_requerido
 def detalhe_pedido(request, numero):
     pedido = get_object_or_404(
-        Pedido.objects.prefetch_related("itens__produto", "eventos", "pagamentos"),
+        Pedido.objects.select_related("usuario")
+        .prefetch_related("itens__produto", "itens__variacao", "eventos", "pagamentos"),
         numero=numero,
     )
     return render(
@@ -131,8 +132,33 @@ def detalhe_pedido(request, numero):
             "pedido": pedido,
             "pagamento": pedido.pagamento_atual,
             "faltantes": pedido.itens_indisponiveis,
+            "link_whatsapp": _whatsapp_do_pedido(pedido),
         },
     )
+
+
+def _whatsapp_do_pedido(pedido) -> str:
+    """Conversa com o cliente já com o assunto escrito.
+
+    Vazio quando não há número ou o cliente não autorizou — a tela então
+    oferece o e-mail em vez de um botão que não leva a lugar nenhum.
+    """
+    from urllib.parse import quote
+
+    base = pedido.usuario.whatsapp_url
+    if not base:
+        return ""
+
+    texto = (
+        f"Olá, {pedido.usuario.primeiro_nome}! Aqui é da AgroCampo, "
+        f"sobre o seu pedido {pedido.numero}."
+    )
+    if pedido.itens_em_falta:
+        texto += (
+            f" Infelizmente ficou faltando: {pedido.itens_em_falta}. "
+            "Podemos trocar por outro item ou devolver o valor — o que prefere?"
+        )
+    return f"{base}?text={quote(texto)}"
 
 
 @operador_requerido
@@ -353,6 +379,8 @@ def configuracoes(request):
             "form_aparencia": formularios.AparenciaForm(instance=config),
             "form_contato": formularios.ContatoForm(instance=config),
             "form_regras": formularios.RegrasForm(instance=config),
+            "form_entrega": formularios.EntregaForm(instance=config),
+            "form_vitrines": formularios.VitrinesForm(instance=config),
             "form_firebase": formularios.FirebaseForm(instance=config),
             "form_provedor": formularios.ProvedorPagamentoForm(instance=provedor),
             "provedores": ProvedorPagamento.objects.all(),
@@ -381,8 +409,94 @@ def produto_form(request, produto_id=None):
     return render(
         request,
         "dashboard/_produto_form.html",
-        {"form": ProdutoForm(instance=produto), "produto": produto},
+        _contexto_wizard(ProdutoForm(instance=produto), produto),
     )
+
+
+def _contexto_wizard(form, produto):
+    from apps.catalog.models import VariacaoProduto
+
+    return {
+        "form": form,
+        "produto": produto,
+        "variacoes": (produto.variacoes.order_by("ordem", "preco") if produto else []),
+        "unidades_variacao": VariacaoProduto.Unidade.choices,
+    }
+
+
+def _salvar_variacoes(request, produto):
+    """Grava os tamanhos vindos do wizard.
+
+    As linhas chegam indexadas (`var-0-preco`, `var-1-preco`…) porque o índice
+    é o que amarra o arquivo de imagem à linha certa. Linhas sem quantidade ou
+    sem preço são descartadas em silêncio — no celular é fácil tocar em
+    "adicionar" sem querer.
+    """
+    from decimal import Decimal, InvalidOperation
+    import re
+
+    from apps.catalog.models import VariacaoProduto
+
+    indices = sorted(
+        {int(m.group(1)) for chave in request.POST
+         if (m := re.fullmatch(r"var-(\d+)-quantidade", chave))}
+    )
+    padrao = request.POST.get("var_padrao", "")
+    mantidos = []
+
+    for ordem, i in enumerate(indices):
+        def campo(nome, vazio=""):
+            return (request.POST.get(f"var-{i}-{nome}") or vazio).strip()
+
+        try:
+            quantidade = Decimal(campo("quantidade").replace(",", "."))
+            preco = Decimal(campo("preco").replace(",", "."))
+        except (InvalidOperation, ValueError):
+            continue
+        if quantidade <= 0 or preco <= 0:
+            continue
+
+        try:
+            promocional = Decimal(campo("preco_promocional").replace(",", "."))
+        except (InvalidOperation, ValueError):
+            promocional = None
+        if promocional is not None and promocional >= preco:
+            promocional = None   # promoção maior que o preço não é promoção
+
+        dados = {
+            "quantidade": quantidade,
+            "unidade": campo("unidade", "kg"),
+            "preco": preco,
+            "preco_promocional": promocional,
+            "estoque": int(campo("estoque", "0") or 0),
+            "padrao": str(i) == padrao,
+            "ordem": ordem,
+            "ativo": True,
+        }
+
+        existente_id = campo("id")
+        variacao = None
+        if existente_id:
+            variacao = produto.variacoes.filter(pk=existente_id).first()
+        if variacao:
+            for atributo, valor in dados.items():
+                setattr(variacao, atributo, valor)
+        else:
+            variacao = VariacaoProduto(produto=produto, **dados)
+
+        imagem = request.FILES.get(f"var-{i}-imagem")
+        if imagem:
+            variacao.imagem = imagem
+        variacao.save()
+        mantidos.append(variacao.pk)
+
+    # o que sumiu da tela sai do banco
+    produto.variacoes.exclude(pk__in=mantidos).delete()
+
+    # sem nenhuma marcada, a primeira vira a padrão: a vitrine precisa
+    # de um preço para mostrar
+    if mantidos and not produto.variacoes.filter(padrao=True).exists():
+        produto.variacoes.filter(pk=mantidos[0]).update(padrao=True)
 
 
 @operador_requerido
@@ -405,7 +519,7 @@ def produto_salvar(request, produto_id=None):
                 "erros": {c: [str(e) for e in erros] for c, erros in form.errors.items()},
                 "html": render_to_string(
                     "dashboard/_produto_form.html",
-                    {"form": form, "produto": produto},
+                    _contexto_wizard(form, produto),
                     request=request,
                 ),
             },
@@ -421,6 +535,8 @@ def produto_salvar(request, produto_id=None):
     remover = request.POST.getlist("remover_imagem")
     if remover:
         ProdutoImagem.objects.filter(produto=produto, pk__in=remover).delete()
+
+    _salvar_variacoes(request, produto)
 
     return JsonResponse({
         "ok": True,
@@ -445,6 +561,8 @@ SECOES_CONFIG = {
     "aparencia": ("AparenciaForm", "Aparência da loja"),
     "contato": ("ContatoForm", "Contato e rodapé"),
     "regras": ("RegrasForm", "Regras da loja"),
+    "entrega": ("EntregaForm", "Entrega e WhatsApp"),
+    "vitrines": ("VitrinesForm", "Vitrines da home"),
     "firebase": ("FirebaseForm", "Notificações push"),
 }
 
@@ -513,7 +631,7 @@ def gestao(request, slug):
     """Listagem genérica de uma seção de conteúdo."""
     from django.db.models import Q
 
-    from .gestao import SECOES
+    from .gestao import secoes_agrupadas
 
     secao = _secao_ou_404(slug)
     qs = secao.queryset()
@@ -538,12 +656,13 @@ def gestao(request, slug):
         "dashboard/gestao.html",
         {
             "secao_atual": secao,
-            "secoes": SECOES.values(),
+            "grupos": secoes_agrupadas().items(),
             "colunas": [c[0] for c in secao.colunas],
             "linhas": linhas,
             "total": qs.count(),
             "busca": busca,
-            "secao": "conteudo",
+            # a barra lateral acende "Entrega" para cidades/localidades/avisos
+            "secao": "entrega" if secao.grupo == "Entrega" else "conteudo",
             "metricas": _metricas(),
         },
     )

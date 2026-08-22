@@ -16,6 +16,12 @@
   <button type="button" class="aba" data-aba="regras">
     <svg width="15" height="15"><use href="#i-escudo"></use></svg>Regras da loja
   </button>
+  <button type="button" class="aba" data-aba="entrega">
+    <svg width="15" height="15"><use href="#i-caminhao"></use></svg>Entrega
+  </button>
+  <button type="button" class="aba" data-aba="vitrines">
+    <svg width="15" height="15"><use href="#i-medalha"></use></svg>Vitrines
+  </button>
   <button type="button" class="aba" data-aba="contato">
     <svg width="15" height="15"><use href="#i-whatsapp"></use></svg>Contato
   </button>
@@ -61,6 +67,11 @@
         <div class="field">
           <label for="{{ form_aparencia.logo_claro.id_for_label }}">Logo para fundo escuro</label>
           {{ form_aparencia.logo_claro }}
+        </div>
+        <div class="field">
+          <label for="{{ form_aparencia.logo_altura.id_for_label }}">Altura da logo (px)</label>
+          {{ form_aparencia.logo_altura }}
+          <span class="help">{{ form_aparencia.logo_altura.help_text }}</span>
         </div>
         <div class="field">
           <label for="{{ form_aparencia.favicon.id_for_label }}">Ícone do navegador</label>
@@ -284,6 +295,102 @@
 </section>
 
 {# ═══════════════════════════════════════════════════ REGRAS DA LOJA #}
+{# ═══════════════════════════════════════════════════════ ENTREGA #}
+<section data-painel-aba="entrega" hidden>
+  <form method="post" action="{% url 'dashboard:salvar_config' 'entrega' %}"
+        class="card card--pad" style="max-width:720px">
+    {% csrf_token %}
+    <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Entrega e WhatsApp</h2>
+    <p class="small muted" style="margin-bottom:var(--s-5)">
+      Aqui ficam as regras que valem para a loja inteira. O frete, os dias e as
+      ilhas de cada cidade ficam em
+      <a href="{% url 'dashboard:gestao' 'cidades' %}" class="strong" style="color:var(--red)">Conteúdo → Cidades atendidas</a>.
+    </p>
+
+    <div class="field">
+      <label for="{{ form_entrega.entrega_a_partir_de.id_for_label }}">Entregas a partir das</label>
+      {{ form_entrega.entrega_a_partir_de }}
+      <span class="help">{{ form_entrega.entrega_a_partir_de.help_text }}</span>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
+      <label for="{{ form_entrega.aviso_entrega.id_for_label }}">Aviso geral de entrega</label>
+      {{ form_entrega.aviso_entrega }}
+      <span class="help">Aparece no carrinho e no checkout. Vazio não mostra nada.</span>
+    </div>
+
+    <hr class="divider">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Balão do WhatsApp</h3>
+    <label class="switch-row">
+      {{ form_entrega.whatsapp_flutuante }} Mostrar o botão flutuante em todas as páginas
+    </label>
+    <div class="field" style="margin-top:var(--s-3)">
+      <label for="{{ form_entrega.whatsapp_mensagem.id_for_label }}">Mensagem já preenchida</label>
+      {{ form_entrega.whatsapp_mensagem }}
+      <span class="help">
+        O número vem da aba Contato{% if site.whatsapp %} — hoje é <strong>{{ site.whatsapp }}</strong>{% else %}
+        e ainda está vazio, então o balão não aparece{% endif %}.
+      </span>
+    </div>
+
+    <button type="submit" class="btn btn--primary" style="margin-top:var(--s-5)">
+      <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar entrega
+    </button>
+  </form>
+</section>
+
+{# ══════════════════════════════════════════════════════ VITRINES #}
+<section data-painel-aba="vitrines" hidden>
+  <form method="post" action="{% url 'dashboard:salvar_config' 'vitrines' %}"
+        class="card card--pad" style="max-width:720px">
+    {% csrf_token %}
+    <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Vitrines da home</h2>
+    <p class="small muted" style="margin-bottom:var(--s-5)">
+      Cada produto pertence a uma linha (Ouro, Prata ou Bronze) e a home ganha
+      uma vitrine para cada uma. Você escolhe o título e se ela aparece.
+    </p>
+
+    <div class="stack" style="gap:var(--s-5)">
+      <div class="vitrine-config vitrine-linha--ouro">
+        <span class="vitrine-linha__fita" aria-hidden="true"></span>
+        <label class="switch-row">
+          {{ form_vitrines.vitrine_ouro_ativa }} {{ form_vitrines.vitrine_ouro_ativa.label }}
+        </label>
+        <div class="field" style="margin-top:var(--s-2)">
+          <label for="{{ form_vitrines.vitrine_ouro_titulo.id_for_label }}">Título</label>
+          {{ form_vitrines.vitrine_ouro_titulo }}
+        </div>
+      </div>
+
+      <div class="vitrine-config vitrine-linha--prata">
+        <span class="vitrine-linha__fita" aria-hidden="true"></span>
+        <label class="switch-row">
+          {{ form_vitrines.vitrine_prata_ativa }} {{ form_vitrines.vitrine_prata_ativa.label }}
+        </label>
+        <div class="field" style="margin-top:var(--s-2)">
+          <label for="{{ form_vitrines.vitrine_prata_titulo.id_for_label }}">Título</label>
+          {{ form_vitrines.vitrine_prata_titulo }}
+        </div>
+      </div>
+
+      <div class="vitrine-config vitrine-linha--bronze">
+        <span class="vitrine-linha__fita" aria-hidden="true"></span>
+        <label class="switch-row">
+          {{ form_vitrines.vitrine_bronze_ativa }} {{ form_vitrines.vitrine_bronze_ativa.label }}
+        </label>
+        <div class="field" style="margin-top:var(--s-2)">
+          <label for="{{ form_vitrines.vitrine_bronze_titulo.id_for_label }}">Título</label>
+          {{ form_vitrines.vitrine_bronze_titulo }}
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn--primary" style="margin-top:var(--s-5)">
+      <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar vitrines
+    </button>
+  </form>
+</section>
+
 <section data-painel-aba="regras" hidden>
   <form method="post" action="{% url 'dashboard:salvar_config' 'regras' %}"
         class="card card--pad" style="max-width:720px">
@@ -367,7 +474,7 @@
       <div class="field">
         <label>WhatsApp</label>
         {{ form_contato.whatsapp }}
-        <span class="help">Só números, com DDI. Ex.: 5514997202800</span>
+        <span class="help">Só números, com DDI. Ex.: 5575900000000</span>
       </div>
       <div class="field"><label>E-mail</label>{{ form_contato.email_contato }}</div>
       <div class="field"><label>Horário de atendimento</label>{{ form_contato.horario_atendimento }}</div>

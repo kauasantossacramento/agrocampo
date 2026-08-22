@@ -94,6 +94,52 @@
 </section>
 {% endif %}
 
+{# ======================================== FAIXA DE PRODUTOS COM LINK #}
+{% for faixa in faixas_produto %}
+  {% with itens=faixa.produtos_visiveis %}
+    {% if itens %}
+      <section class="section section--tight wrap">
+        <div class="section-head" data-reveal>
+          <div class="section-head__title">
+            <h2>{{ faixa.titulo }}</h2>
+            {% if faixa.subtitulo %}<p>{{ faixa.subtitulo }}</p>{% endif %}
+            <span class="rule"></span>
+          </div>
+          {% if faixa.link %}
+            <a href="{{ faixa.link }}" class="small strong link-underline">
+              {{ faixa.texto_botao|default:"Ver tudo" }} →
+            </a>
+          {% endif %}
+        </div>
+
+        {% comment %}
+          Uma fita que rola com o dedo. Cada foto é o link — no celular o
+          alvo é a imagem inteira, não um textinho embaixo dela.
+        {% endcomment %}
+        <div class="fita" role="list">
+          {% for p in itens %}
+            <a href="{{ p.get_absolute_url }}" class="fita__item" role="listitem">
+              {% with imagem=p.imagem_principal %}
+                {% if imagem %}
+                  <img src="{{ imagem.imagem.url }}" alt="{{ p.nome }}" loading="lazy">
+                {% else %}
+                  <span class="product__placeholder">
+                    <svg width="40" height="40" aria-hidden="true"><use href="#c-{{ p.categoria.icone_svg }}"></use></svg>
+                  </span>
+                {% endif %}
+              {% endwith %}
+              <span class="fita__legenda">
+                <strong>{{ p.nome|truncatechars:34 }}</strong>
+                <span>{% if p.tem_variacoes %}a partir de {% endif %}R$ {{ p.preco_atual|floatformat:2 }}</span>
+              </span>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  {% endwith %}
+{% endfor %}
+
 {# ===================================================== MAIS VENDIDOS #}
 {% if mais_vendidos %}
 <section class="section section--tight wrap">
@@ -111,6 +157,25 @@
 </section>
 {% endif %}
 
+{# ============================= VITRINES POR LINHA (ouro/prata/bronze) #}
+{% for vitrine in vitrines_linha %}
+<section class="section section--tight wrap vitrine-linha vitrine-linha--{{ vitrine.classe }}">
+  <div class="section-head" data-reveal>
+    <div class="section-head__title">
+      <h2 class="vitrine-linha__titulo">
+        <span class="vitrine-linha__fita" aria-hidden="true"></span>{{ vitrine.titulo }}
+      </h2>
+      <span class="rule"></span>
+    </div>
+    <a href="{% url 'catalog:catalogo' %}?linha={{ vitrine.linha }}"
+       class="small strong link-underline">Ver a linha →</a>
+  </div>
+  <div class="grid grid--4" data-stagger>
+    {% for produto in vitrine.produtos %}{% include 'partials/product_card.html' %}{% endfor %}
+  </div>
+</section>
+{% endfor %}
+
 {# ================================================== OFERTA RELÂMPAGO #}
 {% if oferta_relampago %}
 <section class="section section--tight wrap">
@@ -119,7 +184,7 @@
       <div>
         <span class="badge badge--sale" style="margin-bottom:var(--s-3)">OFERTA POR TEMPO LIMITADO</span>
         <h2>{{ oferta_relampago.nome }}</h2>
-        <p>Aproveite antes que acabe — de <s>R$ {{ oferta_relampago.preco|floatformat:2 }}</s>
+        <p>Aproveite antes que acabe — de <s>R$ {{ oferta_relampago.preco_cheio|floatformat:2 }}</s>
            por <strong style="color:var(--yellow);font-size:var(--fs-xl)">R$ {{ oferta_relampago.preco_atual|floatformat:2 }}</strong></p>
         <div class="countdown" data-countdown="{{ oferta_relampago.promocao_ate|date:'c' }}"></div>
         <a href="{{ oferta_relampago.get_absolute_url }}" class="btn btn--accent" style="margin-top:var(--s-5)">Aproveitar oferta</a>
@@ -168,18 +233,28 @@
     <p>Selecionamos o que cada espécie precisa</p>
     <span class="rule"></span>
   </div>
-  <div class="carousel" data-carousel>
-    <div class="carousel__track" data-carousel-track style="gap:var(--s-6)">
-      {% for e in especies %}
-        <a href="{{ e.get_absolute_url }}" class="species-tile">
-          <span class="species-tile__circle">
-            {% if e.imagem %}<img src="{{ e.imagem.url }}" alt="{{ e.nome }}" loading="lazy">{% else %}{{ e.icone|default:"🐦" }}{% endif %}
-          </span>
-          <span>{{ e.nome }}</span>
-        </a>
-      {% endfor %}
-    </div>
+  {% comment %}
+    Grade, não carrossel: o cliente quer varrer os bichos de uma vez em vez
+    de arrastar de dez em dez. Ela quebra sozinha em 3–4 linhas conforme a
+    largura da tela.
+  {% endcomment %}
+  <div class="species-grid" data-reveal>
+    {% for e in especies %}
+      <a href="{{ e.get_absolute_url }}" class="species-tile">
+        <span class="species-tile__circle">
+          {% if e.imagem %}
+            <img src="{{ e.imagem.url }}" alt="{{ e.nome }}" loading="lazy">
+          {% else %}
+            <svg width="30" height="30" aria-hidden="true"><use href="#c-{{ e.icone_svg }}"></use></svg>
+          {% endif %}
+        </span>
+        <span>{{ e.nome }}</span>
+      </a>
+    {% endfor %}
   </div>
+  <p class="center" style="margin-top:var(--s-5)">
+    <a href="{% url 'catalog:especies' %}" class="small strong link-underline">Ver todas as espécies →</a>
+  </p>
 </section>
 {% endif %}
 

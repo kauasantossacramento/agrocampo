@@ -58,6 +58,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='siteconfig',
             name='whatsapp',
-            field=models.CharField(blank=True, help_text='Só números com DDI, ex.: 5514997202800', max_length=40),
+            field=models.CharField(blank=True, help_text='Só números com DDI, ex.: 5575900000000', max_length=40),
         ),
     ]

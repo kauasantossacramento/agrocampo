@@ -49,6 +49,12 @@
         <p class="eyebrow">
           {{ produto.categoria.nome }}{% if produto.marca %} · {{ produto.marca.nome }}{% endif %}
         </p>
+        {% if produto.linha %}
+          <span class="linha-selo linha-selo--{{ produto.linha }} linha-selo--estatico">
+            <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
+            {{ produto.get_linha_display }}
+          </span>
+        {% endif %}
         <h1 style="font-size:var(--fs-2xl);margin-block:var(--s-2) var(--s-3)">{{ produto.nome }}</h1>
 
         {% if produto.total_avaliacoes %}
@@ -60,17 +66,48 @@
 
         <div style="margin-bottom:var(--s-2)">
           {% if produto.promocao_vigente %}
-            <span class="pdp__price-old">R$ {{ produto.preco|floatformat:2 }}</span>
+            <span class="pdp__price-old" data-preco-antigo>R$ {{ produto.preco_cheio|floatformat:2 }}</span>
+          {% else %}
+            <span class="pdp__price-old" data-preco-antigo hidden></span>
           {% endif %}
-          <div class="pdp__price">R$ {{ produto.preco_atual|floatformat:2 }}</div>
+          <div class="pdp__price" data-preco-atual>R$ {{ produto.preco_atual|floatformat:2 }}</div>
         </div>
 
-        <p class="pdp__stock" style="color:{% if not produto.em_estoque %}var(--red){% elif produto.estoque_baixo %}var(--amber){% else %}var(--green){% endif %};margin-bottom:var(--s-6)">
+        <p class="pdp__stock" data-estoque-rotulo
+           style="color:{% if not produto.em_estoque %}var(--red){% elif produto.estoque_baixo %}var(--amber){% else %}var(--green){% endif %};margin-bottom:var(--s-6)">
           {{ produto.rotulo_estoque }}
         </p>
 
         <form method="post" action="{% url 'cart:adicionar' produto.slug %}" data-cart-form>
           {% csrf_token %}
+
+          {% if produto.tem_variacoes %}
+            {% comment %}
+              Cada tamanho carrega os próprios dados nos data-*: o JS troca
+              preço, estoque e foto sem ida ao servidor, e o POST leva só o id.
+            {% endcomment %}
+            <div class="card card--pad" style="margin-bottom:var(--s-5)">
+              <p class="filters__title" style="margin-bottom:var(--s-3)">Escolha o tamanho</p>
+              <div class="tamanhos" data-tamanhos role="radiogroup" aria-label="Tamanho">
+                {% for v in produto.variacoes_disponiveis %}
+                  <label class="tamanho {% if not v.em_estoque %}is-esgotado{% endif %}">
+                    <input type="radio" name="variacao" value="{{ v.id }}"
+                           {% if v == produto.variacao_padrao %}checked{% endif %}
+                           {% if not v.em_estoque %}disabled{% endif %}
+                           data-preco="R$ {{ v.preco_atual|floatformat:2 }}"
+                           data-preco-cheio="{% if v.preco_promocional %}R$ {{ v.preco|floatformat:2 }}{% endif %}"
+                           data-estoque="{{ v.estoque }}"
+                           data-assinatura="R$ {{ v.preco_assinatura|floatformat:2 }}"
+                           data-economia="R$ {{ v.economia_assinatura|floatformat:2 }}"
+                           data-rotulo-estoque="{% if v.em_estoque %}{{ v.estoque }} em estoque{% else %}Esgotado{% endif %}"
+                           data-imagem="{% if v.imagem %}{{ v.imagem.url }}{% endif %}">
+                    <span class="tamanho__valor">{{ v.rotulo }}</span>
+                    <span class="tamanho__preco">R$ {{ v.preco_atual|floatformat:2 }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
 
           {% if produto.permite_assinatura %}
             <div class="card card--pad" style="margin-bottom:var(--s-5)">
@@ -79,7 +116,7 @@
                 <label class="option">
                   <input type="radio" name="recorrente" value="0" checked>
                   <span>
-                    <span class="option__title">Compra única — R$ {{ produto.preco_atual|floatformat:2 }}</span>
+                    <span class="option__title">Compra única — <span data-preco-unico>R$ {{ produto.preco_atual|floatformat:2 }}</span></span>
                     <span class="option__desc">Sem compromisso, entrega única.</span>
                   </span>
                 </label>
@@ -89,9 +126,9 @@
                     <span>
                       <span class="option__title">
                         Entregar a cada {{ rotulo }} —
-                        <span style="color:var(--green-deep)">R$ {{ produto.preco_assinatura|floatformat:2 }} (−{{ produto.desconto_assinatura }}%)</span>
+                        <span style="color:var(--green-deep)"><span data-preco-assinatura>R$ {{ produto.preco_assinatura|floatformat:2 }}</span> (−{{ produto.desconto_assinatura }}%)</span>
                       </span>
-                      <span class="option__desc">Economize R$ {{ produto.economia_assinatura|floatformat:2 }} por entrega. Pause quando quiser.</span>
+                      <span class="option__desc">Economize <span data-economia-assinatura>R$ {{ produto.economia_assinatura|floatformat:2 }}</span> por entrega. Pause quando quiser.</span>
                     </span>
                   </label>
                 {% endfor %}
@@ -103,7 +140,8 @@
           <div class="row" style="gap:var(--s-3);margin-bottom:var(--s-5)">
             <div class="qty">
               <button type="button" data-qty="menos" aria-label="Diminuir">−</button>
-              <input type="number" name="quantidade" value="1" min="1" max="{{ produto.estoque }}" aria-label="Quantidade">
+              <input type="number" name="quantidade" value="1" min="1"
+                     max="{{ produto.estoque_total }}" aria-label="Quantidade" data-qty-input>
               <button type="button" data-qty="mais" aria-label="Aumentar">+</button>
             </div>
             <button type="submit" class="btn btn--primary btn--lg" style="flex:1" {% if not produto.em_estoque %}disabled{% endif %}>

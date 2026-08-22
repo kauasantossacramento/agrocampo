@@ -12,13 +12,16 @@
         {% for item in carrinho.linhas %}
           <div class="cart-line">
             <a href="{{ item.produto.get_absolute_url }}" class="cart-line__media">
-              {% with imagem=item.produto.imagem_principal %}
-                {% if imagem %}<img src="{{ imagem.imagem.url }}" alt="{{ item.produto.nome }}" loading="lazy">{% endif %}
+              {% with imagem=item.foto %}
+                {% if imagem %}<img src="{{ imagem.url }}" alt="{{ item.nome_exibicao }}" loading="lazy">{% endif %}
               {% endwith %}
             </a>
 
             <div style="flex:1;min-width:0">
               <a href="{{ item.produto.get_absolute_url }}" style="font-weight:600;color:var(--ink)">{{ item.produto.nome }}</a>
+              {% if item.variacao %}
+                <span class="badge badge--gray" style="margin-left:6px">{{ item.variacao.rotulo }}</span>
+              {% endif %}
 
               {% if item.recorrente %}
                 <div style="margin-top:var(--s-2)">
@@ -88,9 +91,14 @@
             <div class="summary__row summary__row--green"><span>Cupom {{ carrinho.cupom.codigo }}</span><span>−R$ {{ carrinho.desconto_cupom|floatformat:2 }}</span></div>
           {% endif %}
           <div class="summary__row">
-            <span>Frete</span>
-            <span>{% if carrinho.frete_gratis %}<strong style="color:var(--green-deep)">Grátis</strong>{% else %}R$ {{ carrinho.frete|floatformat:2 }}{% endif %}</span>
+            <span>Frete{% if entrega.cidade %} · {{ entrega.cidade.nome }}{% endif %}</span>
+            <span>{% if not entrega.valor %}<strong style="color:var(--green-deep)">Grátis</strong>{% else %}R$ {{ entrega.valor|floatformat:2 }}{% endif %}</span>
           </div>
+          {% if entrega.estimado %}
+            <p class="xs muted" style="margin:2px 0 0">
+              Valor estimado — confirme o endereço no próximo passo.
+            </p>
+          {% endif %}
 
           {% if not carrinho.frete_gratis %}
             <div style="margin-top:var(--s-3)">
@@ -105,6 +113,25 @@
           {% endif %}
 
           <div class="summary__total"><span>Total</span><span>R$ {{ carrinho.total|floatformat:2 }}</span></div>
+
+          {% if entrega.prazo or site.aviso_entrega or avisos_entrega %}
+            <div class="entrega-avisos" style="margin-top:var(--s-4)">
+              {% if entrega.prazo %}
+                <p class="entrega-avisos__prazo">
+                  <svg width="16" height="16"><use href="#i-caminhao"></use></svg>
+                  Chega em <strong>{{ entrega.prazo|date:"l, d/m" }}</strong>
+                </p>
+              {% endif %}
+              {% if site.aviso_entrega %}
+                <p class="small muted" style="margin:0">{{ site.aviso_entrega }}</p>
+              {% endif %}
+              {% for aviso in avisos_entrega %}
+                <p class="small muted" style="margin:var(--s-2) 0 0">
+                  <strong>{{ aviso.titulo }}</strong> — {{ aviso.mensagem }}
+                </p>
+              {% endfor %}
+            </div>
+          {% endif %}
 
           <p class="xs muted" style="margin-block:var(--s-2) var(--s-4)">
             ou <strong style="color:var(--ink)">{{ provedor.parcelas_sem_juros }}x de

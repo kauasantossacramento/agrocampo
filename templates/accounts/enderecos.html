@@ -58,6 +58,24 @@
           <div class="field"><label>Cidade</label>{{ form.cidade }}</div>
           <div class="field"><label>UF</label>{{ form.uf }}</div>
         </div>
+        {% if form.cidade_atendida %}
+          <div class="field">
+            <label for="{{ form.cidade_atendida.id_for_label }}">{{ form.cidade_atendida.label }}</label>
+            {{ form.cidade_atendida }}
+            <span class="help">{{ form.cidade_atendida.help_text }}</span>
+            {% if form.cidade_atendida.errors %}
+              <span class="error-text">{{ form.cidade_atendida.errors|join:" " }}</span>
+            {% endif %}
+          </div>
+          <div class="field">
+            <label for="{{ form.localidade.id_for_label }}">{{ form.localidade.label }}</label>
+            {{ form.localidade }}
+            <span class="help">{{ form.localidade.help_text }}</span>
+            {% if form.localidade.errors %}
+              <span class="error-text">{{ form.localidade.errors|join:" " }}</span>
+            {% endif %}
+          </div>
+        {% endif %}
         <div class="field"><label>Ponto de referência</label>{{ form.referencia }}</div>
         <label class="switch-row">{{ form.zona_rural }} É zona rural</label>
         <label class="switch-row">{{ form.padrao }} Usar como endereço padrão</label>

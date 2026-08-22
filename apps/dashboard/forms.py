@@ -38,7 +38,7 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Produto
         fields = (
-            "nome", "categoria", "marca", "sku",
+            "nome", "categoria", "marca", "linha", "sku",
             "resumo", "descricao",
             "preco", "preco_promocional", "promocao_ate",
             "estoque", "estoque_minimo", "unidade", "peso_kg",
@@ -120,7 +120,7 @@ class AparenciaForm(_EstilizadoMixin, forms.ModelForm):
         model = SiteConfig
         fields = (
             "nome_loja", "chamada", "descricao",
-            "logo", "logo_claro", "favicon", "imagem_capa",
+            "logo", "logo_claro", "logo_altura", "favicon", "imagem_capa",
             "topbar_icone", "topbar_mensagem", "topbar_link_texto", "topbar_link_url",
         )
         widgets = {
@@ -140,7 +140,7 @@ class ContatoForm(_EstilizadoMixin, forms.ModelForm):
             "instagram", "facebook", "youtube", "rodape_sobre",
         )
         widgets = {
-            "whatsapp": forms.TextInput(attrs={"placeholder": "5514997202800 (com DDI)"}),
+            "whatsapp": forms.TextInput(attrs={"placeholder": "5575900000000 (com DDI)"}),
             "cep": forms.TextInput(attrs={"data-mask": "cep", "placeholder": "00000-000"}),
             "telefone": forms.TextInput(attrs={"data-mask": "telefone"}),
             "rodape_sobre": forms.Textarea(attrs={"rows": 3}),
@@ -163,6 +163,63 @@ class RegrasForm(_EstilizadoMixin, forms.ModelForm):
             "frete_valor": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
             "frete_gratis_acima_de": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
         }
+
+
+class EntregaForm(_EstilizadoMixin, forms.ModelForm):
+    """Horário e avisos gerais de entrega.
+
+    O frete de cada cidade fica em Conteúdo → Entrega; aqui ficam só as
+    regras que valem para a loja inteira.
+    """
+
+    class Meta:
+        model = SiteConfig
+        fields = ("entrega_a_partir_de", "aviso_entrega",
+                  "whatsapp_flutuante", "whatsapp_mensagem")
+        widgets = {
+            "entrega_a_partir_de": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "aviso_entrega": forms.Textarea(attrs={
+                "rows": 3,
+                "placeholder": "Ex.: pedidos feitos após as 12h saem no dia seguinte.",
+            }),
+            "whatsapp_mensagem": forms.TextInput(attrs={
+                "placeholder": "Olá! Vim pelo site e gostaria de tirar uma dúvida.",
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["entrega_a_partir_de"].input_formats = ["%H:%M"]
+        self.fields["entrega_a_partir_de"].help_text = (
+            "Aparece no checkout. Cada cidade pode ter um horário próprio."
+        )
+
+
+class VitrinesForm(_EstilizadoMixin, forms.ModelForm):
+    """Títulos das três vitrines da home, editáveis pelo lojista."""
+
+    class Meta:
+        model = SiteConfig
+        fields = (
+            "vitrine_ouro_ativa", "vitrine_ouro_titulo",
+            "vitrine_prata_ativa", "vitrine_prata_titulo",
+            "vitrine_bronze_ativa", "vitrine_bronze_titulo",
+        )
+        labels = {
+            "vitrine_ouro_titulo": "Título da vitrine Ouro",
+            "vitrine_prata_titulo": "Título da vitrine Prata",
+            "vitrine_bronze_titulo": "Título da vitrine Bronze",
+            "vitrine_ouro_ativa": "Mostrar a vitrine Ouro na home",
+            "vitrine_prata_ativa": "Mostrar a vitrine Prata na home",
+            "vitrine_bronze_ativa": "Mostrar a vitrine Bronze na home",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for linha in ("ouro", "prata", "bronze"):
+            self.fields[f"vitrine_{linha}_titulo"].help_text = (
+                "A vitrine só aparece se houver produto nesta linha."
+            )
 
 
 class FirebaseForm(_EstilizadoMixin, forms.ModelForm):

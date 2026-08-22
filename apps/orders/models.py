@@ -37,6 +37,7 @@ class Pedido(TimeStampedModel):
         RASCUNHO = "rascunho", "Rascunho"
         AGUARDANDO_PAGAMENTO = "aguardando_pagamento", "Aguardando pagamento"
         PAGO = "pago", "Pagamento confirmado"
+        # legado: pedidos criados antes de a aprovação ser removida
         AGUARDANDO_APROVACAO = "aguardando_aprovacao", "Aguardando aprovação do lojista"
         APROVADO = "aprovado", "Aprovado"
         EM_SEPARACAO = "em_separacao", "Em separação"
@@ -50,8 +51,12 @@ class Pedido(TimeStampedModel):
     TRANSICOES = {
         Status.RASCUNHO: {Status.AGUARDANDO_PAGAMENTO, Status.CANCELADO},
         Status.AGUARDANDO_PAGAMENTO: {Status.PAGO, Status.CANCELADO},
-        Status.PAGO: {Status.AGUARDANDO_APROVACAO, Status.CANCELADO, Status.ESTORNADO},
-        Status.AGUARDANDO_APROVACAO: {Status.APROVADO, Status.RECUSADO},
+        # Pago vai direto para separação: não há mais etapa de aprovação.
+        # Faltando item, o pedido segue e um atendente entra em contato.
+        Status.PAGO: {Status.EM_SEPARACAO, Status.CANCELADO, Status.ESTORNADO},
+        # Pedidos antigos ainda param nestes dois status — mantidos para que
+        # o lojista consiga encerrá-los.
+        Status.AGUARDANDO_APROVACAO: {Status.APROVADO, Status.EM_SEPARACAO, Status.RECUSADO},
         Status.APROVADO: {Status.EM_SEPARACAO, Status.CANCELADO},
         Status.EM_SEPARACAO: {Status.ENVIADO, Status.CANCELADO},
         Status.ENVIADO: {Status.ENTREGUE},
@@ -110,6 +115,15 @@ class Pedido(TimeStampedModel):
         related_name="pedidos_decididos",
     )
     decidido_em = models.DateTimeField(null=True, blank=True)
+    contato_pendente = models.BooleanField(
+        "atendente precisa falar com o cliente",
+        default=False,
+        help_text="Algum item saiu sem estoque suficiente na hora da separação.",
+    )
+    itens_em_falta = models.TextField(
+        "itens em falta", blank=True,
+        help_text="Preenchido automaticamente quando o estoque não cobre o pedido.",
+    )
     motivo_recusa = models.CharField(max_length=250, blank=True)
 
     codigo_rastreio = models.CharField(max_length=60, blank=True)
@@ -264,7 +278,15 @@ class ItemPedido(models.Model):
     produto = models.ForeignKey(
         "catalog.Produto", on_delete=models.PROTECT, related_name="itens_pedido"
     )
+    variacao = models.ForeignKey(
+        "catalog.VariacaoProduto", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="itens_pedido",
+    )
     nome_produto = models.CharField(max_length=200)
+    variacao_rotulo = models.CharField(
+        "apresentação", max_length=30, blank=True,
+        help_text="Congelado na compra: 2kg, 500g…",
+    )
     sku = models.CharField(max_length=40, blank=True)
     quantidade = models.PositiveIntegerField(default=1)
     preco_unitario = models.DecimalField(
@@ -282,7 +304,19 @@ class ItemPedido(models.Model):
         verbose_name_plural = "itens do pedido"
 
     def __str__(self):
-        return f"{self.quantidade}x {self.nome_produto}"
+        return f"{self.quantidade}x {self.descricao_completa}"
+
+    @property
+    def descricao_completa(self) -> str:
+        if self.variacao_rotulo:
+            return f"{self.nome_produto} · {self.variacao_rotulo}"
+        return self.nome_produto
+
+    @property
+    def foto(self):
+        if self.variacao:
+            return self.variacao.foto
+        return self.produto.foto_principal
 
     @property
     def total(self):
@@ -293,8 +327,18 @@ class ItemPedido(models.Model):
         return (self.preco_cheio - self.preco_unitario) * self.quantidade
 
     @property
+    def estoque_disponivel(self) -> int:
+        return self.variacao.estoque if self.variacao else self.produto.estoque
+
+    @property
     def tem_estoque(self):
-        return self.produto.estoque >= self.quantidade
+        return self.estoque_disponivel >= self.quantidade
+
+    def baixar_estoque(self, pedido_numero):
+        """Baixa da variação quando existe, do produto quando não."""
+        alvo = self.variacao or self.produto
+        alvo.baixar_estoque(self.quantidade, motivo="Venda", pedido=pedido_numero)
+        return alvo
 
     @property
     def rotulo_frequencia(self):

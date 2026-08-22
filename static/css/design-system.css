@@ -283,7 +283,15 @@ button { cursor: pointer; border: none; background: none; }
 
 .product__flags {
   position: absolute; top: var(--s-3); left: var(--s-3);
-  display: flex; flex-direction: column; gap: var(--s-1); z-index: 2;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: var(--s-1); z-index: 2;
+}
+/* Com selo de linha no canto direito, os selos descem uma faixa em vez de
+   disputar a mesma linha — encurtá-los cortava a palavra "ASSINATURA". */
+.product--ouro .product__flags,
+.product--prata .product__flags,
+.product--bronze .product__flags {
+  top: calc(var(--s-3) + 26px);
 }
 
 .product__wish {
@@ -318,6 +326,127 @@ button { cursor: pointer; border: none; background: none; }
 .product__price-sub { font-size: var(--fs-xs); color: var(--green-deep); font-weight: 600; }
 
 .product__actions { padding: 0 var(--s-4) var(--s-4); }
+
+.product__price-desde {
+  font-size: var(--fs-xs); color: var(--muted); line-height: 1;
+}
+.product__tamanhos {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+.product__tamanhos span {
+  padding: 2px 7px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--cream-warm);
+  font-size: 10px; font-weight: 700; color: var(--muted);
+}
+
+/* ══════════════════════════════════════ linhas Ouro, Prata e Bronze
+   A linha é a hierarquia de qualidade da loja. Ela pinta a borda e o selo
+   do card — mas nunca o preço nem o botão, que precisam continuar iguais
+   em toda a vitrine para o cliente comparar. */
+:root {
+  --ouro-1: #C9971B;  --ouro-2: #F5D77E;  --ouro-tinta: #6B4E05;
+  --prata-1: #8C97A3; --prata-2: #DEE4EA; --prata-tinta: #414B56;
+  --bronze-1: #A8703C; --bronze-2: #E5BE95; --bronze-tinta: #61391A;
+}
+
+.linha-selo {
+  position: absolute; top: var(--s-3); right: var(--s-3); z-index: 3;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: .22rem .5rem; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing: .03em;
+  text-transform: uppercase; box-shadow: var(--sh-1);
+}
+.linha-selo--ouro {
+  background: linear-gradient(135deg, var(--ouro-2), var(--ouro-1));
+  color: var(--ouro-tinta);
+}
+.linha-selo--prata {
+  background: linear-gradient(135deg, var(--prata-2), var(--prata-1));
+  color: var(--prata-tinta);
+}
+.linha-selo--bronze {
+  background: linear-gradient(135deg, var(--bronze-2), var(--bronze-1));
+  color: var(--bronze-tinta);
+}
+
+/* o card com linha ganha um fio colorido no topo e a borda combinando */
+.product--ouro, .product--prata, .product--bronze { border-top-width: 3px; }
+.product--ouro { border-top-color: var(--ouro-1); }
+.product--prata { border-top-color: var(--prata-1); }
+.product--bronze { border-top-color: var(--bronze-1); }
+.product--ouro:hover { border-color: var(--ouro-1); }
+.product--prata:hover { border-color: var(--prata-1); }
+.product--bronze:hover { border-color: var(--bronze-1); }
+
+/* o botão de desejo divide o canto com o selo */
+.product--ouro .product__wish,
+.product--prata .product__wish,
+.product--bronze .product__wish { top: calc(var(--s-3) + 26px); }
+
+/* seletor de tamanho na página do produto */
+.tamanhos {
+  display: grid; gap: var(--s-2);
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+}
+.tamanho {
+  display: flex; flex-direction: column; gap: 2px; cursor: pointer;
+  min-height: 62px; padding: var(--s-3);
+  border: 1.5px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); text-align: center;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.tamanho input { position: absolute; opacity: 0; pointer-events: none; }
+.tamanho:hover { border-color: var(--muted); }
+.tamanho:has(input:checked) {
+  border-color: var(--red); background: var(--red-wash, var(--cream-warm));
+  transform: translateY(-2px);
+}
+.tamanho:has(input:focus-visible) { outline: 2px solid var(--red); outline-offset: 2px; }
+.tamanho__valor {
+  font-family: var(--font-display); font-size: var(--fs-md);
+  font-weight: 700; color: var(--ink);
+}
+.tamanho__preco { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.tamanho:has(input:checked) .tamanho__preco { color: var(--red); }
+.tamanho.is-esgotado { opacity: .45; cursor: not-allowed; }
+.tamanho.is-esgotado .tamanho__valor { text-decoration: line-through; }
+
+/* o selo de linha na página do produto não flutua: ele fica no fluxo */
+.linha-selo--estatico { position: static; margin-bottom: var(--s-2); }
+
+/* filtro de linha: botões, não caixinhas — o toque é maior no celular */
+.linha-filtro { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.linha-opcao {
+  display: inline-flex; align-items: center; min-height: 36px;
+  padding: .35rem .7rem; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--surface);
+  font-size: var(--fs-xs); font-weight: 700; color: var(--muted);
+  transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+.linha-opcao input { position: absolute; opacity: 0; pointer-events: none; }
+.linha-opcao:hover { color: var(--ink); }
+.linha-opcao.is-atual { color: var(--ink); background: var(--cream-warm); }
+.linha-opcao--ouro.is-atual { border-color: var(--ouro-1); color: var(--ouro-tinta); }
+.linha-opcao--prata.is-atual { border-color: var(--prata-1); color: var(--prata-tinta); }
+.linha-opcao--bronze.is-atual { border-color: var(--bronze-1); color: var(--bronze-tinta); }
+.linha-opcao:not(.linha-opcao--ouro):not(.linha-opcao--prata):not(.linha-opcao--bronze).is-atual {
+  border-color: var(--red); color: var(--red);
+}
+
+/* cabeçalho das vitrines por linha */
+.vitrine-linha__titulo { display: inline-flex; align-items: center; gap: var(--s-3); }
+.vitrine-linha__fita {
+  width: 34px; height: 5px; border-radius: 3px; flex: none;
+}
+.vitrine-linha--ouro .vitrine-linha__fita {
+  background: linear-gradient(90deg, var(--ouro-2), var(--ouro-1));
+}
+.vitrine-linha--prata .vitrine-linha__fita {
+  background: linear-gradient(90deg, var(--prata-2), var(--prata-1));
+}
+.vitrine-linha--bronze .vitrine-linha__fita {
+  background: linear-gradient(90deg, var(--bronze-2), var(--bronze-1));
+}
 
 /* ================================================================== selos */
 .badge {

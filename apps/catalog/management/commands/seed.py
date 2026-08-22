@@ -31,21 +31,24 @@ CATEGORIAS = [
     ("Casa e Jardim", "jardim", ["Sementes de horta", "Adubos"]),
 ]
 
+# A ordem manda na home: cão e gato vêm primeiro porque são o que mais
+# gente procura numa loja de ração. Antes eles ficavam depois de 20 pássaros
+# e nunca apareciam na vitrine.
 ESPECIES = [
-    ("Canário", "passeriforme", "🐤"), ("Coleiro", "passeriforme", "🐦"),
+    ("Cão", "pet", "🐕"), ("Gato", "pet", "🐈"),
+    ("Peixe", "pet", "🐠"), ("Roedor", "pet", "🐹"),
+    ("Canário", "passeriforme", "🐤"), ("Calopsita", "psitacideo", "🦜"),
+    ("Coleiro", "passeriforme", "🐦"), ("Periquito", "psitacideo", "🦜"),
+    ("Curió", "passeriforme", "🐦"), ("Papagaio", "psitacideo", "🦜"),
+    ("Bovino", "rural", "🐄"), ("Galinha", "rural", "🐓"),
+    ("Equino", "rural", "🐴"), ("Suíno", "rural", "🐖"),
     ("Azulão", "passeriforme", "🐦"), ("Cardeal", "passeriforme", "🐦"),
     ("Sabiá", "passeriforme", "🐦"), ("Mandarim", "passeriforme", "🐤"),
     ("Caboclinho", "passeriforme", "🐦"), ("Patativa", "passeriforme", "🐦"),
-    ("Bigodinho", "passeriforme", "🐦"),
-    ("Curió", "passeriforme", "🐦"), ("Trinca-ferro", "passeriforme", "🐦"),
+    ("Bigodinho", "passeriforme", "🐦"), ("Trinca-ferro", "passeriforme", "🐦"),
     ("Pintassilgo", "passeriforme", "🐤"), ("Bicudo", "passeriforme", "🐦"),
-    ("Calopsita", "psitacideo", "🦜"), ("Periquito", "psitacideo", "🦜"),
-    ("Papagaio", "psitacideo", "🦜"), ("Agapornis", "psitacideo", "🦜"),
-    ("Arara", "psitacideo", "🦜"), ("Ring Neck", "psitacideo", "🦜"), ("Rosella", "psitacideo", "🦜"),
-    ("Cão", "pet", "🐕"), ("Gato", "pet", "🐈"),
-    ("Peixe", "pet", "🐠"), ("Roedor", "pet", "🐹"),
-    ("Bovino", "rural", "🐄"), ("Equino", "rural", "🐴"),
-    ("Suíno", "rural", "🐖"), ("Galinha", "rural", "🐓"),
+    ("Agapornis", "psitacideo", "🦜"), ("Arara", "psitacideo", "🦜"),
+    ("Ring Neck", "psitacideo", "🦜"), ("Rosella", "psitacideo", "🦜"),
 ]
 
 MARCAS = [
@@ -179,6 +182,7 @@ class Command(BaseCommand):
         marcas = self._marcas()
         especies = self._especies()
         self._produtos(categorias, marcas, especies, opcoes)
+        self._entrega()
         self._banners()
         self._diferenciais()
         self._paginas()
@@ -186,6 +190,34 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("\nCatálogo populado com sucesso."))
         self.stdout.write("Crie um operador com: python manage.py createsuperuser")
+
+    # ------------------------------------------------------------------
+    def _entrega(self):
+        """Cria só a cidade sede.
+
+        Valença/BA é a única informação de entrega que veio do lojista, e por
+        isso a cidade nasce **desativada**: com frete 0,00 e ativa, a loja
+        estaria anunciando entrega grátis — um preço que ninguém combinou.
+        O lojista define o valor e liga a cidade no painel.
+        """
+        from apps.shipping.models import Cidade
+
+        cidade, criada = Cidade.objects.get_or_create(
+            nome="Valença", uf="BA",
+            defaults={
+                "sede": True,
+                "frete": Decimal("0.00"),
+                "prazo_dias": 0,
+                "ativo": False,
+                "observacao": "",
+            },
+        )
+        if criada:
+            # o console do Windows usa cp1252: seta e travessao quebram aqui
+            self.stdout.write(
+                "  1 cidade (Valenca/BA) DESATIVADA - defina o frete e ative em "
+                "Painel > Entrega > Cidades atendidas"
+            )
 
     # ------------------------------------------------------------------
     def _config(self):
@@ -257,10 +289,17 @@ class Command(BaseCommand):
     def _especies(self):
         mapa = {}
         for ordem, (nome, grupo, icone) in enumerate(ESPECIES):
-            especie, _ = Especie.objects.get_or_create(
+            especie, criada = Especie.objects.get_or_create(
                 nome=nome,
-                defaults={"grupo": grupo, "icone": icone, "ordem": ordem, "destaque_home": ordem < 14},
+                defaults={"grupo": grupo, "icone": icone, "ordem": ordem,
+                          "destaque_home": ordem < 24},
             )
+            if not criada:
+                # a ordem mudou: sem isso, quem já rodou o seed ficaria com
+                # cão e gato fora da vitrine para sempre
+                especie.ordem = ordem
+                especie.destaque_home = ordem < 24
+                especie.save(update_fields=["ordem", "destaque_home"])
             mapa[nome] = especie
         self.stdout.write(f"  {len(mapa)} espécies")
         return mapa

@@ -195,13 +195,73 @@
       });
     });
 
+    /* --------------------------------------------- tamanhos (variações) */
+    const caixaVariacoes = $('[data-variacoes]', wizard);
+    const modeloVariacao = $('[data-variacao-modelo]', wizard);
+    const vazioVariacao = $('[data-variacao-vazio]', wizard);
+    // o índice nunca é reaproveitado: reindexar linhas existentes trocaria
+    // o arquivo de foto de uma pela da outra
+    let proximoIndice = $$('[data-variacao]', caixaVariacoes).length;
+
+    function atualizarVazioVariacao() {
+      if (vazioVariacao) {
+        vazioVariacao.hidden = caixaVariacoes.children.length > 0;
+      }
+    }
+
+    function ligarRemocao(linha) {
+      const botao = $('[data-variacao-remover]', linha);
+      if (botao) {
+        botao.addEventListener('click', function () {
+          linha.remove();
+          atualizarVazioVariacao();
+        });
+      }
+      const foto = $('[data-variacao-foto]', linha);
+      if (foto) {
+        foto.addEventListener('change', function () {
+          const rotulo = foto.closest('label').querySelector('span');
+          if (foto.files.length && rotulo) rotulo.textContent = foto.files[0].name;
+        });
+      }
+    }
+
+    if (caixaVariacoes) {
+      $$('[data-variacao]', caixaVariacoes).forEach(ligarRemocao);
+
+      const btAdicionar = $('[data-variacao-add]', wizard);
+      if (btAdicionar && modeloVariacao) {
+        btAdicionar.addEventListener('click', function () {
+          const i = proximoIndice++;
+          const html = modeloVariacao.innerHTML.split('__i__').join(String(i));
+          const temporario = document.createElement('div');
+          temporario.innerHTML = html.trim();
+          const linha = temporario.firstElementChild;
+          caixaVariacoes.appendChild(linha);
+          ligarRemocao(linha);
+          atualizarVazioVariacao();
+          const primeiro = $('input', linha);
+          if (primeiro) primeiro.focus();
+        });
+      }
+    }
+
     /* ------------------------------------------------------- salvar */
     btSalvar.addEventListener('click', async function () {
       if (!telaValida()) return;
 
       const dados = new FormData();
+      // o conteúdo do <template> dos tamanhos vive num fragmento à parte,
+      // então nem aparece aqui — só as linhas realmente adicionadas entram
       $$('input, select, textarea', wizard).forEach(function (campo) {
-        if (!campo.name || campo.type === 'file') return;
+        if (!campo.name) return;
+        if (campo.type === 'file') {
+          // fotos dos tamanhos vão pelo próprio nome indexado
+          if (campo.name.indexOf('var-') === 0 && campo.files.length) {
+            dados.append(campo.name, campo.files[0]);
+          }
+          return;
+        }
         if ((campo.type === 'checkbox' || campo.type === 'radio') && !campo.checked) return;
         dados.append(campo.name, campo.value);
       });

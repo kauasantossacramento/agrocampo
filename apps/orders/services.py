@@ -2,7 +2,11 @@
 from django.db import transaction
 
 from apps.notifications.models import Notificacao
-from apps.notifications.services import alertar_estoque_baixo, notificar
+from apps.notifications.services import (
+    alertar_estoque_baixo,
+    notificar,
+    notificar_lojistas,
+)
 
 from .models import EventoPedido, ItemPedido, Pedido
 
@@ -16,7 +20,7 @@ class EstoqueInsuficiente(Exception):
 
 @transaction.atomic
 def criar_pedido_do_carrinho(carrinho, usuario, endereco=None, observacoes="") -> Pedido:
-    """Congela o carrinho em um pedido. Não baixa estoque — isso é na aprovação."""
+    """Congela o carrinho em um pedido. O estoque só é baixado na separação."""
     if carrinho.vazio:
         raise ValueError("Carrinho vazio.")
 
@@ -33,7 +37,7 @@ def criar_pedido_do_carrinho(carrinho, usuario, endereco=None, observacoes="") -
         telefone_cliente=usuario.telefone,
         endereco_entrega=endereco,
         endereco_texto=endereco.linha_unica if endereco else "",
-        frete=carrinho.frete,
+        frete=carrinho.entrega(endereco)["valor"],
         desconto=carrinho.desconto_cupom,
         cupom=carrinho.cupom.codigo if carrinho.cupom else "",
         observacoes=observacoes,
@@ -43,8 +47,11 @@ def criar_pedido_do_carrinho(carrinho, usuario, endereco=None, observacoes="") -
         ItemPedido.objects.create(
             pedido=pedido,
             produto=linha.produto,
+            variacao=linha.variacao,
             nome_produto=linha.produto.nome,
-            sku=linha.produto.sku,
+            variacao_rotulo=linha.variacao.rotulo if linha.variacao else "",
+            sku=(linha.variacao.sku if linha.variacao and linha.variacao.sku
+                 else linha.produto.sku),
             quantidade=linha.quantidade,
             preco_unitario=linha.preco_unitario,
             preco_cheio=linha.preco_cheio,
@@ -69,49 +76,95 @@ def criar_pedido_do_carrinho(carrinho, usuario, endereco=None, observacoes="") -
 
 
 @transaction.atomic
-def aprovar_pedido(pedido: Pedido, lojista) -> Pedido:
-    """O lojista confirmou o estoque: baixa as unidades e avança o pedido."""
+def separar_pedido(pedido: Pedido, autor=None) -> Pedido:
+    """Pedido pago entra em separação na hora, sem esperar o lojista.
+
+    Se o estoque não cobre algum item, o pedido **não** trava: a loja baixa o
+    que tem, marca o pedido para contato e um atendente combina com o cliente
+    o que fazer. Segurar a compra numa fila de aprovação era pior para os dois
+    lados — o cliente ficava sem resposta e o lojista sem venda.
+    """
     faltantes = pedido.itens_indisponiveis
-    if faltantes:
-        raise EstoqueInsuficiente(faltantes)
 
-    pedido.mudar_status(
-        Pedido.Status.APROVADO,
-        autor=lojista,
-        titulo="Pedido aprovado",
-        descricao="Disponibilidade confirmada pelo lojista.",
-    )
+    if pedido.status == Pedido.Status.PAGO:
+        pedido.mudar_status(
+            Pedido.Status.EM_SEPARACAO,
+            autor=autor,
+            titulo="Em separação",
+            descricao="Seu pedido já está sendo preparado.",
+        )
 
-    for item in pedido.itens.select_related("produto"):
+    for item in pedido.itens.select_related("produto", "variacao"):
         if item.baixado_do_estoque:
             continue
-        item.produto.baixar_estoque(
-            item.quantidade, motivo="Venda", pedido=pedido.numero
-        )
-        item.baixado_do_estoque = True
-        item.save(update_fields=["baixado_do_estoque"])
+        # baixa só o que existe: estoque negativo mente para o lojista
+        disponivel = min(item.quantidade, max(item.estoque_disponivel, 0))
+        if disponivel:
+            alvo = item.variacao or item.produto
+            alvo.baixar_estoque(disponivel, motivo="Venda", pedido=pedido.numero)
+        if disponivel >= item.quantidade:
+            item.baixado_do_estoque = True
+            item.save(update_fields=["baixado_do_estoque"])
         if item.produto.estoque <= item.produto.estoque_minimo:
             alertar_estoque_baixo(item.produto)
 
-    pedido.mudar_status(
-        Pedido.Status.EM_SEPARACAO,
-        autor=lojista,
-        titulo="Em separação",
-        descricao="Seu pedido está sendo preparado para envio.",
-    )
+    if faltantes:
+        pedido.contato_pendente = True
+        pedido.itens_em_falta = "; ".join(
+            f"{i.descricao_completa} (pedido {i.quantidade}, "
+            f"disponível {max(i.estoque_disponivel, 0)})"
+            for i in faltantes
+        )
+        pedido.save(update_fields=["contato_pendente", "itens_em_falta"])
 
-    notificar(
-        destinatario=pedido.usuario,
-        tipo=Notificacao.Tipo.PEDIDO_APROVADO,
-        nivel=Notificacao.Nivel.SUCESSO,
-        titulo="Pedido aprovado!",
-        mensagem=f"Seu pedido {pedido.numero} foi aprovado e está em separação.",
-        link=pedido.get_absolute_url(),
-        pedido=pedido,
-        email=True,
-    )
+        notificar(
+            destinatario=pedido.usuario,
+            tipo=Notificacao.Tipo.PEDIDO_APROVADO,
+            nivel=Notificacao.Nivel.INFO,
+            titulo="Estamos separando seu pedido",
+            mensagem=(
+                "Um item pode estar em falta. Nossa equipe vai falar com você "
+                "pelo WhatsApp para combinar a troca ou a devolução do valor."
+            ),
+            link=pedido.get_absolute_url(),
+            pedido=pedido,
+            email=True,
+        )
+        notificar_lojistas(
+            tipo=Notificacao.Tipo.PEDIDO_NOVO,
+            nivel=Notificacao.Nivel.ALERTA,
+            titulo="Falar com o cliente — item em falta",
+            mensagem=f"{pedido.numero} · {pedido.itens_em_falta}",
+            link=f"/painel/pedidos/{pedido.numero}/",
+            pedido=pedido,
+        )
+    else:
+        notificar(
+            destinatario=pedido.usuario,
+            tipo=Notificacao.Tipo.PEDIDO_APROVADO,
+            nivel=Notificacao.Nivel.SUCESSO,
+            titulo="Pedido confirmado!",
+            mensagem=f"Seu pedido {pedido.numero} está em separação.",
+            link=pedido.get_absolute_url(),
+            pedido=pedido,
+            email=True,
+        )
+
     _criar_assinaturas(pedido)
     return pedido
+
+
+@transaction.atomic
+def aprovar_pedido(pedido: Pedido, lojista) -> Pedido:
+    """Encerra à mão um pedido antigo que ficou parado na fila de aprovação."""
+    if pedido.status == Pedido.Status.AGUARDANDO_APROVACAO:
+        pedido.mudar_status(
+            Pedido.Status.EM_SEPARACAO,
+            autor=lojista,
+            titulo="Pedido liberado",
+            descricao="Disponibilidade confirmada pelo lojista.",
+        )
+    return separar_pedido(pedido, autor=lojista)
 
 
 @transaction.atomic

@@ -1,6 +1,7 @@
 """Modelos-base reutilizaveis e conteudo institucional da loja."""
 from decimal import Decimal
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
@@ -95,7 +96,7 @@ class SiteConfig(TimeStampedModel):
 
     telefone = models.CharField(max_length=40, blank=True)
     whatsapp = models.CharField(
-        max_length=40, blank=True, help_text="Só números com DDI, ex.: 5514997202800"
+        max_length=40, blank=True, help_text="Só números com DDI, ex.: 5575900000000"
     )
     email_contato = models.EmailField(blank=True)
     endereco = models.CharField(max_length=250, blank=True)
@@ -123,6 +124,50 @@ class SiteConfig(TimeStampedModel):
         default=2012,
         help_text="Conforme o CNPJ. O site calcula os anos de mercado a partir daqui.",
     )
+    logo_altura = models.PositiveIntegerField(
+        "altura da logo (px)",
+        default=46,
+        validators=[MinValueValidator(24), MaxValueValidator(96)],
+        help_text="No celular ela encolhe sozinha. Entre 24 e 96.",
+    )
+
+    # ------------------------------------------------------- entrega
+    entrega_a_partir_de = models.TimeField(
+        "entregas a partir de",
+        null=True, blank=True,
+        help_text="Horário padrão. Cada cidade pode ter o seu.",
+    )
+    aviso_entrega = models.TextField(
+        "aviso geral de entrega",
+        blank=True,
+        help_text="Aparece no carrinho e no checkout.",
+    )
+
+    # -------------------------------------------------- balão do WhatsApp
+    whatsapp_flutuante = models.BooleanField(
+        "botão flutuante do WhatsApp", default=True
+    )
+    whatsapp_mensagem = models.CharField(
+        max_length=200,
+        blank=True,
+        default="Olá! Vim pelo site e gostaria de tirar uma dúvida.",
+        help_text="Texto já preenchido quando o cliente abre a conversa.",
+    )
+
+    # ------------------------------------------ vitrines por linha
+    vitrine_ouro_titulo = models.CharField(
+        max_length=60, blank=True, default="Mais vendidos — Linha Ouro"
+    )
+    vitrine_prata_titulo = models.CharField(
+        max_length=60, blank=True, default="Mais vendidos — Linha Prata"
+    )
+    vitrine_bronze_titulo = models.CharField(
+        max_length=60, blank=True, default="Mais vendidos — Linha Bronze"
+    )
+    vitrine_ouro_ativa = models.BooleanField(default=True)
+    vitrine_prata_ativa = models.BooleanField(default=True)
+    vitrine_bronze_ativa = models.BooleanField(default=True)
+
     # ------------------------------------------------------------- PWA
     pwa_convite_ativo = models.BooleanField(
         "convidar a instalar o app",
@@ -253,12 +298,35 @@ class SiteConfig(TimeStampedModel):
         numero = "".join(c for c in self.whatsapp if c.isdigit())
         return f"https://wa.me/{numero}" if numero else ""
 
+    @property
+    def whatsapp_url_com_mensagem(self):
+        from urllib.parse import quote
+
+        base = self.whatsapp_url
+        if not base:
+            return ""
+        return f"{base}?text={quote(self.whatsapp_mensagem)}" if self.whatsapp_mensagem else base
+
+    def vitrines_por_linha(self):
+        """Config das três vitrines, na ordem em que aparecem na home."""
+        from apps.catalog.models import Produto
+
+        return [
+            {"linha": Produto.Linha.OURO, "titulo": self.vitrine_ouro_titulo,
+             "ativa": self.vitrine_ouro_ativa, "classe": "ouro"},
+            {"linha": Produto.Linha.PRATA, "titulo": self.vitrine_prata_titulo,
+             "ativa": self.vitrine_prata_ativa, "classe": "prata"},
+            {"linha": Produto.Linha.BRONZE, "titulo": self.vitrine_bronze_titulo,
+             "ativa": self.vitrine_bronze_ativa, "classe": "bronze"},
+        ]
+
 
 class Banner(TimeStampedModel):
     class Posicao(models.TextChoices):
         HERO = "hero", "Carrossel principal"
         FAIXA = "faixa", "Faixa promocional"
         SECUNDARIO = "secundario", "Banner secundário"
+        PRODUTOS = "produtos", "Faixa de produtos (fotos com link)"
 
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=220, blank=True)
@@ -268,6 +336,16 @@ class Banner(TimeStampedModel):
     texto_botao = models.CharField(max_length=40, blank=True, default="Ver catálogo")
     link = models.CharField(max_length=300, blank=True)
     posicao = models.CharField(max_length=20, choices=Posicao.choices, default=Posicao.HERO)
+    produtos = models.ManyToManyField(
+        "catalog.Produto",
+        blank=True,
+        related_name="banners",
+        verbose_name="produtos da faixa",
+        help_text=(
+            "Só para a faixa de produtos: cada foto vira um link direto para "
+            "o produto."
+        ),
+    )
     ordem = models.PositiveIntegerField(default=0)
     publicado = models.BooleanField(default=True)
 
@@ -280,6 +358,11 @@ class Banner(TimeStampedModel):
 
     def __str__(self):
         return self.titulo
+
+    @property
+    def produtos_visiveis(self):
+        """Só produtos publicados: um link para produto fora do ar é um beco."""
+        return self.produtos.filter(publicado=True).prefetch_related("imagens")
 
 
 class Diferencial(TimeStampedModel):

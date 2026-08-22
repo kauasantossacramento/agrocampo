@@ -30,9 +30,9 @@ class Carrinho(TimeStampedModel):
     # ------------------------------------------------------------ totais
     @property
     def linhas(self):
-        return self.itens.select_related("produto", "produto__categoria").prefetch_related(
-            "produto__imagens"
-        )
+        return self.itens.select_related(
+            "produto", "produto__categoria", "variacao"
+        ).prefetch_related("produto__imagens")
 
     @property
     def vazio(self):
@@ -57,16 +57,55 @@ class Carrinho(TimeStampedModel):
         return self.cupom.calcular(base) if self.cupom else Decimal("0")
 
     @property
+    def base_para_frete(self) -> Decimal:
+        return self.subtotal - self.desconto_assinatura - self.desconto_cupom
+
+    def entrega(self, endereco=None) -> dict:
+        """Frete, prazo e avisos para um endereço. Sem endereço, usa o padrão.
+
+        O frete real depende da cidade — e a cidade só é conhecida depois que
+        o cliente escolhe o endereço. Antes disso a loja mostra o valor da
+        cidade sede, que é o caso mais comum, deixando claro no checkout.
+        """
+        from apps.shipping.models import Cidade, calcular_frete
+
+        if self.vazio:
+            return {"valor": Decimal("0"), "cidade": None, "localidade": None,
+                    "atendida": True, "prazo": None, "avisos": []}
+
+        if endereco is None and self.usuario_id:
+            endereco = self.usuario.endereco_padrao
+
+        if endereco is None:
+            # ainda não sabemos para onde vai: estima pela cidade sede
+            sede = Cidade.objects.filter(sede=True, ativo=True).first()
+            if sede:
+                return {
+                    "valor": sede.calcular_frete(self.base_para_frete),
+                    "cidade": sede, "localidade": None, "atendida": True,
+                    "prazo": sede.proxima_entrega(), "estimado": True,
+                    "avisos": ["Frete estimado para "
+                               f"{sede.nome}. Confirme o endereço no checkout."],
+                }
+
+        return calcular_frete(endereco, self.base_para_frete)
+
+    @property
     def frete(self) -> Decimal:
         from apps.core.models import SiteConfig
 
-        config = SiteConfig.load()
-        base = self.subtotal - self.desconto_assinatura - self.desconto_cupom
         if self.vazio:
             return Decimal("0")
+
+        entrega = self.entrega()
+        if entrega["cidade"]:
+            return entrega["valor"]
+
+        # nenhuma cidade cadastrada ainda: cai na regra global da loja
+        config = SiteConfig.load()
         # limite 0 desliga o frete gratis; sem isso um carrinho de R$ 0,01
         # ja sairia com frete gratis
-        if config.frete_gratis_acima_de and base >= config.frete_gratis_acima_de:
+        if config.frete_gratis_acima_de and self.base_para_frete >= config.frete_gratis_acima_de:
             return Decimal("0")
         return config.frete_valor
 
@@ -93,9 +132,13 @@ class Carrinho(TimeStampedModel):
         return self.itens.filter(recorrente=True).exists()
 
     # ---------------------------------------------------------- operacoes
-    def adicionar(self, produto, quantidade=1, recorrente=False, frequencia_dias=None):
+    def adicionar(self, produto, quantidade=1, recorrente=False, frequencia_dias=None,
+                  variacao=None):
+        if variacao is None and produto.tem_variacoes:
+            variacao = produto.variacao_padrao
         item, criado = self.itens.get_or_create(
             produto=produto,
+            variacao=variacao,
             recorrente=recorrente,
             frequencia_dias=frequencia_dias if recorrente else None,
             defaults={"quantidade": quantidade},
@@ -128,28 +171,54 @@ class ItemCarrinho(TimeStampedModel):
     produto = models.ForeignKey(
         "catalog.Produto", on_delete=models.CASCADE, related_name="itens_carrinho"
     )
+    variacao = models.ForeignKey(
+        "catalog.VariacaoProduto", null=True, blank=True,
+        on_delete=models.CASCADE, related_name="itens_carrinho",
+        help_text="A apresentação escolhida: 2kg, 5kg, 500g…",
+    )
     quantidade = models.PositiveIntegerField(default=1)
     recorrente = models.BooleanField(default=False)
     frequencia_dias = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["criado_em"]
-        unique_together = [("carrinho", "produto", "recorrente", "frequencia_dias")]
+        # a mesma ração em 2kg e em 5kg são duas linhas diferentes
+        unique_together = [
+            ("carrinho", "produto", "variacao", "recorrente", "frequencia_dias")
+        ]
         verbose_name = "item do carrinho"
         verbose_name_plural = "itens do carrinho"
 
     def __str__(self):
-        return f"{self.quantidade}x {self.produto.nome}"
+        return f"{self.quantidade}x {self.nome_exibicao}"
+
+    @property
+    def nome_exibicao(self) -> str:
+        if self.variacao:
+            return f"{self.produto.nome} · {self.variacao.rotulo}"
+        return self.produto.nome
+
+    @property
+    def foto(self):
+        """A foto da variação escolhida, quando ela tem uma própria."""
+        return self.variacao.foto if self.variacao else self.produto.foto_principal
+
+    @property
+    def _origem(self):
+        return self.variacao or self.produto
 
     @property
     def preco_cheio(self) -> Decimal:
-        return self.produto.preco_atual
+        return self._origem.preco_atual
 
     @property
     def preco_unitario(self) -> Decimal:
-        return (
-            self.produto.preco_assinatura if self.recorrente else self.produto.preco_atual
-        )
+        origem = self._origem
+        return origem.preco_assinatura if self.recorrente else origem.preco_atual
+
+    @property
+    def estoque_disponivel(self) -> int:
+        return self.variacao.estoque if self.variacao else self.produto.estoque
 
     @property
     def total(self) -> Decimal:
@@ -167,4 +236,4 @@ class ItemCarrinho(TimeStampedModel):
 
     @property
     def disponivel(self):
-        return self.produto.publicado and self.produto.estoque >= self.quantidade
+        return self.produto.publicado and self.estoque_disponivel >= self.quantidade

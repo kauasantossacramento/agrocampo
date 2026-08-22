@@ -43,7 +43,9 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .topbar__highlight { text-align: center; }
 
   .header__main { gap: var(--s-3); }
-  .logo img { height: 38px; }
+  /* a logo é a marca: encolhe menos que o resto, mas nunca acima de 46px
+     no celular, senão empurra a busca e os ícones para fora */
+  .logo img { height: min(var(--logo-h, 46px), 46px); }
 
   /* grades de painel declaradas inline no template caem para uma coluna */
   .panel__main .grid[style] { grid-template-columns: 1fr !important; }
@@ -88,6 +90,14 @@ pre, code { overflow-x: auto; max-width: 100%; }
   :root { --fs-4xl: 1.875rem; --fs-3xl: 1.625rem; --fs-2xl: 1.375rem; }
 
   .wrap { padding-inline: var(--s-4); }
+
+  /* no celular o balão vira só o ícone: o texto roubava a tela do produto */
+  .zap { right: var(--s-4); bottom: var(--s-4); width: 54px; height: 54px; padding: 0;
+         justify-content: center; }
+  .zap__balao { display: none; }
+
+  /* tamanhos do produto: dois por linha ainda dão alvo de toque confortável */
+  .tamanhos { grid-template-columns: repeat(2, 1fr); }
 
   .trust__grid { grid-template-columns: 1fr; gap: var(--s-4); }
   .grid--6, .grid--5, .grid--4, .grid--3 { grid-template-columns: repeat(2, 1fr); }
@@ -158,6 +168,11 @@ pre, code { overflow-x: auto; max-width: 100%; }
     min-height: 40px; display: inline-flex; align-items: center;
   }
 
+  /* Link dentro de uma frase não pode virar bloco de 40px — quebraria o
+     texto. Padding em elemento inline aumenta a área do dedo sem mexer na
+     altura da linha. */
+  .panel__main p a { padding-block: 10px; }
+
   /* o alvo real do checkbox é o label inteiro, não o quadradinho */
   .panel__main .switch-row {
     min-height: 44px; padding-block: var(--s-1);
@@ -213,6 +228,10 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .product__price-now { font-size: var(--fs-base); }
   .cat-tile { padding: var(--s-4) var(--s-2); font-size: var(--fs-xs); }
   .species-tile__circle { width: 68px; height: 68px; }
+  /* quatro por linha no celular: a grade fica curta e ainda dá para tocar */
+  .species-grid { grid-template-columns: repeat(4, 1fr); gap: var(--s-4) var(--s-2); }
+  /* a fita mostra "meio" cartão à direita, avisando que dá para arrastar */
+  .fita { grid-auto-columns: 44vw; gap: var(--s-3); }
 
   .btn--lg { padding: .85rem 1.25rem; font-size: var(--fs-base); }
 }

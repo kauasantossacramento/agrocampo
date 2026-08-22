@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Onde entregamos — {{ site.nome_loja }}{% endblock %}
+
+{% block content %}
+<div class="wrap section">
+  <nav class="breadcrumb" aria-label="Você está aqui">
+    <a href="{% url 'core:home' %}">Início</a> › <span>Onde entregamos</span>
+  </nav>
+
+  <div class="section-head section-head--center" data-reveal>
+    <h1>Onde entregamos</h1>
+    <p>As cidades que atendemos, com o frete e os dias de cada uma</p>
+    <span class="rule"></span>
+  </div>
+
+  {% if config.entrega_a_partir_de or config.aviso_entrega %}
+    <div class="alert alert--info" style="max-width:760px;margin:0 auto var(--s-6)">
+      <svg width="17" height="17"><use href="#i-relogio"></use></svg>
+      <span>
+        {% if config.entrega_a_partir_de %}
+          As entregas saem a partir das <strong>{{ config.entrega_a_partir_de|time:"H:i" }}</strong>.
+        {% endif %}
+        {{ config.aviso_entrega }}
+      </span>
+    </div>
+  {% endif %}
+
+  {% if cidades %}
+    <div class="grid grid--3" data-stagger>
+      {% for cidade in cidades %}
+        <article class="card card--pad cidade-card {% if cidade.sede %}cidade-card--sede{% endif %}">
+          {% comment %}
+            O selo vem antes e em linha própria: ao lado do título ele cortava
+            "Valença" em "Valenç" nos cartões estreitos do celular.
+          {% endcomment %}
+          <header class="cidade-card__topo">
+            {% if cidade.sede %}<span class="badge badge--red">Nossa cidade</span>{% endif %}
+            <h2>{{ cidade.nome }}</h2>
+            <p class="xs muted">{{ cidade.uf }}</p>
+          </header>
+
+          <dl class="cidade-dados">
+            <div>
+              <dt>Frete</dt>
+              <dd>{% if cidade.frete %}R$ {{ cidade.frete|floatformat:2 }}{% else %}Grátis{% endif %}</dd>
+            </div>
+            <div>
+              <dt>Entregamos</dt>
+              <dd>{{ cidade.dias_legivel|capfirst }}</dd>
+            </div>
+            {% if cidade.horario_a_partir_de %}
+              <div>
+                <dt>A partir das</dt>
+                <dd>{{ cidade.horario_a_partir_de|time:"H:i" }}</dd>
+              </div>
+            {% endif %}
+          </dl>
+
+          {% with locais=cidade.localidades.all %}
+            {% if locais %}
+              <p class="xs muted" style="margin:var(--s-3) 0 var(--s-2)">
+                Localidades com frete próprio:
+              </p>
+              <ul class="localidades">
+                {% for local in locais %}
+                  {% if local.ativo %}
+                    <li>
+                      {% if local.acesso_por_barco %}
+                        <svg width="14" height="14" aria-hidden="true"><use href="#i-barco"></use></svg>
+                      {% else %}
+                        <svg width="14" height="14" aria-hidden="true"><use href="#i-mapa"></use></svg>
+                      {% endif %}
+                      <span>{{ local.nome }}</span>
+                      <strong>+ R$ {{ local.frete_adicional|floatformat:2 }}</strong>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            {% endif %}
+          {% endwith %}
+
+          {% if cidade.observacao %}
+            <p class="xs muted" style="margin:var(--s-3) 0 0">{{ cidade.observacao }}</p>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+
+    {% for aviso in avisos %}
+      <div class="alert {% if aviso.destaque %}alert--warning{% else %}alert--info{% endif %}"
+           style="max-width:760px;margin:var(--s-4) auto 0">
+        <svg width="17" height="17"><use href="#i-{{ aviso.icone }}"></use></svg>
+        <span><strong>{{ aviso.titulo }}</strong> — {{ aviso.mensagem }}</span>
+      </div>
+    {% endfor %}
+
+    <div class="center" style="margin-top:var(--s-8)">
+      <p class="small muted">Não achou a sua cidade ou o seu povoado na lista?</p>
+      {% if site.whatsapp_url %}
+        <a href="{{ site.whatsapp_url_com_mensagem }}" target="_blank" rel="noopener"
+           class="btn btn--primary" style="margin-top:var(--s-3)">
+          <svg width="16" height="16"><use href="#i-whatsapp"></use></svg>
+          Perguntar no WhatsApp
+        </a>
+      {% else %}
+        <p class="small">Fale com a loja — combinamos a entrega com você.</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="empty center" style="padding:var(--s-12)">
+      <p class="empty__title">Ainda não publicamos a lista de cidades</p>
+      <p class="small muted">Fale com a loja para confirmar a entrega no seu endereço.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,5 +1,12 @@
 {# Card de produto reutilizado em toda a vitrine. Espera `produto`. #}
-<article class="product">
+<article class="product {% if produto.linha %}product--{{ produto.linha }}{% endif %}">
+  {% if produto.linha %}
+    <span class="linha-selo linha-selo--{{ produto.linha }}">
+      <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
+      {{ produto.get_linha_display }}
+    </span>
+  {% endif %}
+
   <div class="product__flags">
     {% if produto.promocao_vigente %}<span class="badge badge--sale">−{{ produto.percentual_desconto }}%</span>{% endif %}
     {% if produto.permite_assinatura %}<span class="badge badge--sub">ASSINATURA −{{ produto.desconto_assinatura }}%</span>{% endif %}
@@ -40,9 +47,17 @@
 
     <div class="product__price">
       {% if produto.promocao_vigente %}
-        <div class="product__price-old">R$ {{ produto.preco|floatformat:2 }}</div>
+        <div class="product__price-old">R$ {{ produto.preco_cheio|floatformat:2 }}</div>
+      {% endif %}
+      {% if produto.tem_variacoes %}
+        <div class="product__price-desde">a partir de</div>
       {% endif %}
       <div class="product__price-now">R$ {{ produto.preco_atual|floatformat:2 }}</div>
+      {% if produto.tem_variacoes %}
+        <div class="product__tamanhos">
+          {% for v in produto.variacoes_disponiveis %}<span>{{ v.rotulo }}</span>{% endfor %}
+        </div>
+      {% endif %}
       {% if produto.permite_assinatura %}
         <div class="product__price-sub">R$ {{ produto.preco_assinatura|floatformat:2 }} na assinatura</div>
       {% endif %}
@@ -50,7 +65,11 @@
   </div>
 
   <div class="product__actions">
-    {% if produto.em_estoque %}
+    {% if produto.tem_variacoes %}
+      <a href="{{ produto.get_absolute_url }}" class="btn btn--primary btn--sm btn--block">
+        <svg width="15" height="15"><use href="#i-balanca"></use></svg>Escolher tamanho
+      </a>
+    {% elif produto.em_estoque %}
       <form method="post" action="{% url 'cart:adicionar' produto.slug %}" data-cart-form>{% csrf_token %}
         <input type="hidden" name="quantidade" value="1">
         <button type="submit" class="btn btn--primary btn--sm btn--block">

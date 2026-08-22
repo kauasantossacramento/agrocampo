@@ -163,8 +163,9 @@ def _tokenizar(usuario, cartao: DadosCartao, provedor, gateway):
 
 # ---------------------------------------------------------------- pos-pagamento
 def _confirmar_pedido(pedido, pagamento):
-    """Pagamento aprovado → pedido entra na fila de conferência do lojista."""
+    """Pagamento aprovado → pedido entra direto em separação."""
     from apps.orders.models import Pedido as PedidoModel
+    from apps.orders.services import separar_pedido
 
     if pedido.status in {PedidoModel.Status.RASCUNHO, PedidoModel.Status.AGUARDANDO_PAGAMENTO}:
         pedido.mudar_status(
@@ -173,11 +174,7 @@ def _confirmar_pedido(pedido, pagamento):
             descricao=f"{pagamento.get_metodo_display()} aprovado.",
         )
     if pedido.status == PedidoModel.Status.PAGO:
-        pedido.mudar_status(
-            PedidoModel.Status.AGUARDANDO_APROVACAO,
-            titulo="Aguardando conferência do lojista",
-            descricao="A equipe está confirmando a disponibilidade em estoque.",
-        )
+        separar_pedido(pedido)
 
     notificar(
         destinatario=pedido.usuario,

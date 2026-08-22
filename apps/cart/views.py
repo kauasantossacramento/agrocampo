@@ -1,6 +1,7 @@
 """Carrinho e checkout."""
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -29,8 +30,16 @@ def _resposta(request, carrinho, mensagem, ok=True, destino="cart:detalhe"):
 
 
 def detalhe(request):
+    from apps.shipping.models import RegraEntrega
+
     carrinho = obter_carrinho(request)
     provedor = ProvedorPagamento.ativo_padrao()
+    entrega = carrinho.entrega()
+
+    avisos = RegraEntrega.objects.filter(
+        ativo=True, momento=RegraEntrega.Momento.CARRINHO
+    ).filter(Q(cidade__isnull=True) | Q(cidade=entrega["cidade"]))
+
     return render(
         request,
         "cart/carrinho.html",
@@ -39,6 +48,8 @@ def detalhe(request):
             "provedor": provedor,
             "metodos": provedor.metodos_disponiveis(),
             "parcelas": provedor.parcelas_disponiveis(carrinho.total) if carrinho else [],
+            "entrega": entrega,
+            "avisos_entrega": avisos,
         },
     )
 
@@ -52,11 +63,26 @@ def adicionar(request, slug):
     recorrente = request.POST.get("recorrente") == "1" and produto.permite_assinatura
     frequencia = int(request.POST.get("frequencia", 30)) if recorrente else None
 
-    if produto.estoque < quantidade:
-        return _resposta(request, carrinho, f"{produto.nome} está sem estoque.", ok=False)
+    variacao = None
+    if produto.tem_variacoes:
+        escolhida = request.POST.get("variacao")
+        variacao = produto.variacoes.filter(pk=escolhida, ativo=True).first() if escolhida else None
+        if variacao is None:
+            variacao = produto.variacao_padrao
+        if variacao is None:
+            return _resposta(
+                request, carrinho,
+                f"Escolha o tamanho de {produto.nome} antes de adicionar.", ok=False,
+            )
 
-    carrinho.adicionar(produto, quantidade, recorrente, frequencia)
-    return _resposta(request, carrinho, f"{produto.nome} foi para o carrinho.")
+    disponivel = variacao.estoque if variacao else produto.estoque
+    if disponivel < quantidade:
+        nome = f"{produto.nome} {variacao.rotulo}" if variacao else produto.nome
+        return _resposta(request, carrinho, f"{nome} está sem estoque.", ok=False)
+
+    carrinho.adicionar(produto, quantidade, recorrente, frequencia, variacao=variacao)
+    rotulo = f"{produto.nome} {variacao.rotulo}" if variacao else produto.nome
+    return _resposta(request, carrinho, f"{rotulo} foi para o carrinho.")
 
 
 @require_POST
@@ -82,10 +108,10 @@ def atualizar(request, item_id):
     if quantidade <= 0:
         item.delete()
         return _resposta(request, carrinho, "Item removido do carrinho.")
-    if quantidade > item.produto.estoque:
+    if quantidade > item.estoque_disponivel:
         return _resposta(
             request, carrinho,
-            f"Temos apenas {item.produto.estoque} unidades em estoque.", ok=False,
+            f"Temos apenas {item.estoque_disponivel} unidades em estoque.", ok=False,
         )
 
     item.quantidade = quantidade
@@ -151,12 +177,25 @@ def checkout(request):
         carrinho.save(update_fields=["finalizado"])
         return redirect("payments:checkout", numero=pedido.numero)
 
+    from apps.shipping.models import RegraEntrega
+
+    enderecos = request.user.enderecos.select_related("cidade_atendida", "localidade")
+    padrao = enderecos.filter(padrao=True).first() or enderecos.first()
+    entrega = carrinho.entrega(padrao)
+
+    avisos = RegraEntrega.objects.filter(
+        ativo=True, momento=RegraEntrega.Momento.CHECKOUT
+    ).filter(Q(cidade__isnull=True) | Q(cidade=entrega["cidade"]))
+
     return render(
         request,
         "cart/checkout.html",
         {
             "carrinho": carrinho,
-            "enderecos": request.user.enderecos.all(),
+            "enderecos": enderecos,
+            "endereco_padrao": padrao,
+            "entrega": entrega,
+            "avisos_entrega": avisos,
             "provedor": provedor,
         },
     )

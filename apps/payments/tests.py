@@ -52,13 +52,13 @@ class BaseCheckout(TestCase):
 
 
 class CobrancaCartaoTests(BaseCheckout):
-    def test_cartao_aprovado_move_pedido_para_analise(self):
+    def test_cartao_aprovado_manda_pedido_para_separacao(self):
         pagamento = cobrar_cartao(self.pedido, CARTAO_APROVADO)
         self.pedido.refresh_from_db()
 
         self.assertEqual(pagamento.status, Pagamento.Status.PAGO)
         self.assertEqual(pagamento.valor_capturado, self.pedido.total)
-        self.assertEqual(self.pedido.status, Pedido.Status.AGUARDANDO_APROVACAO)
+        self.assertEqual(self.pedido.status, Pedido.Status.EM_SEPARACAO)
 
     def test_cartao_recusado_nao_avanca_o_pedido(self):
         pagamento = cobrar_cartao(self.pedido, CARTAO_RECUSADO)
@@ -106,7 +106,7 @@ class WebhookTests(BaseCheckout):
         self.pedido.refresh_from_db()
 
         self.assertEqual(pagamento.status, Pagamento.Status.PAGO)
-        self.assertEqual(self.pedido.status, Pedido.Status.AGUARDANDO_APROVACAO)
+        self.assertEqual(self.pedido.status, Pedido.Status.EM_SEPARACAO)
 
     def test_assinatura_invalida_e_rejeitada_na_view(self):
         payload = {"type": "charge.paid", "data": {"id": "x", "status": "paid"}}

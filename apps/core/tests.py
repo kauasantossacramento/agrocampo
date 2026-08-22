@@ -223,7 +223,7 @@ class PaginasAutenticadasTests(TestCase):
         self.assertIn(reverse("accounts:entrar"), resposta.url)
         self.assertIn("next=", resposta.url)
 
-    def test_fluxo_completo_pix_ate_aprovacao(self):
+    def test_fluxo_completo_pix_ate_separacao(self):
         from apps.payments.services import cobrar_pix
 
         self.client.force_login(self.cliente)
@@ -235,12 +235,7 @@ class PaginasAutenticadasTests(TestCase):
         # confirma o Pix pela rota de simulação
         self.client.post(reverse("payments:simular_pix", args=[pagamento.id]))
         self.pedido.refresh_from_db()
-        self.assertEqual(self.pedido.status, Pedido.Status.AGUARDANDO_APROVACAO)
-
-        # o lojista aprova
-        self.client.force_login(self.lojista)
-        self.client.post(reverse("dashboard:aprovar", args=[self.pedido.numero]))
-        self.pedido.refresh_from_db()
+        # sem etapa de aprovação: o pagamento já manda para separação
         self.assertEqual(self.pedido.status, Pedido.Status.EM_SEPARACAO)
 
 
@@ -265,7 +260,8 @@ class RetornoAoCheckoutTests(TestCase):
             f"{reverse('accounts:cadastrar')}?next={checkout}",
             {
                 "first_name": "Novo", "last_name": "Cliente",
-                "email": "novo.cliente@exemplo.com", "telefone": "", "cpf": "",
+                "email": "novo.cliente@exemplo.com",
+                "telefone": "(75) 99999-9999", "cpf": "",
                 "password1": "senha-forte-987", "password2": "senha-forte-987",
                 "next": checkout,
             },
@@ -460,10 +456,12 @@ class PainelSemAdminDjangoTests(TestCase):
             "topbar_mensagem": "Nova faixa",
             "topbar_link_texto": "Rastrear",
             "topbar_link_url": "/pedidos/",
+            "logo_altura": 60,
         })
         config = SiteConfig.load()
         self.assertEqual(config.nome_loja, "AgroCampo Editado")
         self.assertEqual(config.chamada, "Nova chamada da capa")
+        self.assertEqual(config.logo_altura, 60)
 
 
 class TelasNativasDeConteudoTests(TestCase):
@@ -570,3 +568,195 @@ class TelasNativasDeConteudoTests(TestCase):
                 # o lojista não é superusuário, então nem o atalho técnico aparece
                 links = re.findall(r'href="(/admin/[^"]*)"', html)
                 self.assertFalse(links, f"{rota} ainda leva ao admin: {links}")
+
+
+class SemNumeroDeTerceiroTests(TestCase):
+    """O telefone da Terra dos Pássaros já vazou para o site uma vez.
+
+    Ele voltou depois disso como "exemplo" em placeholder e help_text — o que
+    é igualmente errado, porque alguém copia e cola. Este teste tranca a porta.
+    """
+
+    NUMERO_DE_TERCEIRO = ["5514997202800", "99720-2800", "1499720"]
+
+    def test_numero_nao_aparece_em_nenhum_arquivo_do_projeto(self):
+        import pathlib
+
+        raiz = pathlib.Path(__file__).resolve().parents[2]
+        ignorar = {".venv", ".git", "node_modules", "media", "staticfiles", "__pycache__"}
+        achados = []
+
+        for caminho in raiz.rglob("*"):
+            if not caminho.is_file() or caminho.suffix not in {
+                ".py", ".html", ".js", ".css", ".md", ".sh", ".yml", ".json"
+            }:
+                continue
+            if any(parte in ignorar for parte in caminho.parts):
+                continue
+            # o próprio teste cita o número para poder proibi-lo
+            if caminho.name == "tests.py" and caminho.parent.name == "core":
+                continue
+            try:
+                texto = caminho.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for numero in self.NUMERO_DE_TERCEIRO:
+                if numero in texto:
+                    achados.append(f"{caminho.relative_to(raiz)}: {numero}")
+
+        self.assertEqual(achados, [], "Número de terceiro no projeto: " + "; ".join(achados))
+
+
+class OfertaSoComDescontoRealTests(TestCase):
+    """A home não pode anunciar "de R$ X por R$ X"."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from apps.catalog.models import Categoria, Produto, VariacaoProduto
+
+        categoria = Categoria.objects.create(nome="Ração")
+        cls.produto = Produto.objects.create(
+            sku="OF-1", nome="Ração com tamanhos", categoria=categoria,
+            preco=Decimal("300.00"), preco_promocional=Decimal("270.00"),
+            promocao_ate=timezone.now() + timezone.timedelta(days=2),
+            estoque=10, publicado=True,
+        )
+        # a variação padrão custa o preço cheio: a promoção do produto morreu
+        VariacaoProduto.objects.create(
+            produto=cls.produto, quantidade=Decimal("15"), unidade="kg",
+            preco=Decimal("300.00"), estoque=10, padrao=True,
+        )
+
+    def test_produto_com_variacao_sem_promocao_fica_fora_da_oferta(self):
+        resposta = self.client.get(reverse("core:home"))
+        self.assertIsNone(resposta.context["oferta_relampago"])
+        self.assertNotIn(self.produto, resposta.context["ofertas"])
+
+    def test_com_promocao_na_variacao_a_oferta_volta(self):
+        from decimal import Decimal
+
+        variacao = self.produto.variacoes.first()
+        variacao.preco_promocional = Decimal("249.00")
+        variacao.save()
+
+        resposta = self.client.get(reverse("core:home"))
+        self.assertEqual(resposta.context["oferta_relampago"], self.produto)
+        self.assertEqual(self.produto.preco_cheio, Decimal("300.00"))
+        self.assertEqual(self.produto.preco_atual, Decimal("249.00"))
+
+
+class WizardDeTamanhosTests(TestCase):
+    """O lojista cadastra 2kg/5kg pelo modal, nunca pelo admin do Django."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.accounts.models import User
+        from apps.catalog.models import Categoria
+
+        cls.lojista = User.objects.create_user(
+            email="lojista-wizard@agrocampo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+        cls.categoria = Categoria.objects.create(nome="Ração")
+
+    def setUp(self):
+        self.client.force_login(self.lojista)
+
+    def _payload(self, **extra):
+        base = {
+            "nome": "Ração do wizard", "categoria": self.categoria.id,
+            "preco": "100.00", "estoque": "0", "estoque_minimo": "2",
+            "unidade": "un", "peso_kg": "1", "publicado": "on",
+        }
+        base.update(extra)
+        return base
+
+    def test_formulario_traz_a_etapa_de_tamanhos(self):
+        html = self.client.get(
+            reverse("dashboard:produto_form_novo")
+        ).content.decode()
+
+        self.assertIn('data-tela="3"', html)
+        self.assertIn("data-variacao-modelo", html)
+        self.assertIn("id_linha", html)
+
+    def test_salvar_cria_os_tamanhos_e_ignora_linha_sem_preco(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Produto
+
+        resposta = self.client.post(
+            reverse("dashboard:produto_salvar_novo"),
+            self._payload(**{
+                "var-0-quantidade": "2", "var-0-unidade": "kg",
+                "var-0-preco": "68,90", "var-0-estoque": "12",
+                "var-1-quantidade": "5", "var-1-unidade": "kg",
+                "var-1-preco": "149.90", "var-1-preco_promocional": "139.90",
+                "var-1-estoque": "6",
+                "var_padrao": "1",
+                # tocou em "adicionar" sem preencher: some sem reclamar
+                "var-2-quantidade": "10", "var-2-unidade": "kg", "var-2-preco": "",
+            }),
+        )
+        self.assertEqual(resposta.status_code, 200)
+
+        produto = Produto.objects.get(nome="Ração do wizard")
+        self.assertEqual(
+            [v.rotulo for v in produto.variacoes.order_by("ordem")], ["2kg", "5kg"]
+        )
+        # vírgula decimal é o que o teclado do celular oferece
+        self.assertEqual(produto.variacoes.first().preco, Decimal("68.90"))
+        self.assertEqual(produto.preco_atual, Decimal("139.90"))
+        self.assertEqual(produto.preco_a_partir_de, Decimal("68.90"))
+        self.assertEqual(produto.estoque_total, 18)
+
+    def test_editar_remove_o_tamanho_que_saiu_da_tela(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Produto
+
+        self.client.post(
+            reverse("dashboard:produto_salvar_novo"),
+            self._payload(**{
+                "var-0-quantidade": "2", "var-0-unidade": "kg",
+                "var-0-preco": "68.90", "var-0-estoque": "12",
+                "var-1-quantidade": "5", "var-1-unidade": "kg",
+                "var-1-preco": "149.90", "var-1-estoque": "6",
+                "var_padrao": "1",
+            }),
+        )
+        produto = Produto.objects.get(nome="Ração do wizard")
+        dois_kg = produto.variacoes.order_by("ordem").first()
+
+        self.client.post(
+            reverse("dashboard:produto_salvar", args=[produto.id]),
+            self._payload(**{
+                "var-0-id": dois_kg.id, "var-0-quantidade": "2",
+                "var-0-unidade": "kg", "var-0-preco": "70.00",
+                "var-0-estoque": "9", "var_padrao": "0",
+            }),
+        )
+
+        produto.refresh_from_db()
+        self.assertEqual([v.rotulo for v in produto.variacoes.all()], ["2kg"])
+        self.assertEqual(produto.variacoes.first().preco, Decimal("70.00"))
+        self.assertTrue(produto.variacoes.first().padrao)
+
+    def test_sem_nenhuma_marcada_a_primeira_vira_padrao(self):
+        from apps.catalog.models import Produto
+
+        self.client.post(
+            reverse("dashboard:produto_salvar_novo"),
+            self._payload(**{
+                "var-0-quantidade": "2", "var-0-unidade": "kg",
+                "var-0-preco": "68.90", "var-0-estoque": "12",
+            }),
+        )
+        produto = Produto.objects.get(nome="Ração do wizard")
+        # sem padrão a vitrine não teria preço para mostrar
+        self.assertIsNotNone(produto.variacao_padrao)
+        self.assertTrue(produto.variacoes.filter(padrao=True).exists())

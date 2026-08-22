@@ -99,6 +99,23 @@
     </div>
   </div>
 
+  {% comment %}
+    No celular a busca fica na própria página, não escondida atrás do menu:
+    procurar é a primeira coisa que se faz numa loja de ração.
+  {% endcomment %}
+  <div class="header__busca-movel">
+    <div class="wrap">
+      <form class="input-icon" action="{% url 'catalog:busca' %}" method="get" role="search">
+        <svg width="18" height="18"><use href="#i-busca"></use></svg>
+        <input type="search" name="q" value="{{ busca|default:'' }}"
+               placeholder="Busque por ração, sementes..." aria-label="Buscar produtos">
+        <button type="submit" aria-label="Buscar">
+          <svg width="17" height="17"><use href="#i-seta-dir"></use></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
   <nav class="nav" aria-label="Categorias">
     <div class="wrap">
       <ul class="nav__list">

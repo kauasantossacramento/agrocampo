@@ -26,7 +26,7 @@
 .header__main { display: flex; align-items: center; gap: var(--s-6); height: var(--header-h); }
 
 .logo { display: flex; align-items: center; flex: none; }
-.logo img { height: 46px; width: auto; transition: transform .28s var(--ease-out); }
+.logo img { height: var(--logo-h, 46px); width: auto; transition: transform .28s var(--ease-out); }
 .logo:hover img { transform: scale(1.04); }
 .logo__fallback {
   font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xl);
@@ -130,11 +130,34 @@
 
 /* menu mobile */
 .header__burger { display: none; }
+.header__busca-movel { display: none; }
 @media (max-width: 980px) {
   .header__burger { display: grid; }
   .nav { display: none; }
   .header__search { display: none; }
   .header__search--mobile { display: block; max-width: none; padding-bottom: var(--s-3); }
+
+  .header__busca-movel {
+    display: block; padding: var(--s-3) 0;
+    border-top: 1px solid var(--line); background: var(--cream-warm);
+  }
+  .header__busca-movel .input-icon { position: relative; }
+  .header__busca-movel input {
+    width: 100%; height: 46px;
+    padding: 0 52px 0 44px; border-radius: 999px;
+    border: 1.5px solid var(--line); background: var(--surface);
+    font-size: 16px;  /* menor que 16px faz o iOS dar zoom ao focar */
+  }
+  .header__busca-movel input:focus { border-color: var(--red); }
+  .header__busca-movel svg { left: 16px; }
+  .header__busca-movel button {
+    position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+    width: 38px; height: 38px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--red); color: #fff;
+  }
+  /* a logo é a âncora da marca: no celular ela cresce em vez de encolher */
+  .logo img { height: 44px; }
 }
 
 /* ==================================================================== hero */
@@ -275,6 +298,49 @@
   border-color: var(--yellow); box-shadow: var(--sh-3);
 }
 .species-tile:hover { color: var(--red); }
+.species-tile__circle svg { color: var(--red); }
+
+/* grade de espécies: 7 por linha no desktop, quebrando em 3–4 linhas */
+.species-grid {
+  display: grid; gap: var(--s-5) var(--s-3);
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+
+/* ═════════════════════════════ fita de produtos com link (banner) */
+.fita {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 190px;
+  gap: var(--s-4); overflow-x: auto; padding-bottom: var(--s-3);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  /* rolagem por dedo sem prender a página */
+  overscroll-behavior-x: contain;
+}
+.fita__item {
+  scroll-snap-align: start;
+  display: flex; flex-direction: column;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface); overflow: hidden;
+  transition: transform .24s var(--ease-out), box-shadow .24s ease,
+              border-color .24s ease;
+}
+.fita__item:hover {
+  transform: translateY(-4px); box-shadow: var(--sh-3);
+  border-color: rgba(214, 43, 32, .24);
+}
+.fita__item img,
+.fita__item .product__placeholder {
+  width: 100%; aspect-ratio: 1; object-fit: cover;
+  display: grid; place-items: center; background: var(--cream-warm);
+}
+.fita__legenda {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--s-3); font-size: var(--fs-xs);
+}
+.fita__legenda strong { color: var(--ink); font-weight: 600; line-height: 1.35; }
+.fita__legenda span {
+  font-family: var(--font-display); font-size: var(--fs-md);
+  font-weight: 700; color: var(--red);
+}
 
 /* ============================================================ oferta relâmpago */
 .flash {
@@ -610,6 +676,118 @@
   font-size: 10px; font-weight: 700; text-align: center; padding: 3px;
 }
 
+/* cartão de configuração de cada vitrine, com a fita da linha */
+.vitrine-config {
+  position: relative; padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--cream-warm);
+}
+.vitrine-config .vitrine-linha__fita {
+  position: absolute; left: 0; top: var(--s-4); bottom: var(--s-4);
+  width: 5px; height: auto; border-radius: 0 3px 3px 0;
+}
+
+/* ══════════════════════════════════ balão flutuante do WhatsApp */
+.zap {
+  position: fixed; right: var(--s-5); bottom: var(--s-5); z-index: 900;
+  display: inline-flex; align-items: center; gap: var(--s-3);
+  height: 56px; padding: 0 var(--s-4);
+  border-radius: 999px; background: #25D366; color: #fff;
+  box-shadow: 0 6px 22px rgba(37, 211, 102, .42);
+  transition: transform .24s var(--ease-spring), box-shadow .24s ease;
+}
+.zap:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(37, 211, 102, .5); }
+.zap:active { transform: translateY(0) scale(.97); }
+.zap svg { flex: none; }
+.zap__balao { font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; }
+
+/* uma pulsação discreta, uma vez só: chamar atenção sem virar pisca-pisca */
+@media (prefers-reduced-motion: no-preference) {
+  .zap { animation: zap-entra .5s var(--ease-spring) .9s both; }
+  @keyframes zap-entra {
+    from { opacity: 0; transform: translateY(14px) scale(.86); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/* ═══════════════════════════════ página pública "onde entregamos" */
+.cidade-card { display: flex; flex-direction: column; }
+.cidade-card__topo { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cidade-card__topo h2 {
+  font-size: var(--fs-lg); margin: 0; line-height: 1.2;
+  /* nome de cidade quebra em vez de sumir */
+  overflow-wrap: anywhere;
+}
+.cidade-card__topo p { margin: 0; }
+.cidade-card--sede { border-color: rgba(214, 43, 32, .3); border-width: 1.5px; }
+.cidade-dados {
+  display: grid; gap: var(--s-2); margin: var(--s-4) 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+.cidade-dados > div { margin: 0; }
+.cidade-dados dt {
+  font-size: var(--fs-xs); color: var(--muted); text-transform: uppercase;
+  letter-spacing: .05em; font-weight: 700;
+}
+.cidade-dados dd {
+  margin: 2px 0 0; font-size: var(--fs-sm); font-weight: 600; color: var(--ink);
+}
+.localidades { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.localidades li {
+  display: flex; align-items: center; gap: var(--s-2);
+  font-size: var(--fs-xs); color: var(--ink-2);
+  padding: 6px var(--s-2); border-radius: var(--r-sm);
+  background: var(--cream-warm);
+}
+.localidades svg { color: var(--red); flex: none; }
+.localidades li strong { margin-left: auto; color: var(--ink); white-space: nowrap; }
+
+/* ────────────────────────────────── avisos de entrega no checkout */
+.entrega-avisos {
+  margin-top: var(--s-5); padding: var(--s-4);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--cream-warm);
+}
+.entrega-avisos__prazo {
+  display: flex; align-items: center; gap: var(--s-2);
+  font-size: var(--fs-sm); color: var(--ink); margin: 0 0 var(--s-2);
+}
+.entrega-avisos__prazo svg { color: var(--green-deep); flex: none; }
+.entrega-avisos__prazo strong { text-transform: capitalize; }
+.entrega-avisos ul { margin: 0; padding-left: var(--s-5); }
+.entrega-avisos li {
+  font-size: var(--fs-sm); color: var(--muted); line-height: 1.55;
+}
+
+/* ─────────────────────────── tamanhos do produto (variações) */
+.variacoes { display: grid; gap: var(--s-3); }
+.variacao {
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--cream-warm); padding: var(--s-4);
+  animation: pop-in .28s var(--ease-spring) both;
+}
+.variacao__campos {
+  display: grid; gap: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+}
+.variacao__rodape {
+  display: flex; align-items: center; gap: var(--s-3);
+  flex-wrap: wrap; margin-top: var(--s-3);
+  padding-top: var(--s-3); border-top: 1px dashed var(--line);
+}
+.variacao__rodape .btn { cursor: pointer; }
+.variacao__rodape .btn span {
+  max-width: 15ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.variacao__miniatura {
+  width: 40px; height: 40px; border-radius: var(--r-sm);
+  object-fit: cover; border: 1px solid var(--line);
+}
+.field--mini label {
+  font-size: var(--fs-xs); font-weight: 600; color: var(--muted);
+}
+.switch-row--inline { margin: 0; font-size: var(--fs-sm); }
+
 /* ───────────────────────────────────────── abas das configurações */
 .abas {
   display: flex; gap: var(--s-1); margin-bottom: var(--s-6);
@@ -629,6 +807,17 @@
 .aba.is-atual::after {
   content: ''; position: absolute; left: var(--s-3); right: var(--s-3); bottom: -1px;
   height: 2.5px; border-radius: 2px; background: var(--red);
+}
+
+/* Grupos de abas: dez seções numa fila só viram uma barra de rolagem
+   sem pistas de onde estou. O rótulo à esquerda ancora cada bloco. */
+.abas--grupo { margin-bottom: var(--s-3); align-items: center; }
+.abas--grupo + .abas--grupo { margin-top: calc(var(--s-2) * -1); }
+.abas--grupo:last-of-type { margin-bottom: var(--s-6); }
+.abas__rotulo {
+  flex: none; padding-right: var(--s-3);
+  font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted-2, var(--muted));
 }
 
 /* ────────────────────────────────── pré-visualização da aparência */

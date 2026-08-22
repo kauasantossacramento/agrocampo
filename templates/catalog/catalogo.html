@@ -70,6 +70,23 @@
         </div>
 
         <div class="filters__group">
+          <p class="filters__title">Linha</p>
+          <div class="linha-filtro">
+            <label class="linha-opcao {% if not linha_atual %}is-atual{% endif %}">
+              <input type="radio" name="linha" value="" {% if not linha_atual %}checked{% endif %}>
+              Todas
+            </label>
+            {% for valor, rotulo in linhas %}
+              <label class="linha-opcao linha-opcao--{{ valor }} {% if linha_atual == valor %}is-atual{% endif %}">
+                <input type="radio" name="linha" value="{{ valor }}"
+                       {% if linha_atual == valor %}checked{% endif %}>
+                {{ rotulo }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="filters__group">
           <p class="filters__title">Compra</p>
           <div class="stack" style="gap:var(--s-2)">
             <label class="switch-row"><input type="checkbox" name="assinatura" value="1" {% if request.GET.assinatura == '1' %}checked{% endif %}> Disponível para assinatura</label>

@@ -90,6 +90,32 @@
       </div>
     {% endif %}
 
+    {% if pedido.contato_pendente %}
+      <div class="card card--pad" style="border-color:var(--amber);border-width:1.5px">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Falar com o cliente</h3>
+        <p class="small" style="margin-bottom:var(--s-3)">
+          O pedido seguiu para separação, mas faltou:<br>
+          <strong>{{ pedido.itens_em_falta }}</strong>
+        </p>
+        {% if link_whatsapp %}
+          <a href="{{ link_whatsapp }}" target="_blank" rel="noopener"
+             class="btn btn--block" style="background:#25D366;color:#fff">
+            <svg width="15" height="15"><use href="#i-whatsapp"></use></svg>
+            Chamar {{ pedido.usuario.primeiro_nome }} no WhatsApp
+          </a>
+        {% else %}
+          <p class="small muted" style="margin:0">
+            {% if not pedido.usuario.telefone %}
+              O cliente não cadastrou um número de WhatsApp.
+            {% else %}
+              O cliente não autorizou contato por WhatsApp. Use o e-mail
+              <strong>{{ pedido.email_cliente }}</strong>.
+            {% endif %}
+          </p>
+        {% endif %}
+      </div>
+    {% endif %}
+
     <div class="card card--pad">
       <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Decisão</h3>
 

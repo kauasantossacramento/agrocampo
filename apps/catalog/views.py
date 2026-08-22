@@ -69,6 +69,11 @@ def catalogo(request, categoria=None, marca=None, especie=None):
     if marcas_filtro:
         produtos = produtos.filter(marca__slug__in=marcas_filtro)
 
+    linha = request.GET.get("linha", "")
+    if linha in dict(Produto.Linha.choices):
+        produtos = produtos.da_linha(linha)
+        titulo = dict(Produto.Linha.choices)[linha]
+
     if request.GET.get("assinatura") == "1":
         produtos = produtos.filter(permite_assinatura=True)
     if request.GET.get("promocao") == "1":
@@ -97,6 +102,8 @@ def catalogo(request, categoria=None, marca=None, especie=None):
             "busca": busca,
             "ordem": ordem,
             "ordenacoes": ORDENACOES.keys(),
+            "linhas": Produto.Linha.choices,
+            "linha_atual": linha,
             "categorias": Categoria.objects.menu(),
             "marcas": Marca.objects.publicados(),
             "marcas_selecionadas": marcas_filtro,

@@ -1,5 +1,5 @@
 {% load static humanize %}<!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" style="--logo-h:{{ site.logo_altura|default:46 }}px">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -33,6 +33,7 @@
 
   <div class="overlay"></div>
 
+  {% block whatsapp_balao %}{% include 'partials/whatsapp_balao.html' %}{% endblock %}
   {% include 'partials/pwa_convite.html' %}
 
   {# mensagens do Django viram toasts via JS #}

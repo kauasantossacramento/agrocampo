@@ -21,7 +21,18 @@
             <span>
               <span class="option__title">{{ e.apelido }} — {{ e.destinatario }}</span>
               <span class="option__desc">{{ e.linha_unica }}</span>
-              {% if e.zona_rural %}<span class="badge badge--amber" style="margin-top:6px">Zona rural</span>{% endif %}
+              <span class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">
+                {% if e.zona_rural %}<span class="badge badge--amber">Zona rural</span>{% endif %}
+                {% if e.localidade %}
+                  <span class="badge {% if e.localidade.acesso_por_barco %}badge--blue{% else %}badge--gray{% endif %}">
+                    {% if e.localidade.acesso_por_barco %}🚤 {% endif %}{{ e.localidade.nome }}
+                    · + R$ {{ e.localidade.frete_adicional|floatformat:2 }}
+                  </span>
+                {% endif %}
+                {% if not e.atendido %}
+                  <span class="badge badge--amber">Confirmamos a entrega por WhatsApp</span>
+                {% endif %}
+              </span>
               {% if e.referencia %}<span class="option__desc">Referência: {{ e.referencia }}</span>{% endif %}
             </span>
           </label>
@@ -35,6 +46,27 @@
 
       <a href="{% url 'accounts:enderecos' %}?next={{ request.path|urlencode }}" class="btn btn--ghost btn--sm" style="margin-top:var(--s-4)">+ Adicionar endereço</a>
 
+      {% if entrega.avisos or avisos_entrega %}
+        <div class="entrega-avisos" data-reveal>
+          {% if entrega.prazo %}
+            <p class="entrega-avisos__prazo">
+              <svg width="16" height="16"><use href="#i-caminhao"></use></svg>
+              Previsão de entrega: <strong>{{ entrega.prazo|date:"l, d/m" }}</strong>
+            </p>
+          {% endif %}
+          <ul>
+            {% for aviso in entrega.avisos %}<li>{{ aviso }}</li>{% endfor %}
+          </ul>
+          {% for aviso in avisos_entrega %}
+            <div class="alert {% if aviso.destaque %}alert--warning{% else %}alert--info{% endif %}"
+                 style="margin-top:var(--s-3)">
+              <svg width="16" height="16"><use href="#i-{{ aviso.icone }}"></use></svg>
+              <span><strong>{{ aviso.titulo }}</strong> — {{ aviso.mensagem }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       <div class="field" style="margin-top:var(--s-6)">
         <label for="observacoes">Observações para a entrega <span class="muted">(opcional)</span></label>
         <textarea name="observacoes" id="observacoes" placeholder="Ex.: portão azul, entregar no galpão dos fundos, ligar antes de chegar..."></textarea>
@@ -46,7 +78,7 @@
         <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Resumo</h3>
         {% for item in carrinho.linhas %}
           <div class="summary__row">
-            <span>{{ item.quantidade }}× {{ item.produto.nome|truncatechars:30 }}</span>
+            <span>{{ item.quantidade }}× {{ item.nome_exibicao|truncatechars:34 }}</span>
             <span class="nowrap">R$ {{ item.total|floatformat:2 }}</span>
           </div>
         {% endfor %}
@@ -54,7 +86,10 @@
         <div class="summary__row"><span>Subtotal</span><span>R$ {{ carrinho.subtotal|floatformat:2 }}</span></div>
         {% if carrinho.desconto_assinatura %}<div class="summary__row summary__row--green"><span>Desconto assinatura</span><span>−R$ {{ carrinho.desconto_assinatura|floatformat:2 }}</span></div>{% endif %}
         {% if carrinho.desconto_cupom %}<div class="summary__row summary__row--green"><span>Cupom</span><span>−R$ {{ carrinho.desconto_cupom|floatformat:2 }}</span></div>{% endif %}
-        <div class="summary__row"><span>Frete</span><span>{% if carrinho.frete_gratis %}Grátis{% else %}R$ {{ carrinho.frete|floatformat:2 }}{% endif %}</span></div>
+        <div class="summary__row">
+          <span>Frete{% if entrega.cidade %} · {{ entrega.cidade.nome }}{% endif %}</span>
+          <span>{% if not entrega.valor %}Grátis{% else %}R$ {{ entrega.valor|floatformat:2 }}{% endif %}</span>
+        </div>
         <div class="summary__total"><span>Total</span><span>R$ {{ carrinho.total|floatformat:2 }}</span></div>
         <button type="submit" class="btn btn--primary btn--block btn--lg" style="margin-top:var(--s-5)" {% if not enderecos %}disabled{% endif %}>
           Ir para o pagamento

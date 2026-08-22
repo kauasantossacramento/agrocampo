@@ -13,6 +13,7 @@ urlpatterns = [
     path("notificacoes/", include("apps.notifications.urls")),
     path("painel/", include("apps.dashboard.urls")),
     path("blog/", include("apps.blog.urls")),
+    path("entrega/", include("apps.shipping.urls")),
     path("api/v1/", include("config.api_urls")),
     path("", include("apps.catalog.urls")),
     path("", include("apps.core.urls")),

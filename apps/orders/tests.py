@@ -10,6 +10,7 @@ from apps.orders.models import Pedido
 from apps.orders.services import (
     EstoqueInsuficiente,
     aprovar_pedido,
+    separar_pedido,
     criar_pedido_do_carrinho,
     devolver_estoque,
     recusar_pedido,
@@ -115,16 +116,17 @@ class MaquinaDeEstadosTests(BasePedido):
         self.assertEqual(pedido.status, Pedido.Status.ENTREGUE)
 
 
-class AprovacaoTests(BasePedido):
-    def _ate_analise(self, **kwargs):
+class SeparacaoTests(BasePedido):
+    """A etapa de aprovação foi removida: pago já entra em separação."""
+
+    def _pago(self, **kwargs):
         pedido = self._pedido(**kwargs)
         pedido.mudar_status(Pedido.Status.PAGO)
-        pedido.mudar_status(Pedido.Status.AGUARDANDO_APROVACAO)
         return pedido
 
-    def test_aprovacao_baixa_estoque_e_notifica(self):
-        pedido = self._ate_analise(quantidade=2)
-        aprovar_pedido(pedido, self.lojista)
+    def test_separacao_baixa_estoque_e_notifica(self):
+        pedido = self._pago(quantidade=2)
+        separar_pedido(pedido)
 
         self.produto.refresh_from_db()
         pedido.refresh_from_db()
@@ -132,18 +134,41 @@ class AprovacaoTests(BasePedido):
         self.assertEqual(self.produto.estoque, 3)
         self.assertEqual(self.produto.vendas, 2)
         self.assertEqual(pedido.status, Pedido.Status.EM_SEPARACAO)
+        self.assertFalse(pedido.contato_pendente)
         self.assertTrue(pedido.notificacoes.filter(tipo="pedido_aprovado").exists())
 
-    def test_aprovacao_falha_se_o_estoque_sumiu(self):
-        pedido = self._ate_analise(quantidade=3)
+    def test_sem_estoque_o_pedido_segue_e_marca_contato(self):
+        """Faltando item, a compra não trava: um atendente liga para o cliente."""
+        pedido = self._pago(quantidade=3)
         self.produto.estoque = 1
         self.produto.save()
 
-        with self.assertRaises(EstoqueInsuficiente):
-            aprovar_pedido(pedido, self.lojista)
+        separar_pedido(pedido)
+        pedido.refresh_from_db()
+        self.produto.refresh_from_db()
+
+        self.assertEqual(pedido.status, Pedido.Status.EM_SEPARACAO)
+        self.assertTrue(pedido.contato_pendente)
+        self.assertIn(self.produto.nome, pedido.itens_em_falta)
+        # baixou só o que existia — estoque negativo mentiria para o lojista
+        self.assertEqual(self.produto.estoque, 0)
+        self.assertFalse(pedido.itens.first().baixado_do_estoque)
+
+    def test_pago_nao_passa_mais_por_aprovacao(self):
+        pedido = self._pago()
+        self.assertFalse(pedido.pode_ir_para(Pedido.Status.AGUARDANDO_APROVACAO))
+        self.assertTrue(pedido.pode_ir_para(Pedido.Status.EM_SEPARACAO))
+
+    def test_pedido_antigo_parado_na_fila_ainda_e_liberado(self):
+        pedido = self._pago()
+        pedido.mudar_status(Pedido.Status.AGUARDANDO_APROVACAO, forcar=True)
+        aprovar_pedido(pedido, self.lojista)
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.status, Pedido.Status.EM_SEPARACAO)
 
     def test_recusa_registra_motivo_e_notifica(self):
-        pedido = self._ate_analise()
+        pedido = self._pago()
+        pedido.mudar_status(Pedido.Status.AGUARDANDO_APROVACAO, forcar=True)
         recusar_pedido(pedido, self.lojista, "Sem estoque no depósito")
         pedido.refresh_from_db()
 
@@ -151,9 +176,9 @@ class AprovacaoTests(BasePedido):
         self.assertEqual(pedido.motivo_recusa, "Sem estoque no depósito")
         self.assertTrue(pedido.notificacoes.filter(tipo="pedido_recusado").exists())
 
-    def test_aprovacao_de_item_recorrente_cria_assinatura(self):
-        pedido = self._ate_analise(recorrente=True)
-        aprovar_pedido(pedido, self.lojista)
+    def test_item_recorrente_cria_assinatura(self):
+        pedido = self._pago(recorrente=True)
+        separar_pedido(pedido)
 
         assinatura = Assinatura.objects.get(usuario=self.cliente)
         self.assertEqual(assinatura.produto, self.produto)
@@ -161,8 +186,8 @@ class AprovacaoTests(BasePedido):
         self.assertEqual(assinatura.preco_unitario, Decimal("270.00"))
 
     def test_devolver_estoque_reverte_a_baixa(self):
-        pedido = self._ate_analise(quantidade=2)
-        aprovar_pedido(pedido, self.lojista)
+        pedido = self._pago(quantidade=2)
+        separar_pedido(pedido)
         devolver_estoque(pedido)
 
         self.produto.refresh_from_db()
@@ -252,18 +277,17 @@ class AvaliacaoSomenteDeCompradorTests(BasePedido):
         self.assertFalse(self.produto.foi_comprado_por(self.cliente))
 
     def test_pedido_so_pago_ainda_nao_libera(self):
-        """Pagou mas o lojista não aprovou: o produto pode nem ser entregue."""
+        """Pagou mas ainda não saiu para separação: pode nem ser entregue."""
         pedido = self._pedido()
         pedido.mudar_status(Pedido.Status.PAGO)
         self.assertFalse(self.produto.foi_comprado_por(self.cliente))
 
-    def test_comprador_com_pedido_aprovado_avalia(self):
+    def test_comprador_com_pedido_em_separacao_avalia(self):
         from apps.catalog.models import Avaliacao
 
         pedido = self._pedido()
         pedido.mudar_status(Pedido.Status.PAGO)
-        pedido.mudar_status(Pedido.Status.AGUARDANDO_APROVACAO)
-        aprovar_pedido(pedido, self.lojista)
+        separar_pedido(pedido)
 
         self.assertTrue(self.produto.foi_comprado_por(self.cliente))
 
@@ -534,3 +558,171 @@ class IconeDeCategoriaTests(TestCase):
         self.assertTrue(usados, "a home deveria usar ícones de categoria")
         faltando = usados - definidos
         self.assertFalse(faltando, f"ícones referenciados sem <symbol>: {faltando}")
+
+
+class VariacaoTests(BasePedido):
+    """Um mesmo produto vendido em 2kg, 5kg e 15kg."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.catalog.models import VariacaoProduto
+
+        self.dois = VariacaoProduto.objects.create(
+            produto=self.produto, quantidade=Decimal("2"), unidade="kg",
+            preco=Decimal("60.00"), estoque=10, padrao=True,
+        )
+        self.cinco = VariacaoProduto.objects.create(
+            produto=self.produto, quantidade=Decimal("5"), unidade="kg",
+            preco=Decimal("130.00"), estoque=4,
+        )
+
+    def test_rotulo_sem_zeros_sobrando(self):
+        self.assertEqual(self.dois.rotulo, "2kg")
+        self.assertEqual(self.cinco.rotulo, "5kg")
+
+    def test_preco_do_produto_segue_a_variacao_padrao(self):
+        self.assertEqual(self.produto.preco_atual, Decimal("60.00"))
+        self.assertEqual(self.produto.preco_a_partir_de, Decimal("60.00"))
+
+    def test_estoque_total_soma_as_variacoes(self):
+        self.assertEqual(self.produto.estoque_total, 14)
+
+    def test_tamanhos_diferentes_sao_linhas_diferentes_no_carrinho(self):
+        self.carrinho.adicionar(self.produto, 1, variacao=self.dois)
+        self.carrinho.adicionar(self.produto, 1, variacao=self.cinco)
+        self.assertEqual(self.carrinho.itens.count(), 2)
+
+    def test_o_mesmo_tamanho_soma_na_mesma_linha(self):
+        self.carrinho.adicionar(self.produto, 1, variacao=self.dois)
+        self.carrinho.adicionar(self.produto, 2, variacao=self.dois)
+        self.assertEqual(self.carrinho.itens.count(), 1)
+        self.assertEqual(self.carrinho.itens.first().quantidade, 3)
+
+    def test_sem_variacao_informada_usa_a_padrao(self):
+        self.carrinho.adicionar(self.produto, 1)
+        self.assertEqual(self.carrinho.itens.first().variacao, self.dois)
+
+    def test_pedido_congela_o_rotulo_do_tamanho(self):
+        self.carrinho.adicionar(self.produto, 1, variacao=self.cinco)
+        pedido = criar_pedido_do_carrinho(self.carrinho, self.cliente)
+        item = pedido.itens.first()
+
+        self.assertEqual(item.variacao_rotulo, "5kg")
+        self.assertEqual(item.preco_unitario, Decimal("130.00"))
+        self.assertIn("5kg", item.descricao_completa)
+
+    def test_separacao_baixa_o_estoque_da_variacao_certa(self):
+        self.carrinho.adicionar(self.produto, 2, variacao=self.cinco)
+        pedido = criar_pedido_do_carrinho(self.carrinho, self.cliente)
+        pedido.mudar_status(Pedido.Status.PAGO)
+        separar_pedido(pedido)
+
+        self.cinco.refresh_from_db()
+        self.dois.refresh_from_db()
+        self.assertEqual(self.cinco.estoque, 2)
+        self.assertEqual(self.dois.estoque, 10)
+
+    def test_carrinho_recusa_mais_do_que_o_tamanho_tem(self):
+        self.carrinho.adicionar(self.produto, 4, variacao=self.cinco)
+        item = self.carrinho.itens.first()
+        item.quantidade = 5
+        self.assertFalse(item.disponivel)
+
+
+class LinhaTests(BasePedido):
+    def test_filtro_por_linha(self):
+        from apps.catalog.models import Produto as P
+
+        self.produto.linha = P.Linha.OURO
+        self.produto.save()
+        outro = P.objects.create(
+            sku="P-2", nome="Ração Comum", categoria=self.produto.categoria,
+            preco=Decimal("80.00"), estoque=3, linha=P.Linha.BRONZE,
+        )
+        self.assertIn(self.produto, P.objects.da_linha(P.Linha.OURO))
+        self.assertNotIn(outro, P.objects.da_linha(P.Linha.OURO))
+
+    def test_produto_sem_linha_nao_entra_em_nenhuma_vitrine(self):
+        from apps.catalog.models import Produto as P
+
+        self.assertEqual(self.produto.linha, "")
+        for valor, _ in P.Linha.choices:
+            self.assertNotIn(self.produto, P.objects.da_linha(valor))
+
+
+class ContatoPorWhatsAppTests(BasePedido):
+    """Quando falta item, o painel precisa dar um caminho até o cliente."""
+
+    def _pedido_com_falta(self):
+        self.carrinho.adicionar(self.produto, 3)
+        pedido = criar_pedido_do_carrinho(self.carrinho, self.cliente)
+        pedido.mudar_status(Pedido.Status.PAGO)
+        self.produto.estoque = 1
+        self.produto.save()
+        separar_pedido(pedido)
+        pedido.refresh_from_db()
+        return pedido
+
+    def test_link_traz_o_numero_do_pedido_e_o_que_faltou(self):
+        from apps.dashboard.views import _whatsapp_do_pedido
+
+        self.cliente.telefone = "(75) 98888-7777"
+        self.cliente.aceita_contato_whatsapp = True
+        self.cliente.save()
+
+        pedido = self._pedido_com_falta()
+        link = _whatsapp_do_pedido(pedido)
+
+        self.assertIn("wa.me/5575988887777", link)
+        self.assertIn(pedido.numero, link.replace("%20", " "))
+
+    def test_sem_autorizacao_nao_ha_link(self):
+        from apps.dashboard.views import _whatsapp_do_pedido
+
+        self.cliente.telefone = "(75) 98888-7777"
+        self.cliente.aceita_contato_whatsapp = False
+        self.cliente.save()
+
+        self.assertEqual(_whatsapp_do_pedido(self._pedido_com_falta()), "")
+
+    def test_tela_do_pedido_oferece_o_email_quando_nao_ha_whatsapp(self):
+        pedido = self._pedido_com_falta()
+        self.client.force_login(self.lojista)
+        resposta = self.client.get(f"/painel/pedidos/{pedido.numero}/")
+
+        self.assertContains(resposta, "Falar com o cliente")
+        self.assertContains(resposta, pedido.email_cliente)
+
+
+class PrecoComVariacaoTests(BasePedido):
+    """A vitrine não pode estampar desconto que o preço não dá."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.catalog.models import VariacaoProduto
+
+        # o produto tem promoção própria, mas quem manda no preço é a variação
+        self.produto.preco_promocional = Decimal("270.00")
+        self.produto.save()
+        self.var = VariacaoProduto.objects.create(
+            produto=self.produto, quantidade=Decimal("15"), unidade="kg",
+            preco=Decimal("300.00"), estoque=5, padrao=True,
+        )
+
+    def test_promocao_do_produto_nao_vale_quando_ha_variacao(self):
+        self.assertFalse(self.produto.promocao_vigente)
+        self.assertEqual(self.produto.percentual_desconto, 0)
+        self.assertEqual(self.produto.preco_cheio, Decimal("300.00"))
+        self.assertEqual(self.produto.preco_atual, Decimal("300.00"))
+
+    def test_promocao_da_variacao_aparece_no_card(self):
+        self.var.preco_promocional = Decimal("240.00")
+        self.var.save()
+
+        self.assertTrue(self.produto.promocao_vigente)
+        self.assertEqual(self.produto.preco_atual, Decimal("240.00"))
+        self.assertEqual(self.produto.percentual_desconto, 20)
+
+    def test_assinatura_segue_o_preco_da_variacao(self):
+        self.assertEqual(self.var.preco_assinatura, Decimal("270.00"))
+        self.assertEqual(self.var.economia_assinatura, Decimal("30.00"))

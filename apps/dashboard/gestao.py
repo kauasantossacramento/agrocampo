@@ -15,6 +15,7 @@ from django import forms
 from apps.catalog.models import Categoria, Especie, Marca
 from apps.core.models import Banner, Diferencial, Pagina
 from apps.orders.models import Cupom
+from apps.shipping.models import DIAS_SEMANA, Cidade, Localidade, RegraEntrega
 
 from .forms import CLASSE, _EstilizadoMixin
 
@@ -24,12 +25,25 @@ class BannerForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Banner
         fields = ("selo", "titulo", "subtitulo", "imagem", "cor_fundo",
-                  "texto_botao", "link", "posicao", "ordem", "publicado")
+                  "texto_botao", "link", "posicao", "produtos", "ordem", "publicado")
         widgets = {
             "subtitulo": forms.Textarea(attrs={"rows": 2}),
             "cor_fundo": forms.TextInput(attrs={"type": "color"}),
             "link": forms.TextInput(attrs={"placeholder": "/catalogo/"}),
+            "produtos": forms.SelectMultiple(attrs={"size": 10}),
         }
+
+    def __init__(self, *args, **kwargs):
+        from apps.catalog.models import Produto
+
+        super().__init__(*args, **kwargs)
+        self.fields["produtos"].queryset = (
+            Produto.objects.filter(publicado=True).order_by("nome")
+        )
+        self.fields["produtos"].help_text = (
+            "Segure Ctrl (ou toque em vários no celular) para escolher mais de um. "
+            "Só vale para a posição “Faixa de produtos”."
+        )
 
 
 class DiferencialForm(_EstilizadoMixin, forms.ModelForm):
@@ -112,6 +126,89 @@ class CupomForm(_EstilizadoMixin, forms.ModelForm):
         self.fields["usos_maximos"].help_text = "0 = ilimitado."
 
 
+class CidadeForm(_EstilizadoMixin, forms.ModelForm):
+    """Dias da semana como caixinhas — ninguém deveria digitar "0,2,4"."""
+
+    dias = forms.MultipleChoiceField(
+        choices=DIAS_SEMANA,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Entrega nestes dias",
+        help_text="Nenhum marcado = de segunda a sexta.",
+    )
+
+    class Meta:
+        model = Cidade
+        fields = ("nome", "uf", "sede", "frete", "frete_gratis_acima_de",
+                  "horario_a_partir_de", "prazo_dias", "observacao", "ordem", "ativo")
+        widgets = {
+            "uf": forms.TextInput(attrs={"maxlength": 2, "autocapitalize": "characters"}),
+            "frete": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
+            "frete_gratis_acima_de": forms.NumberInput(
+                attrs={"step": "0.01", "inputmode": "decimal", "placeholder": "usa o padrão da loja"}
+            ),
+            "horario_a_partir_de": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "observacao": forms.TextInput(
+                attrs={"placeholder": "Ex.: entregamos só no centro"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["horario_a_partir_de"].input_formats = ["%H:%M"]
+        if self.instance.pk and self.instance.dias_entrega:
+            self.fields["dias"].initial = [str(d) for d in self.instance.dias]
+
+    def save(self, commit=True):
+        cidade = super().save(commit=False)
+        cidade.dias_entrega = ",".join(self.cleaned_data.get("dias") or [])
+        if commit:
+            cidade.save()
+        return cidade
+
+
+class LocalidadeForm(_EstilizadoMixin, forms.ModelForm):
+    class Meta:
+        model = Localidade
+        fields = ("cidade", "nome", "frete_adicional", "acesso_por_barco",
+                  "prazo_extra_dias", "observacao", "ativo")
+        widgets = {
+            "nome": forms.TextInput(
+                attrs={"placeholder": "Ilha de Guaibim, Povoado do Retiro…"}
+            ),
+            "frete_adicional": forms.NumberInput(
+                attrs={"step": "0.01", "inputmode": "decimal"}
+            ),
+            "observacao": forms.TextInput(attrs={"placeholder": "Ex.: só de manhã"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["cidade"].queryset = Cidade.objects.atendidas()
+        self.fields["nome"].help_text = (
+            "Vale o nome que o cliente usa, mesmo que não exista no mapa."
+        )
+
+
+class RegraEntregaForm(_EstilizadoMixin, forms.ModelForm):
+    ICONES = [
+        ("caminhao", "Caminhão (entrega)"), ("relogio", "Relógio (horário)"),
+        ("info", "Informação"), ("alerta", "Alerta"), ("escudo", "Escudo"),
+    ]
+    icone = forms.ChoiceField(choices=ICONES, label="Ícone")
+
+    class Meta:
+        model = RegraEntrega
+        fields = ("titulo", "mensagem", "momento", "icone", "destaque",
+                  "cidade", "ordem", "ativo")
+        widgets = {"mensagem": forms.Textarea(attrs={"rows": 3})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["cidade"].queryset = Cidade.objects.atendidas()
+        self.fields["cidade"].empty_label = "Todas as cidades"
+
+
 # ══════════════════════════════════════════════════════════ registro
 @dataclass
 class Secao:
@@ -123,6 +220,7 @@ class Secao:
     colunas: list           # [(rótulo, callable(obj) -> str|bool)]
     # campo com default tem que vir depois dos obrigatórios
     artigo: str = "Novo"    # "Novo banner" x "Nova marca"
+    grupo: str = "Loja"     # agrupa as abas: dez numa linha só vira sopa
     icone: str = "i-config"
     descricao: str = ""
     ordenacao: tuple = ("id",)
@@ -151,6 +249,7 @@ SECOES: dict[str, Secao] = {
             ("Título", lambda o: o.titulo),
             ("Selo", lambda o: o.selo or "—"),
             ("Posição", lambda o: o.get_posicao_display()),
+            ("Produtos", lambda o: o.produtos.count() or "—"),
             ("Imagem", lambda o: _sim_nao(o.imagem)),
             ("Ordem", lambda o: o.ordem),
             ("No ar", lambda o: o.publicado),
@@ -225,6 +324,57 @@ SECOES: dict[str, Secao] = {
             ("No ar", lambda o: o.publicado),
         ],
     ),
+    "cidades": Secao(
+        slug="cidades", artigo="Nova", grupo="Entrega", titulo="Cidades atendidas", singular="cidade",
+        model=Cidade, form=CidadeForm, icone="i-caminhao",
+        descricao="Onde a loja entrega, com o frete e os dias de cada cidade.",
+        ordenacao=("-sede", "ordem", "nome"),
+        busca=("nome",),
+        colunas=[
+            ("Cidade", lambda o: f"{o.nome}/{o.uf}"),
+            ("Sede", lambda o: o.sede),
+            ("Frete", lambda o: f"R$ {o.frete:.2f}"),
+            ("Dias", lambda o: o.dias_legivel),
+            ("Prazo", lambda o: f"{o.prazo_dias} dia(s)"),
+            ("Localidades", lambda o: o.localidades.count()),
+            ("Atende", lambda o: o.ativo),
+        ],
+    ),
+    "localidades": Secao(
+        slug="localidades", artigo="Nova", grupo="Entrega", titulo="Ilhas e localidades",
+        singular="localidade",
+        model=Localidade, form=LocalidadeForm, icone="i-mapa",
+        descricao=(
+            "Povoados, ilhas e bairros com frete próprio — inclusive os que o "
+            "mapa não conhece."
+        ),
+        ordenacao=("cidade__nome", "nome"),
+        busca=("nome",),
+        relacionados=("cidade",),
+        colunas=[
+            ("Localidade", lambda o: o.nome),
+            ("Cidade", lambda o: o.cidade.nome),
+            ("Acréscimo", lambda o: f"+ R$ {o.frete_adicional:.2f}"),
+            ("De barco", lambda o: o.acesso_por_barco),
+            ("Dias a mais", lambda o: o.prazo_extra_dias or "—"),
+            ("Ativa", lambda o: o.ativo),
+        ],
+    ),
+    "avisos-entrega": Secao(
+        slug="avisos-entrega", grupo="Entrega", titulo="Avisos de entrega", singular="aviso",
+        model=RegraEntrega, form=RegraEntregaForm, icone="i-info",
+        descricao="Recados que o cliente lê durante a compra.",
+        ordenacao=("ordem", "id"),
+        busca=("titulo", "mensagem"),
+        relacionados=("cidade",),
+        colunas=[
+            ("Aviso", lambda o: o.titulo),
+            ("Onde aparece", lambda o: o.get_momento_display()),
+            ("Cidade", lambda o: o.cidade.nome if o.cidade else "todas"),
+            ("Destaque", lambda o: o.destaque),
+            ("No ar", lambda o: o.ativo),
+        ],
+    ),
     "cupons": Secao(
         slug="cupons", titulo="Cupons de desconto", singular="cupom",
         model=Cupom, form=CupomForm, icone="i-cartao",
@@ -241,3 +391,11 @@ SECOES: dict[str, Secao] = {
         ],
     ),
 }
+
+
+def secoes_agrupadas():
+    """As abas de conteúdo em grupos, na ordem de cadastro."""
+    grupos: dict[str, list[Secao]] = {}
+    for secao in SECOES.values():
+        grupos.setdefault(secao.grupo, []).append(secao)
+    return grupos

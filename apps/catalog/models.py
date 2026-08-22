@@ -152,6 +152,27 @@ class Especie(TimeStampedModel, SluggedModel):
     def get_absolute_url(self):
         return reverse("catalog:especie", args=[self.slug])
 
+    # cada grupo cai num símbolo do tema; emoji some em vários Android
+    ICONES_POR_GRUPO = {
+        Grupo.PASSERIFORME: "ave",
+        Grupo.PSITACIDEO: "ave",
+        Grupo.PET: "pata",
+        Grupo.RURAL: "rural",
+        Grupo.OUTRO: "pata",
+    }
+
+    @property
+    def icone_svg(self) -> str:
+        """Símbolo usado quando a espécie ainda não tem foto."""
+        nome = (self.nome or "").lower()
+        if "cão" in nome or "cachorro" in nome or "cao" in nome:
+            return "cao"
+        if "gato" in nome:
+            return "gato"
+        if "peixe" in nome or "aquár" in nome:
+            return "peixe"
+        return self.ICONES_POR_GRUPO.get(self.grupo, "pata")
+
 
 class ProdutoQuerySet(PublicadoQuerySet):
     def disponiveis(self):
@@ -169,6 +190,9 @@ class ProdutoQuerySet(PublicadoQuerySet):
     def assinaveis(self):
         return self.publicados().filter(permite_assinatura=True)
 
+    def da_linha(self, linha):
+        return self.publicados().filter(linha=linha)
+
     def vitrine(self):
         """Seleção padrão de listagem, já com os joins e agregados necessários."""
         return (
@@ -183,8 +207,17 @@ class Produto(TimeStampedModel, SluggedModel):
     class Unidade(models.TextChoices):
         UN = "un", "Unidade"
         KG = "kg", "Quilo"
+        G = "g", "Grama"
         L = "l", "Litro"
+        ML = "ml", "Mililitro"
         PCT = "pct", "Pacote"
+
+    class Linha(models.TextChoices):
+        """Faixa de posicionamento do produto na vitrine."""
+
+        OURO = "ouro", "Linha Ouro"
+        PRATA = "prata", "Linha Prata"
+        BRONZE = "bronze", "Linha Bronze"
 
     sku = models.CharField("SKU", max_length=40, unique=True)
     categoria = models.ForeignKey(
@@ -232,6 +265,15 @@ class Produto(TimeStampedModel, SluggedModel):
         default=5, help_text="Abaixo disso o painel emite alerta."
     )
 
+    linha = models.CharField(
+        "linha",
+        max_length=10,
+        choices=Linha.choices,
+        blank=True,
+        db_index=True,
+        help_text="Ouro, Prata ou Bronze. Vazio deixa o produto fora das vitrines por linha.",
+    )
+
     destaque = models.BooleanField("mais vendido", default=False)
     lancamento = models.BooleanField(default=False)
     publicado = models.BooleanField(default=True)
@@ -255,9 +297,35 @@ class Produto(TimeStampedModel, SluggedModel):
     def get_absolute_url(self):
         return reverse("catalog:produto", args=[self.slug])
 
+    # ---------------------------------------------------------- variacoes
+    @property
+    def tem_variacoes(self):
+        return self.variacoes.exists()
+
+    @property
+    def variacao_padrao(self):
+        """A variação escolhida de saída — a marcada, ou a mais barata."""
+        return (
+            self.variacoes.filter(padrao=True).first()
+            or self.variacoes.order_by("preco").first()
+        )
+
+    @property
+    def variacoes_disponiveis(self):
+        return self.variacoes.filter(ativo=True).order_by("preco")
+
     # ------------------------------------------------------------- precos
     @property
     def promocao_vigente(self):
+        """Há desconto real sobre o preço que o cliente vai pagar?
+
+        Com variações, quem manda no preço é a variação. Olhar só o
+        `preco_promocional` do produto fazia o card estampar "−10%" ao lado de
+        um preço cheio — uma promessa de desconto que a loja não daria.
+        """
+        variacao = self.variacao_padrao
+        if variacao:
+            return variacao.promocao_vigente
         if self.preco_promocional is None:
             return False
         if self.promocao_ate and self.promocao_ate < timezone.now():
@@ -265,9 +333,32 @@ class Produto(TimeStampedModel, SluggedModel):
         return self.preco_promocional < self.preco
 
     @property
+    def preco_cheio(self) -> Decimal:
+        """Preço riscado. Igual ao atual quando não há promoção."""
+        variacao = self.variacao_padrao
+        if variacao:
+            return variacao.preco
+        return self.preco
+
+    @property
     def preco_atual(self) -> Decimal:
-        """Preço de compra avulsa, já considerando promoção vigente."""
+        """Preço de compra avulsa, já considerando promoção vigente.
+
+        Com variações, o preço da vitrine é o da variação padrão — é o que
+        o cliente vê marcado ao abrir o produto.
+        """
+        variacao = self.variacao_padrao
+        if variacao:
+            return variacao.preco_atual
         return self.preco_promocional if self.promocao_vigente else self.preco
+
+    @property
+    def preco_a_partir_de(self) -> Decimal:
+        """Menor preço entre as variações — para o card dizer "a partir de"."""
+        variacoes = self.variacoes_disponiveis
+        if variacoes:
+            return min(v.preco_atual for v in variacoes)
+        return self.preco_atual
 
     @property
     def desconto_assinatura(self) -> int:
@@ -303,29 +394,46 @@ class Produto(TimeStampedModel, SluggedModel):
     def percentual_desconto(self) -> int:
         if not self.promocao_vigente:
             return 0
-        return int(round((self.preco - self.preco_promocional) / self.preco * 100))
+        cheio, atual = self.preco_cheio, self.preco_atual
+        if not cheio or cheio <= atual:
+            return 0
+        return int(round((cheio - atual) / cheio * 100))
 
     # ------------------------------------------------------------ estoque
     @property
+    def estoque_total(self):
+        """Soma das variações ativas, ou o estoque próprio."""
+        if self.tem_variacoes:
+            return sum(v.estoque for v in self.variacoes_disponiveis)
+        return self.estoque
+
+    @property
     def em_estoque(self):
-        return self.estoque > 0
+        return self.estoque_total > 0
 
     @property
     def estoque_baixo(self):
-        return 0 < self.estoque <= self.estoque_minimo
+        return 0 < self.estoque_total <= self.estoque_minimo
 
     @property
     def rotulo_estoque(self):
-        if self.estoque <= 0:
+        total = self.estoque_total
+        if total <= 0:
             return "Esgotado"
         if self.estoque_baixo:
-            return f"Últimas {self.estoque} unidades"
-        return f"Em estoque - {self.estoque} unidades"
+            return f"Últimas {total} unidades"
+        return f"Em estoque - {total} unidades"
 
     # -------------------------------------------------------------- midia
     @property
     def imagem_principal(self):
         return self.imagens.first()
+
+    @property
+    def foto_principal(self):
+        """O arquivo da capa — o mesmo tipo que `VariacaoProduto.foto`."""
+        principal = self.imagem_principal
+        return principal.imagem if principal else None
 
     @property
     def lista_beneficios(self):
@@ -462,3 +570,140 @@ class ListaDesejos(TimeStampedModel):
 
     def __str__(self):
         return f"{self.usuario} - {self.produto}"
+
+
+class VariacaoProduto(TimeStampedModel):
+    """Uma apresentação do mesmo produto: 2kg, 3kg, 500g…
+
+    Preço, estoque e foto vivem aqui porque mudam de tamanho para tamanho.
+    Sem variações cadastradas, o produto se comporta como antes.
+    """
+
+    class Unidade(models.TextChoices):
+        KG = "kg", "kg"
+        G = "g", "g"
+        L = "l", "L"
+        ML = "ml", "mL"
+        UN = "un", "un"
+
+    produto = models.ForeignKey(
+        Produto, on_delete=models.CASCADE, related_name="variacoes"
+    )
+    quantidade = models.DecimalField(
+        "quantidade", max_digits=8, decimal_places=3,
+        help_text="Ex.: 2 para 2kg, 500 para 500g.",
+    )
+    unidade = models.CharField(max_length=4, choices=Unidade.choices, default=Unidade.KG)
+
+    sku = models.CharField("SKU", max_length=40, blank=True)
+    preco = models.DecimalField(max_digits=10, decimal_places=2)
+    preco_promocional = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    estoque = models.IntegerField(default=0)
+
+    imagem = models.ImageField(
+        upload_to="produtos/",
+        blank=True,
+        help_text="Foto desta apresentação. Vazio usa a foto principal do produto.",
+    )
+
+    padrao = models.BooleanField(
+        "opção padrão", default=False,
+        help_text="A que vem marcada ao abrir o produto.",
+    )
+    ativo = models.BooleanField(default=True)
+    ordem = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "preco"]
+        unique_together = [("produto", "quantidade", "unidade")]
+        verbose_name = "variação do produto"
+        verbose_name_plural = "variações do produto"
+
+    def __str__(self):
+        return f"{self.produto.nome} — {self.rotulo}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.padrao:
+            VariacaoProduto.objects.filter(produto=self.produto).exclude(
+                pk=self.pk
+            ).update(padrao=False)
+
+    @property
+    def rotulo(self):
+        """`2kg`, `500g` — sem casas decimais quando o número é inteiro."""
+        valor = self.quantidade.normalize()
+        texto = format(valor, "f").rstrip("0").rstrip(".")
+        return f"{texto}{self.get_unidade_display()}"
+
+    @property
+    def promocao_vigente(self):
+        if self.preco_promocional is None:
+            return False
+        if self.produto.promocao_ate and self.produto.promocao_ate < timezone.now():
+            return False
+        return self.preco_promocional < self.preco
+
+    @property
+    def preco_atual(self) -> Decimal:
+        return self.preco_promocional if self.promocao_vigente else self.preco
+
+    @property
+    def percentual_desconto(self) -> int:
+        if not self.promocao_vigente:
+            return 0
+        return int(round((self.preco - self.preco_promocional) / self.preco * 100))
+
+    @property
+    def preco_assinatura(self) -> Decimal:
+        if not self.produto.permite_assinatura:
+            return self.preco_atual
+        fator = (CEM - Decimal(self.produto.desconto_assinatura)) / CEM
+        return (self.preco_atual * fator).quantize(Decimal("0.01"))
+
+    @property
+    def economia_assinatura(self) -> Decimal:
+        return self.preco_atual - self.preco_assinatura
+
+    @property
+    def em_estoque(self):
+        return self.estoque > 0
+
+    @property
+    def foto(self):
+        """A foto desta variação, ou a principal do produto."""
+        if self.imagem:
+            return self.imagem
+        principal = self.produto.imagem_principal
+        return principal.imagem if principal else None
+
+    def baixar_estoque(self, quantidade, motivo="", pedido=None):
+        VariacaoProduto.objects.filter(pk=self.pk).update(
+            estoque=models.F("estoque") - quantidade
+        )
+        Produto.objects.filter(pk=self.produto_id).update(
+            vendas=models.F("vendas") + quantidade
+        )
+        MovimentoEstoque.objects.create(
+            produto=self.produto,
+            tipo=MovimentoEstoque.Tipo.SAIDA,
+            quantidade=quantidade,
+            motivo=f"{motivo} ({self.rotulo})".strip(),
+            pedido_referencia=pedido or "",
+        )
+        self.refresh_from_db(fields=["estoque"])
+
+    def repor_estoque(self, quantidade, motivo="", pedido=None):
+        VariacaoProduto.objects.filter(pk=self.pk).update(
+            estoque=models.F("estoque") + quantidade
+        )
+        MovimentoEstoque.objects.create(
+            produto=self.produto,
+            tipo=MovimentoEstoque.Tipo.ENTRADA,
+            quantidade=quantidade,
+            motivo=f"{motivo} ({self.rotulo})".strip(),
+            pedido_referencia=pedido or "",
+        )
+        self.refresh_from_db(fields=["estoque"])

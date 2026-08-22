@@ -16,18 +16,45 @@ def home(request):
     produtos = Produto.objects.vitrine()
     agora = timezone.now()
 
-    ofertas = produtos.filter(preco_promocional__isnull=False).order_by("promocao_ate")[:10]
-    oferta_relampago = (
-        produtos.filter(preco_promocional__isnull=False, promocao_ate__gt=agora)
+    # `preco_promocional` preenchido não basta: quando o produto tem tamanhos,
+    # quem manda no preço é a variação, e a oferta virava "de R$ 289,90 por
+    # R$ 289,90". O filtro final é `promocao_vigente`, que já sabe disso.
+    candidatas = (
+        produtos.filter(preco_promocional__isnull=False)
+        .prefetch_related("variacoes")
         .order_by("promocao_ate")
-        .first()
     )
+    ofertas = [p for p in candidatas[:30] if p.promocao_vigente][:10]
+
+    oferta_relampago = next(
+        (
+            p
+            for p in candidatas.filter(promocao_ate__gt=agora)[:30]
+            if p.promocao_vigente
+        ),
+        None,
+    )
+
+    # uma vitrine por linha, só as que o lojista deixou ligadas e têm produto
+    vitrines = []
+    for config_vitrine in config.vitrines_por_linha():
+        if not config_vitrine["ativa"]:
+            continue
+        itens = produtos.da_linha(config_vitrine["linha"]).order_by("-vendas", "-destaque")[:8]
+        if itens:
+            vitrines.append({**config_vitrine, "produtos": itens})
 
     return render(
         request,
         "core/home.html",
         {
+            "vitrines_linha": vitrines,
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
+            "faixas_produto": (
+                Banner.objects.publicados()
+                .filter(posicao=Banner.Posicao.PRODUTOS)
+                .prefetch_related("produtos__imagens")
+            ),
             "diferenciais": Diferencial.objects.publicados(),
             "categorias_destaque": Categoria.objects.publicados().filter(destaque_home=True)[:6],
             "mais_vendidos": produtos.filter(destaque=True)[:8],
@@ -35,7 +62,7 @@ def home(request):
             "assinaveis": produtos.filter(permite_assinatura=True)[:4],
             "ofertas": ofertas,
             "oferta_relampago": oferta_relampago,
-            "especies": Especie.objects.publicados().filter(destaque_home=True)[:14],
+            "especies": Especie.objects.publicados().filter(destaque_home=True)[:24],
             "marcas": Marca.objects.publicados().filter(destaque=True)[:18],
             "posts": Post.objects.visiveis()[:3] if config.blog_ativo else [],
         },

@@ -11,8 +11,9 @@
   <ol class="wizard__passos" aria-label="Etapas">
     <li class="wizard__passo is-atual"><span>1</span>Produto</li>
     <li class="wizard__passo"><span>2</span>Preço</li>
-    <li class="wizard__passo"><span>3</span>Fotos</li>
-    <li class="wizard__passo"><span>4</span>Vitrine</li>
+    <li class="wizard__passo"><span>3</span>Tamanhos</li>
+    <li class="wizard__passo"><span>4</span>Fotos</li>
+    <li class="wizard__passo"><span>5</span>Vitrine</li>
   </ol>
 
   {% if form.non_field_errors %}
@@ -39,6 +40,11 @@
       <div class="field">
         <label for="{{ form.marca.id_for_label }}">Marca</label>
         {{ form.marca }}
+      </div>
+      <div class="field">
+        <label for="{{ form.linha.id_for_label }}">Linha</label>
+        {{ form.linha }}
+        <span class="help">Define o selo do produto e em qual vitrine ele aparece.</span>
       </div>
     </div>
 
@@ -104,8 +110,138 @@
     </div>
   </section>
 
-  {# ─────────────────────────────────────────────── 3. fotos #}
+  {# ────────────────────────────────── 3. tamanhos (variações) #}
   <section class="wizard__tela" data-tela="3" hidden>
+    <p class="small muted" style="margin-bottom:var(--s-4)">
+      Se a mesma ração é vendida em 2&nbsp;kg, 5&nbsp;kg e 15&nbsp;kg, cadastre
+      cada tamanho aqui — com preço, estoque e foto próprios. Deixe vazio se o
+      produto tem um tamanho só; nesse caso vale o preço da etapa anterior.
+    </p>
+
+    <div class="variacoes" data-variacoes>
+      {% for v in variacoes %}
+        <div class="variacao" data-variacao data-indice="{{ forloop.counter0 }}">
+          <input type="hidden" name="var-{{ forloop.counter0 }}-id" value="{{ v.id }}">
+          <div class="variacao__campos">
+            <div class="field field--mini">
+              <label>Quantidade</label>
+              <input type="number" step="0.001" inputmode="decimal"
+                     name="var-{{ forloop.counter0 }}-quantidade" value="{{ v.quantidade|floatformat:'-3' }}">
+            </div>
+            <div class="field field--mini">
+              <label>Unidade</label>
+              <select name="var-{{ forloop.counter0 }}-unidade">
+                {% for valor, rotulo in unidades_variacao %}
+                  <option value="{{ valor }}" {% if v.unidade == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field field--mini">
+              <label>Preço (R$)</label>
+              <input type="number" step="0.01" inputmode="decimal"
+                     name="var-{{ forloop.counter0 }}-preco" value="{{ v.preco|floatformat:'-2' }}">
+            </div>
+            <div class="field field--mini">
+              <label>Promocional</label>
+              <input type="number" step="0.01" inputmode="decimal" placeholder="opcional"
+                     name="var-{{ forloop.counter0 }}-preco_promocional"
+                     value="{% if v.preco_promocional %}{{ v.preco_promocional|floatformat:'-2' }}{% endif %}">
+            </div>
+            <div class="field field--mini">
+              <label>Estoque</label>
+              <input type="number" inputmode="numeric"
+                     name="var-{{ forloop.counter0 }}-estoque" value="{{ v.estoque }}">
+            </div>
+          </div>
+
+          <div class="variacao__rodape">
+            <label class="btn btn--ghost btn--sm">
+              <svg width="15" height="15"><use href="#i-camera"></use></svg>
+              <span>{% if v.imagem %}Trocar foto{% else %}Foto deste tamanho{% endif %}</span>
+              <input type="file" name="var-{{ forloop.counter0 }}-imagem" accept="image/*" hidden
+                     data-variacao-foto>
+            </label>
+            {% if v.imagem %}
+              <img class="variacao__miniatura" src="{{ v.imagem.url }}" alt="">
+            {% endif %}
+            <label class="switch-row switch-row--inline">
+              <input type="radio" name="var_padrao" value="{{ forloop.counter0 }}"
+                     {% if v.padrao %}checked{% endif %}>
+              Mostrar por padrão
+            </label>
+            <span class="spacer"></span>
+            <button type="button" class="icon-btn" data-variacao-remover
+                    aria-label="Remover este tamanho">
+              <svg width="16" height="16"><use href="#i-x"></use></svg>
+            </button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <p class="small muted" data-variacao-vazio {% if variacoes %}hidden{% endif %}>
+      Nenhum tamanho cadastrado — o produto é vendido em uma apresentação só.
+    </p>
+
+    <button type="button" class="btn btn--ghost" style="margin-top:var(--s-4)"
+            data-variacao-add>
+      <svg width="16" height="16"><use href="#i-balanca"></use></svg>
+      Adicionar tamanho
+    </button>
+
+    <template data-variacao-modelo>
+      <div class="variacao" data-variacao data-indice="__i__">
+        <div class="variacao__campos">
+          <div class="field field--mini">
+            <label>Quantidade</label>
+            <input type="number" step="0.001" inputmode="decimal"
+                   name="var-__i__-quantidade" placeholder="2">
+          </div>
+          <div class="field field--mini">
+            <label>Unidade</label>
+            <select name="var-__i__-unidade">
+              {% for valor, rotulo in unidades_variacao %}
+                <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field field--mini">
+            <label>Preço (R$)</label>
+            <input type="number" step="0.01" inputmode="decimal"
+                   name="var-__i__-preco" placeholder="0,00">
+          </div>
+          <div class="field field--mini">
+            <label>Promocional</label>
+            <input type="number" step="0.01" inputmode="decimal" placeholder="opcional"
+                   name="var-__i__-preco_promocional">
+          </div>
+          <div class="field field--mini">
+            <label>Estoque</label>
+            <input type="number" inputmode="numeric" name="var-__i__-estoque" value="0">
+          </div>
+        </div>
+        <div class="variacao__rodape">
+          <label class="btn btn--ghost btn--sm">
+            <svg width="15" height="15"><use href="#i-camera"></use></svg>
+            <span>Foto deste tamanho</span>
+            <input type="file" name="var-__i__-imagem" accept="image/*" hidden
+                   data-variacao-foto>
+          </label>
+          <label class="switch-row switch-row--inline">
+            <input type="radio" name="var_padrao" value="__i__"> Mostrar por padrão
+          </label>
+          <span class="spacer"></span>
+          <button type="button" class="icon-btn" data-variacao-remover
+                  aria-label="Remover este tamanho">
+            <svg width="16" height="16"><use href="#i-x"></use></svg>
+          </button>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  {# ─────────────────────────────────────────────── 4. fotos #}
+  <section class="wizard__tela" data-tela="4" hidden>
     <p class="small muted" style="margin-bottom:var(--s-4)">
       A primeira foto é a que aparece na vitrine. No celular, o botão abre a
       câmera direto.
@@ -146,8 +282,8 @@
     </p>
   </section>
 
-  {# ─────────────────────────────────────────────── 4. vitrine #}
-  <section class="wizard__tela" data-tela="4" hidden>
+  {# ─────────────────────────────────────────────── 5. vitrine #}
+  <section class="wizard__tela" data-tela="5" hidden>
     <div class="card card--pad" style="background:var(--cream)">
       <label class="switch-row" style="font-size:var(--fs-base)">
         {{ form.permite_assinatura }} Disponível para assinatura recorrente

@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{# o balão do WhatsApp fala com o cliente; no painel ele só cobre o trabalho #}
+{% block whatsapp_balao %}{% endblock %}
+
 {% block header %}{% endblock %}
 {% block footer %}{% endblock %}
 
@@ -37,6 +40,9 @@
     </a>
     <a href="{% url 'dashboard:gestao' 'banners' %}" class="panel__link {% if secao == 'conteudo' %}is-active{% endif %}">
       <svg width="16" height="16"><use href="#i-imagem"></use></svg>Conteúdo
+    </a>
+    <a href="{% url 'dashboard:gestao' 'cidades' %}" class="panel__link {% if secao == 'entrega' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-caminhao"></use></svg>Entrega
     </a>
     <a href="{% url 'dashboard:auditoria' 'pagamentos' %}" class="panel__link {% if secao == 'auditoria' %}is-active{% endif %}">
       <svg width="16" height="16"><use href="#i-escudo"></use></svg>Auditoria
