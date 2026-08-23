@@ -293,6 +293,24 @@
       // quando o servidor devolve o formulário com erros, ele precisa ser
       // religado — mas fora do try, senão um erro de JS apagaria a tela
       let recarregado = false;
+
+      // barra antes de gastar o 4G do lojista com um envio que vai falhar
+      const limites = { video: 60, imagem: 10, logo: 10, favicon: 10 };
+      const grande = $$('input[type=file]', wizard).find(function (campo) {
+        const limite = limites[campo.name] || 10;
+        return campo.files.length && campo.files[0].size > limite * 1024 * 1024;
+      });
+      if (grande) {
+        const limite = limites[grande.name] || 10;
+        const mb = (grande.files[0].size / 1024 / 1024).toFixed(1);
+        toast(
+          'O arquivo tem ' + mb + ' MB e o limite é ' + limite +
+          ' MB. Comprima e tente de novo.',
+          'error'
+        );
+        return;
+      }
+
       const dados = new FormData();
       // o conteúdo do <template> dos tamanhos vive num fragmento à parte,
       // então nem aparece aqui — só as linhas realmente adicionadas entram
@@ -337,6 +355,24 @@
           body: dados,
           headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
         });
+
+        // 413 vem do nginx como página HTML: tentar lê-la como JSON estourava
+        // e o lojista via "verifique a conexão" para um arquivo grande demais
+        if (resposta.status === 413) {
+          toast('Arquivo grande demais para enviar. Comprima e tente de novo.', 'error');
+          return;
+        }
+        const tipo = resposta.headers.get('content-type') || '';
+        if (!tipo.includes('application/json')) {
+          toast(
+            resposta.ok
+              ? 'Resposta inesperada do servidor. Recarregue a página.'
+              : 'O servidor recusou o envio (erro ' + resposta.status + ').',
+            'error'
+          );
+          return;
+        }
+
         const json = await resposta.json();
 
         if (json.ok) {

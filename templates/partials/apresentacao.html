@@ -7,7 +7,7 @@
   iOS recusa o autoplay e o cliente vê um retângulo preto.
 {% endcomment %}
 <section class="apresentacao" data-apresentacao aria-label="Destaques">
-  <div class="apresentacao__palco">
+  <div class="apresentacao__pilha">
     {% for banner in apresentacao %}
         <{% if banner.destino %}a href="{{ banner.destino }}"{% else %}div{% endif %}
            class="apresentacao__slide" data-apresentacao-slide
@@ -26,6 +26,11 @@
                  {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
           {% endif %}
 
+          {% comment %}
+            O texto fica numa faixa abaixo da mídia, não sobre ela. A peça
+            que o lojista sobe já traz a arte pronta — cobrir o canto dela
+            com título e botão escondia justamente o que ele quis mostrar.
+          {% endcomment %}
           {% if banner.titulo or banner.selo %}
             <div class="apresentacao__texto">
               {% if banner.selo %}<span class="apresentacao__selo">{{ banner.selo }}</span>{% endif %}

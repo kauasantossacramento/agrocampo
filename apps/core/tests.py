@@ -775,7 +775,7 @@ class BannerDeApresentacaoTests(TestCase):
         html = self.client.get(reverse("core:home")).content.decode()
 
         self.assertIn("hero--compacto-movel", html)
-        self.assertNotIn("apresentacao__palco", html)
+        self.assertNotIn("apresentacao__pilha", html)
 
     def test_com_apresentacao_ela_assume_o_topo(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
@@ -788,7 +788,7 @@ class BannerDeApresentacaoTests(TestCase):
         )
         html = self.client.get(reverse("core:home")).content.decode()
 
-        self.assertIn("apresentacao__palco", html)
+        self.assertIn("apresentacao__pilha", html)
         self.assertIn("Chegou a linha nova", html)
         # o hero deixa de disputar o topo no celular
         self.assertIn("hero--secundario", html)
@@ -1086,3 +1086,93 @@ class ModalDeConteudoTests(TestCase):
         # determinístico, em vez de "o que o banco devolver"
         self.assertEqual(banner.destino, produtos[0].get_absolute_url())
         self.assertEqual(banner.destino, banner.destino)
+
+
+class LimiteDeArquivoTests(TestCase):
+    """Arquivo grande demais tem que dizer isso, não "erro de conexão"."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.accounts.models import User
+
+        cls.lojista = User.objects.create_user(
+            email="lojista-limite@agrocampo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.lojista)
+
+    def test_video_acima_do_limite_e_recusado_com_o_tamanho_no_texto(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.core.models import LIMITE_VIDEO_MB, Banner
+        from apps.dashboard.gestao import BannerForm
+
+        grande = SimpleUploadedFile(
+            "grande.mp4",
+            b"\x00" * ((LIMITE_VIDEO_MB + 1) * 1024 * 1024),
+            content_type="video/mp4",
+        )
+        form = BannerForm(
+            data={
+                "posicao": Banner.Posicao.APRESENTACAO, "titulo": "Grande",
+                "cor_fundo": "#D62B20", "texto_botao": "Ver", "ordem": 0,
+                "publicado": "on",
+            },
+            files={"video": grande},
+        )
+        self.assertFalse(form.is_valid())
+        mensagem = " ".join(form.errors["video"])
+        self.assertIn(str(LIMITE_VIDEO_MB), mensagem)
+        self.assertIn("MB", mensagem)
+
+    def test_video_dentro_do_limite_passa(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.core.models import Banner
+        from apps.dashboard.gestao import BannerForm
+
+        form = BannerForm(
+            data={
+                "posicao": Banner.Posicao.APRESENTACAO, "titulo": "Pequeno",
+                "cor_fundo": "#D62B20", "texto_botao": "Ver", "ordem": 0,
+                "publicado": "on",
+            },
+            files={"video": SimpleUploadedFile(
+                "ok.mp4", b"\x00" * (2 * 1024 * 1024), content_type="video/mp4"
+            )},
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_o_painel_nao_le_413_como_json(self):
+        """A regressão: `resposta.json()` numa página HTML do nginx."""
+        import pathlib
+
+        js = (
+            pathlib.Path(__file__).resolve().parents[2]
+            / "static" / "js" / "painel.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("resposta.status === 413", js)
+        self.assertIn("Arquivo grande demais", js)
+        # e o content-type é conferido antes de chamar .json()
+        posicao_tipo = js.index("content-type")
+        posicao_json = js.index("await resposta.json()")
+        self.assertLess(posicao_tipo, posicao_json)
+
+    def test_nginx_aceita_mais_que_o_limite_da_aplicacao(self):
+        """O corte tem que ser o da aplicação, que explica o motivo."""
+        import pathlib
+        import re
+
+        from apps.core.models import LIMITE_VIDEO_MB
+
+        conf = (
+            pathlib.Path(__file__).resolve().parents[2]
+            / "deploy" / "nginx.conf"
+        ).read_text(encoding="utf-8")
+
+        achado = re.search(r"client_max_body_size\s+(\d+)M", conf)
+        self.assertIsNotNone(achado, "client_max_body_size ausente")
+        self.assertGreater(int(achado.group(1)), LIMITE_VIDEO_MB)

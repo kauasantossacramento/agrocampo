@@ -1,6 +1,7 @@
 """Modelos-base reutilizaveis e conteudo institucional da loja."""
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
     MaxValueValidator,
@@ -325,6 +326,30 @@ class SiteConfig(TimeStampedModel):
         ]
 
 
+# O nginx corta em 80 MB e devolve uma página HTML de erro, que o painel não
+# consegue interpretar — vira "erro de conexão". Barrar antes, aqui e no
+# navegador, é o que dá uma mensagem útil ao lojista.
+LIMITE_VIDEO_MB = 60
+ALERTA_VIDEO_MB = 8
+LIMITE_IMAGEM_MB = 10
+
+
+def _validar_tamanho(arquivo, limite_mb, tipo):
+    if arquivo and arquivo.size > limite_mb * 1024 * 1024:
+        raise ValidationError(
+            f"{tipo} tem {arquivo.size / 1024 / 1024:.1f} MB e o limite é "
+            f"{limite_mb} MB. Comprima o arquivo e envie de novo."
+        )
+
+
+def validar_tamanho_video(arquivo):
+    _validar_tamanho(arquivo, LIMITE_VIDEO_MB, "O vídeo")
+
+
+def validar_tamanho_imagem(arquivo):
+    _validar_tamanho(arquivo, LIMITE_IMAGEM_MB, "A imagem")
+
+
 class Banner(TimeStampedModel):
     class Posicao(models.TextChoices):
         HERO = "hero", "Carrossel principal"
@@ -336,15 +361,22 @@ class Banner(TimeStampedModel):
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=220, blank=True)
     selo = models.CharField(max_length=60, blank=True, help_text="Etiqueta acima do título.")
-    imagem = models.ImageField(upload_to="banners/", blank=True)
+    imagem = models.ImageField(
+        upload_to="banners/", blank=True,
+        validators=[validar_tamanho_imagem],
+    )
     video = models.FileField(
         "vídeo",
         upload_to="banners/video/",
         blank=True,
-        validators=[FileExtensionValidator(["mp4", "webm", "ogv"])],
+        validators=[
+            FileExtensionValidator(["mp4", "webm", "ogv"]),
+            validar_tamanho_video,
+        ],
         help_text=(
-            "MP4 ou WebM, curto e sem som — ele toca sozinho e em silêncio. "
-            "Acima de ~5 MB a página fica lenta no 4G."
+            f"MP4 ou WebM, curto e sem som — ele toca sozinho e em silêncio. "
+            f"Até {LIMITE_VIDEO_MB} MB; acima de {ALERTA_VIDEO_MB} MB a página "
+            f"fica lenta para quem abre no 4G."
         ),
     )
     cor_fundo = models.CharField(max_length=20, default="#D62B20")

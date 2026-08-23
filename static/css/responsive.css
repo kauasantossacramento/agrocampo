@@ -91,9 +91,9 @@ pre, code { overflow-x: auto; max-width: 100%; }
      retângulo — texto e botões, sem a figura de meia tela. */
   .hero--secundario { display: none; }
 
-  .apresentacao__palco { aspect-ratio: 16 / 9; max-height: 46vh; }
-  .apresentacao__texto { padding: var(--s-6) var(--s-4) var(--s-4); }
-  .apresentacao__texto strong { font-size: var(--fs-lg); }
+  .apresentacao__midia { aspect-ratio: 16 / 9; max-height: 46vh; }
+  .apresentacao__texto { padding: var(--s-3) var(--s-4) var(--s-4); }
+  .apresentacao__texto strong { font-size: var(--fs-md); }
   /* alvo de toque do ponto: 8px de bolinha, 28px de área */
   .apresentacao__dot { padding: 10px 0; background-clip: content-box; }
   .apresentacao__dots { gap: var(--s-3); }
