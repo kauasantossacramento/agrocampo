@@ -343,3 +343,44 @@ descartável, `up -d --no-deps web`.
   lojista troca no cadastro do produto quando quiser.
 - Conferência: md5 do conjunto de arquivos do Traefik inalterado, 15
   containers `nuvem-*` sem reinício, `nuvem.center` respondendo 200.
+
+### 10.2 Terceira entrega (23/08) — limite de upload
+
+Mesmo procedimento de sempre. Uma diferença: além do `web`, o **nginx do
+AgroCampo** precisou ser recriado.
+
+Motivo: `deploy/nginx.conf` entra no container como bind mount de arquivo
+único. O `git pull` grava um arquivo novo (inode novo) e o container continua
+enxergando o antigo — `nginx -s reload` relê o mesmo conteúdo de sempre.
+Só `docker compose up -d --no-deps --force-recreate nginx` resolve.
+
+```bash
+docker compose up -d --no-deps web
+docker compose up -d --no-deps --force-recreate nginx
+```
+
+`--no-deps` garante que `db` e `cron` não são tocados — os dois seguem com
+2 dias de uptime.
+
+O que mudou na borda: `client_max_body_size` de 25M para 80M e timeouts de
+300 s, porque o vídeo de banner de 30,6 MB do lojista batia em 413. Conferido
+depois do deploy com um POST de 35 MB: a resposta é 403 (CSRF do Django), ou
+seja, o nginx leu o corpo inteiro e entregou à aplicação.
+
+#### Sobre a verificação por md5 do Traefik
+
+Nas entregas anteriores eu comparava o md5 do conjunto de arquivos em
+`traefik/dynamic/`. **Esse sinal deixou de valer**: o próprio Nuvem Center
+provisiona tenants e reescreve esses arquivos sozinho. Entre 22 e 23/08
+apareceram `tenant-lab-kaua.yml` e `tenant-matematica1.yml`, e
+`middlewares.yml`, `servicos.yml` e três `tenant-*.yml` mudaram — nada disso
+partiu daqui.
+
+A verificação correta é o md5 do **`agrocampo.yml`**, que é o único arquivo
+meu naquele diretório:
+
+```
+79ae25137eede851e1a4ce31fa2c3c23  agrocampo.yml
+```
+
+Esse valor está igual desde a primeira instalação, em 21/08.
