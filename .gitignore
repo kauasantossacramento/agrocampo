@@ -33,3 +33,7 @@ Thumbs.db
 # arquivos de diagnostico temporarios
 diag_tmp.py
 *_tmp.py
+
+# Credenciais de producao. O repositorio e publico — este arquivo
+# nunca pode entrar. A versao sem segredos e o .exemplo.md ao lado.
+deploy/DADOS-DE-DEPLOY.md
