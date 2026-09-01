@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Recusa commits que carreguem chave privada.
+#
+# O .gitignore nao basta: `git add -f` passa por cima dele, e um arquivo
+# renomeado escapa do padrao. Este gancho olha o CONTEUDO do que esta
+# sendo commitado, entao pega a chave com qualquer nome.
+#
+# Instale com:  git config core.hooksPath .githooks
+set -euo pipefail
+
+achados=""
+while IFS= read -r arquivo; do
+    [ -z "$arquivo" ] && continue
+    # le a versao que esta no indice, nao a do disco
+    if git show ":$arquivo" 2>/dev/null \
+       | grep -qE -- '-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----'; then
+        achados="${achados}  ${arquivo}"$'\n'
+    fi
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$achados" ]; then
+    cat >&2 <<MSG
+
+  COMMIT BLOQUEADO — chave privada encontrada:
+
+${achados}
+  Este repositorio e publico. A chave do servidor da acesso root a
+  maquina inteira, incluindo os tenants do nuvem.center.
+
+  Tire do indice:   git restore --staged <arquivo>
+  O lugar certo:    deploy/chaves/  (ja ignorado pelo Git)
+
+  Se voce tem certeza absoluta de que isto NAO e um segredo:
+      git commit --no-verify
+
+MSG
+    exit 1
+fi

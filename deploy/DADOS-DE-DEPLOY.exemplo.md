@@ -28,6 +28,7 @@ Atualizado em 23/08/2026.
 | Host | `<IP do servidor>` (servidor dedicado nuvem.center) |
 | Usuário | `root` |
 | Chave SSH | `<caminho da chave SSH>` |
+| Cópia para outras máquinas | `deploy/chaves/` — ver `deploy/chaves/README.md` |
 | Diretório da aplicação | `/opt/agrocampo` |
 
 ```bash

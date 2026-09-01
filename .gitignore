@@ -37,3 +37,17 @@ diag_tmp.py
 # Credenciais de producao. O repositorio e publico — este arquivo
 # nunca pode entrar. A versao sem segredos e o .exemplo.md ao lado.
 deploy/DADOS-DE-DEPLOY.md
+
+# ── Chaves privadas ──────────────────────────────────────────────────
+# Este repositorio e publico. A chave do servidor da root na maquina
+# inteira, incluindo os tenants do nuvem.center. Nada disso pode subir.
+deploy/chaves/*
+!deploy/chaves/README.md
+!deploy/chaves/.gitkeep
+*.pem
+*.key
+id_rsa
+id_ed25519
+*_ed25519
+*_rsa
+!*.pub
