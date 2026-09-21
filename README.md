@@ -9,6 +9,10 @@ em paralelo para alimentar o PWA/app mobile.
 
 ---
 
+**Manual completo do sistema, com prints (computador e celular):** [`docs/manual/MANUAL.md`](docs/manual/MANUAL.md).
+
+---
+
 ## Subir o projeto
 
 ```bash
