@@ -208,6 +208,28 @@ clássico não muda. Banners da posição *Banner secundário* com imagem viram
 o bloco "Ofertas em destaque" (4 cartazes). A tag Git `layout-classico`
 marca o código anterior à mudança.
 
+### Rodada de 21/09 — capa, seções, promoções, compra
+
+- **Capa**: dois interruptores em Aparência — *carrossel de slides* (padrão ligado) e
+  *apresentação* (vídeo/foto, padrão **desligado**). Slide com imagem e título mostra o
+  texto sobre o cartaz, da esquerda para a direita, com gradiente. Setas + pontos.
+- **Ordem das seções** da home (estilo vitrine) em Vitrines, com setas. Padrão:
+  Maiores sucessos → Ouro → Prata → Bronze → … Seção sem conteúdo não aparece.
+- **Maiores sucessos** é manual: `Produto.destaque` ("maior sucesso") no cadastro, em
+  lote na lista de produtos (coluna *Sucesso*), ou a **marca inteira** (`Marca.sucesso`).
+- **Promoções em destaque** (Conteúdo › Promoções): bloco com título, texto, imagem
+  ou produto, início/fim e a seção depois da qual entra. Some sozinho no fim do prazo.
+- **Assinatura**: desconto padrão agora é **0%** (editável em Regras); interruptor
+  *mostrar a assinatura na loja*; no produto a assinatura fica fechada atrás de
+  "Deseja ativar a assinatura deste produto?". Sem cartão salvo, o ciclo vira
+  **lembrete** (pedido aguardando pagamento + aviso por WhatsApp/e-mail) em vez de
+  falha; aviso prévio 2 dias antes (`processar_assinaturas` faz os dois).
+- **Comprar agora** no produto (vai direto ao checkout) e **calculadora de frete**
+  (`/entrega/calcular/`, mesma regra do checkout).
+- **PWA**: ícones vermelhos com a logo branca (`static/img/pwa-*.png`, maskable).
+- **Mobile**: hambúrguer sempre visível com a pessoa logada, notificações em folha
+  rolável, balão do WhatsApp menor e sem cobrir botões.
+
 ---
 
 ## Design system
@@ -259,7 +281,7 @@ Auditado com emulação real de device via CDP: **19 páginas × 9 larguras
 ## Testes
 
 ```bash
-python manage.py test          # 192 testes
+python manage.py test          # 206 testes
 ```
 
 Cobrem: preço de assinatura, máquina de estados do pedido, baixa e devolução de

@@ -109,30 +109,41 @@
             </div>
           {% endif %}
 
-          {% if produto.permite_assinatura %}
-            <div class="card card--pad" style="margin-bottom:var(--s-5)">
-              <p class="filters__title" style="margin-bottom:var(--s-3)">Frequência de entrega</p>
-              <div class="stack" style="gap:var(--s-2)" data-option-group>
-                <label class="option">
-                  <input type="radio" name="recorrente" value="0" checked>
-                  <span>
-                    <span class="option__title">Compra única — <span data-preco-unico>R$ {{ produto.preco_atual|floatformat:2 }}</span></span>
-                    <span class="option__desc">Sem compromisso, entrega única.</span>
-                  </span>
-                </label>
-                {% for dias, rotulo in frequencias %}
-                  <label class="option">
-                    <input type="radio" name="recorrente" value="1" data-frequencia="{{ dias }}">
-                    <span>
-                      <span class="option__title">
-                        Entregar a cada {{ rotulo }} —
-                        <span style="color:var(--green-deep)"><span data-preco-assinatura>R$ {{ produto.preco_assinatura|floatformat:2 }}</span> (−{{ produto.desconto_assinatura }}%)</span>
+          {% if produto.permite_assinatura and site.assinatura_visivel %}
+            {% comment %}
+              Assinatura fechada por padrão: um interruptor pergunta se a pessoa
+              quer; só então aparecem as frequências e a confirmação. Quem não
+              quer assinar não precisa nem ler sobre isso.
+            {% endcomment %}
+            <div class="card card--pad assinatura-caixa" style="margin-bottom:var(--s-5)" data-assinatura-caixa>
+              <label class="switch-row assinatura-caixa__pergunta">
+                <input type="checkbox" data-assinatura-toggle>
+                <span><strong>Deseja ativar a assinatura deste produto?</strong>
+                  <span class="option__desc">Receba de novo sem precisar pedir. Pause ou cancele quando quiser.</span></span>
+              </label>
+              <div class="assinatura-caixa__corpo" data-assinatura-corpo hidden>
+                <p class="filters__title" style="margin:var(--s-3) 0">Com que frequência?</p>
+                <div class="stack" style="gap:var(--s-2)" data-option-group>
+                  {% for dias, rotulo in frequencias %}
+                    <label class="option">
+                      <input type="radio" name="frequencia_escolhida" value="{{ dias }}" data-frequencia="{{ dias }}" {% if forloop.first %}checked{% endif %}>
+                      <span>
+                        <span class="option__title">
+                          A cada {{ rotulo }} —
+                          <span style="color:var(--green-deep)"><span data-preco-assinatura>R$ {{ produto.preco_assinatura|floatformat:2 }}</span>{% if produto.desconto_assinatura %} (−{{ produto.desconto_assinatura }}%){% endif %}</span>
+                        </span>
+                        {% if produto.desconto_assinatura %}<span class="option__desc">Economize <span data-economia-assinatura>R$ {{ produto.economia_assinatura|floatformat:2 }}</span> por entrega.</span>{% endif %}
                       </span>
-                      <span class="option__desc">Economize <span data-economia-assinatura>R$ {{ produto.economia_assinatura|floatformat:2 }}</span> por entrega. Pause quando quiser.</span>
-                    </span>
-                  </label>
-                {% endfor %}
+                    </label>
+                  {% endfor %}
+                </div>
+                <div class="assinatura-caixa__confirma small" data-assinatura-confirma>
+                  <svg width="16" height="16" style="color:var(--green);flex:none"><use href="#i-check"></use></svg>
+                  <span>Confirmado: você recebe <strong>{{ produto.nome }}</strong> a cada <strong data-assinatura-dias>30 dias</strong>.
+                  Com cartão salvo, cobramos automaticamente na data; sem cartão, avisamos por WhatsApp e e-mail para você pagar.</span>
+                </div>
               </div>
+              <input type="hidden" name="recorrente" value="0" data-assinatura-flag>
               <input type="hidden" name="frequencia" value="30" id="campo-frequencia">
             </div>
           {% endif %}
@@ -149,7 +160,19 @@
               {% if produto.em_estoque %}Adicionar ao carrinho{% else %}Produto esgotado{% endif %}
             </button>
           </div>
+          {% if produto.em_estoque %}
+            {% comment %}
+              Comprar agora: mesmo POST, mas o servidor manda direto para o
+              checkout. O JS reconhece o botão e segue o redirecionamento.
+            {% endcomment %}
+            <button type="submit" name="comprar_agora" value="1" class="btn btn--dark btn--lg"
+                    style="width:100%;margin-bottom:var(--s-5)" data-comprar-agora>
+              <svg width="17" height="17"><use href="#i-raio"></use></svg>Comprar agora
+            </button>
+          {% endif %}
         </form>
+
+        {% include 'shipping/_calculadora.html' %}
 
         <div class="row" style="gap:var(--s-4);flex-wrap:wrap;font-size:var(--fs-xs);color:var(--muted)">
           {% if site.desconto_pix %}
@@ -291,12 +314,25 @@
 
 {% block scripts %}
 <script>
-  // mantém o campo oculto de frequência em sincronia com a opção escolhida
-  document.querySelectorAll('[name="recorrente"]').forEach(function (entrada) {
-    entrada.addEventListener('change', function () {
-      var campo = document.getElementById('campo-frequencia');
-      if (campo && entrada.dataset.frequencia) campo.value = entrada.dataset.frequencia;
-    });
-  });
+  // assinatura: interruptor abre a caixa; os campos ocultos carregam a escolha
+  (function () {
+    var caixa = document.querySelector('[data-assinatura-caixa]');
+    if (!caixa) return;
+    var toggle = caixa.querySelector('[data-assinatura-toggle]');
+    var corpo = caixa.querySelector('[data-assinatura-corpo]');
+    var flag = caixa.querySelector('[data-assinatura-flag]');
+    var campo = document.getElementById('campo-frequencia');
+    var dias = caixa.querySelector('[data-assinatura-dias]');
+    function sincronizar() {
+      var ligado = toggle.checked;
+      corpo.hidden = !ligado;
+      flag.value = ligado ? '1' : '0';
+      var marcado = caixa.querySelector('[name="frequencia_escolhida"]:checked');
+      if (marcado) { campo.value = marcado.value; dias.textContent = marcado.value + ' dias'; }
+    }
+    toggle.addEventListener('change', sincronizar);
+    caixa.querySelectorAll('[name="frequencia_escolhida"]').forEach(function (r) { r.addEventListener('change', sincronizar); });
+    sincronizar();
+  })();
 </script>
 {% endblock %}

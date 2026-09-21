@@ -21,10 +21,11 @@
   Banner sem imagem cai no desenho clássico (texto sobre cor), para o lojista
   não ficar com um slide vazio enquanto não sobe o cartaz.
 {% endcomment %}
-{% if apresentacao %}
+{% if apresentacao and site.capa_apresentacao_ativa %}
   {% include 'partials/apresentacao.html' %}
 {% endif %}
 
+{% if site.capa_slides_ativa %}
 <section class="vitrine-capa wrap" data-hero>
   <div class="vitrine-capa__quadro">
     {% for banner in banners %}
@@ -32,9 +33,17 @@
         <a href="{{ banner.link|default:'/catalogo/' }}" class="vitrine-capa__slide" data-hero-slide {% if not forloop.first %}hidden{% endif %}
            aria-label="{{ banner.titulo }}">
           <img src="{{ banner.imagem.url }}" alt="{{ banner.titulo }}" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
-          {% if banner.texto_botao and banner.selo %}
-            <span class="vitrine-capa__legenda">
-              <span class="hero__badge">{{ banner.selo }}</span>
+          {% comment %}
+            Texto opcional sobre o cartaz: entra pela esquerda, sobre um
+            gradiente escuro que some para a direita — a arte continua
+            visível do lado direito. Sem título, o cartaz fala sozinho.
+          {% endcomment %}
+          {% if banner.titulo or banner.selo %}
+            <span class="vitrine-capa__sobre">
+              {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}
+              {% if banner.titulo %}<strong>{{ banner.titulo }}</strong>{% endif %}
+              {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
+              {% if banner.texto_botao %}<span class="btn btn--accent">{{ banner.texto_botao }}</span>{% endif %}
             </span>
           {% endif %}
         </a>
@@ -82,6 +91,7 @@
     {% endif %}
   </div>
 </section>
+{% endif %}
 
 {# ================================================= FAIXA DE GARANTIAS #}
 {% if diferenciais %}
@@ -99,291 +109,15 @@
 </section>
 {% endif %}
 
-{# ============================= VITRINES POR LINHA (ouro/prata/bronze) #}
-{% for vitrine in vitrines_linha %}
-<section class="section section--tight wrap vitrine-linha vitrine-linha--{{ vitrine.classe }}">
-  <div class="secao-titulo" data-reveal>
-    <h2 class="vitrine-linha__titulo"><span class="vitrine-linha__fita" aria-hidden="true"></span>{{ vitrine.titulo }}</h2>
-    <a href="{% url 'catalog:catalogo' %}?linha={{ vitrine.linha }}" class="secao-titulo__link">Ver a linha →</a>
-  </div>
-  <div class="grid grid--4" data-stagger>
-    {% for produto in vitrine.produtos %}{% include 'partials/product_card.html' %}{% endfor %}
-  </div>
-</section>
+{# ====================================== SEÇÕES, NA ORDEM DO PAINEL #}
+{% comment %}
+  Cada seção é uma partial em core/secoes/. A ordem vem de
+  SiteConfig.home_ordem (Painel › Configurações › Vitrines). Depois de cada
+  seção entram as promoções em destaque marcadas para aquela posição.
+{% endcomment %}
+{% for caminho in secoes_home %}
+  {% include caminho %}
+  {% include 'core/secoes/_promocoes.html' with chave=caminho %}
 {% endfor %}
-
-{# ================================================= MAIORES SUCESSOS #}
-{% if mais_vendidos %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-medalha"></use></svg></span>Maiores sucessos — {{ site.nome_loja }}</h2>
-    <a href="{% url 'catalog:catalogo' %}?ordem=mais-vendidos" class="secao-titulo__link">Ver todos →</a>
-  </div>
-  <div class="grid grid--4" data-stagger>
-    {% for produto in mais_vendidos %}{% include 'partials/product_card.html' %}{% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ================================================= NAVEGAR POR ESPÉCIE #}
-{% if especies %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-folha"></use></svg></span>Navegue pelo seu animal</h2>
-    <a href="{% url 'catalog:especies' %}" class="secao-titulo__link">Ver todas →</a>
-  </div>
-  <div class="card card--pad" data-reveal>
-    <div class="species-grid">
-      {% for e in especies %}
-        <a href="{{ e.get_absolute_url }}" class="species-tile">
-          <span class="species-tile__circle">
-            {% if e.imagem %}
-              <img src="{{ e.imagem.url }}" alt="{{ e.nome }}" loading="lazy">
-            {% else %}
-              <svg width="30" height="30" aria-hidden="true"><use href="#c-{{ e.icone_svg }}"></use></svg>
-            {% endif %}
-          </span>
-          <span>{{ e.nome }}</span>
-        </a>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-{% endif %}
-
-{# ================================================= ATALHOS DE CATEGORIA #}
-{% if categorias_destaque %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-pacote"></use></svg></span>Compre por categoria</h2>
-    <a href="{% url 'catalog:catalogo' %}" class="secao-titulo__link">Ver tudo →</a>
-  </div>
-  <div class="grid grid--6" data-stagger>
-    {% for c in categorias_destaque %}
-      <a href="{{ c.get_absolute_url }}" class="cat-tile">
-        <span class="cat-tile__icon">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#c-{{ c.icone_svg }}"></use></svg>
-        </span>
-        <span>{{ c.nome }}</span>
-      </a>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ======================================== FAIXA DE PRODUTOS COM LINK #}
-{% for faixa in faixas_produto %}
-  {% with itens=faixa.produtos_visiveis %}
-    {% if itens %}
-      <section class="section section--tight wrap">
-        <div class="secao-titulo" data-reveal>
-          <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-raio"></use></svg></span>{{ faixa.titulo }}</h2>
-          {% if faixa.link %}<a href="{{ faixa.link }}" class="secao-titulo__link">{{ faixa.texto_botao|default:"Ver tudo" }} →</a>{% endif %}
-        </div>
-        <div class="fita" role="list">
-          {% for p in itens %}
-            <a href="{{ p.get_absolute_url }}" class="fita__item" role="listitem">
-              {% with imagem=p.imagem_principal %}
-                {% if imagem %}
-                  <img src="{{ imagem.imagem.url }}" alt="{{ p.nome }}" loading="lazy">
-                {% else %}
-                  <span class="product__placeholder">
-                    <svg width="40" height="40" aria-hidden="true"><use href="#c-{{ p.categoria.icone_svg }}"></use></svg>
-                  </span>
-                {% endif %}
-              {% endwith %}
-              <span class="fita__legenda">
-                <strong>{{ p.nome|truncatechars:34 }}</strong>
-                <span>{% if p.tem_variacoes %}a partir de {% endif %}R$ {{ p.preco_atual|floatformat:2 }}</span>
-              </span>
-            </a>
-          {% endfor %}
-        </div>
-      </section>
-    {% endif %}
-  {% endwith %}
-{% endfor %}
-
-{# ================================================== OFERTA RELÂMPAGO #}
-{% if oferta_relampago %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone secao-titulo__icone--quente"><svg width="18" height="18"><use href="#i-raio"></use></svg></span>Oferta especial — promoção do dia</h2>
-  </div>
-  <div class="flash" data-reveal="scale">
-    <div class="flash__inner">
-      <div>
-        <span class="badge badge--sale" style="margin-bottom:var(--s-3)">OFERTA POR TEMPO LIMITADO</span>
-        <h2>{{ oferta_relampago.nome }}</h2>
-        <p>Aproveite antes que acabe — de <s>R$ {{ oferta_relampago.preco_cheio|floatformat:2 }}</s>
-           por <strong style="color:var(--yellow);font-size:var(--fs-xl)">R$ {{ oferta_relampago.preco_atual|floatformat:2 }}</strong></p>
-        <div class="countdown" data-countdown="{{ oferta_relampago.promocao_ate|date:'c' }}"></div>
-        <a href="{{ oferta_relampago.get_absolute_url }}" class="btn btn--accent" style="margin-top:var(--s-5)">Aproveitar oferta</a>
-      </div>
-      <div>
-        {% with imagem=oferta_relampago.imagem_principal %}
-          {% if imagem %}
-            <img src="{{ imagem.imagem.url }}" alt="{{ oferta_relampago.nome }}"
-                 style="border-radius:var(--r-lg);background:#fff;padding:var(--s-4)" loading="lazy">
-          {% endif %}
-        {% endwith %}
-      </div>
-    </div>
-  </div>
-</section>
-{% endif %}
-
-{# ================================================= PROMOÇÕES (carrossel) #}
-{% if ofertas %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone secao-titulo__icone--quente"><svg width="18" height="18"><use href="#i-raio"></use></svg></span>Em promoção — só por tempo limitado</h2>
-    <div class="row" style="gap:var(--s-2)">
-      <a href="{% url 'catalog:catalogo' %}?promocao=1" class="secao-titulo__link">Ver todas →</a>
-      <button class="btn btn--ghost btn--sm" data-carousel-prev aria-label="Anterior"><svg width="15" height="15"><use href="#i-seta-esq"></use></svg></button>
-      <button class="btn btn--ghost btn--sm" data-carousel-next aria-label="Próximo"><svg width="15" height="15"><use href="#i-seta-dir"></use></svg></button>
-    </div>
-  </div>
-  <div class="carousel" data-carousel>
-    <div class="carousel__track" data-carousel-track>
-      {% for produto in ofertas %}
-        <div style="width:250px">{% include 'partials/product_card.html' %}</div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-{% endif %}
-
-{# ============================================ OFERTAS EM DESTAQUE (4) #}
-{% if banners_secundarios %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-medalha"></use></svg></span>Ofertas em destaque</h2>
-  </div>
-  <div class="ofertas-grade" data-stagger>
-    {% for b in banners_secundarios %}
-      <a href="{{ b.link|default:'/catalogo/' }}" class="ofertas-grade__item" aria-label="{{ b.titulo }}">
-        <img src="{{ b.imagem.url }}" alt="{{ b.titulo }}" loading="lazy">
-        {% if b.titulo %}<span class="ofertas-grade__legenda">{{ b.titulo }}</span>{% endif %}
-      </a>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ======================================================= LANÇAMENTOS #}
-{% if lancamentos %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-folha"></use></svg></span>Lançamentos do mês</h2>
-    <a href="{% url 'catalog:catalogo' %}?ordem=novidades" class="secao-titulo__link">Ver todos →</a>
-  </div>
-  <div class="grid grid--4" data-stagger>
-    {% for produto in lancamentos %}{% include 'partials/product_card.html' %}{% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ======================================================= ASSINATURA #}
-{% if assinaveis %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-refresh"></use></svg></span>Assinatura — nunca deixe faltar o essencial</h2>
-    <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="secao-titulo__link">Ver assináveis →</a>
-  </div>
-  <p class="small muted" style="margin:calc(-1 * var(--s-3)) 0 var(--s-5)">
-    Escolha a frequência, economize {{ site.desconto_assinatura_padrao }}% e receba em casa. Pause ou cancele quando quiser.
-  </p>
-  <div class="grid grid--4" data-stagger>
-    {% for produto in assinaveis %}{% include 'partials/product_card.html' %}{% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ================================================= POR QUE COMPRAR #}
-{% if diferenciais %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-escudo"></use></svg></span>Por que comprar na {{ site.nome_loja }}?</h2>
-  </div>
-  <div class="porque-grade" data-stagger>
-    {% if site.anos_de_mercado %}
-      <div class="porque-item">
-        <span class="porque-item__numero">{{ site.anos_de_mercado }}</span>
-        <strong>anos de mercado</strong>
-        <span class="small muted">Atendendo o campo e os animais da região.</span>
-      </div>
-    {% endif %}
-    {% for d in diferenciais|slice:":4" %}
-      <div class="porque-item">
-        <span class="porque-item__icone"><svg width="24" height="24"><use href="#i-{{ d.icone }}"></use></svg></span>
-        <strong>{{ d.titulo }}</strong>
-        {% if d.descricao %}<span class="small muted">{{ d.descricao }}</span>{% endif %}
-      </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ============================================================== BLOG #}
-{% if posts and site.blog_ativo %}
-<section class="section section--tight wrap">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-lapis"></use></svg></span>Blog {{ site.nome_loja }}</h2>
-    <a href="{% url 'blog:lista' %}" class="secao-titulo__link">Ver todos →</a>
-  </div>
-  <div class="grid grid--3" data-stagger>
-    {% for post in posts %}
-      <a href="{{ post.get_absolute_url }}" class="card card--hover post-card" style="color:inherit;overflow:hidden">
-        <div class="post-card__media">
-          {% if post.capa %}<img src="{{ post.capa.url }}" alt="{{ post.titulo }}" loading="lazy">{% endif %}
-        </div>
-        <div style="padding:var(--s-5)">
-          {% if post.categoria %}<span class="badge" style="background:{{ post.categoria.cor }};color:#fff">{{ post.categoria.nome }}</span>{% endif %}
-          <h3 class="post-card__title" style="margin-block:var(--s-2)">{{ post.titulo }}</h3>
-          <p class="small muted" style="margin:0">{{ post.resumo|truncatewords:18 }}</p>
-          <p class="xs muted" style="margin:var(--s-3) 0 0">{{ post.tempo_leitura }} min de leitura</p>
-        </div>
-      </a>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ======================================================= NEWSLETTER #}
-<section class="section section--tight wrap">
-  <div class="newsletter" data-reveal="scale">
-    <span class="eyebrow">Receba novidades e ofertas</span>
-    <h2 style="margin-top:var(--s-2)">Cadastre seu e-mail</h2>
-    <p class="lead" style="max-width:520px;margin-inline:auto">Promoções, dicas de manejo e avisos de reposição de estoque.</p>
-    <form class="newsletter__form" method="post" action="{% url 'core:newsletter' %}">
-      {% csrf_token %}
-      <input type="email" name="email" placeholder="seu@email.com.br" required aria-label="Seu e-mail">
-      <button type="submit" class="btn btn--primary">Cadastrar</button>
-    </form>
-  </div>
-</section>
-
-{# ============================================================ MARCAS #}
-{% if marcas %}
-<section class="section section--tight wrap" style="padding-top:0">
-  <div class="secao-titulo" data-reveal>
-    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-medalha"></use></svg></span>Nossas marcas</h2>
-    <a href="{% url 'catalog:marcas' %}" class="secao-titulo__link">Ver todas →</a>
-  </div>
-  <div class="card marquee" style="padding-block:var(--s-4)">
-    <div class="marquee__track">
-      {% for _ in "12"|make_list %}
-        {% for m in marcas %}
-          <a href="{{ m.get_absolute_url }}" class="brand-chip" aria-label="{{ m.nome }}">
-            {% if m.logo %}<img src="{{ m.logo.url }}" alt="{{ m.nome }}" loading="lazy">
-            {% else %}<span class="brand-chip__text">{{ m.nome }}</span>{% endif %}
-          </a>
-        {% endfor %}
-      {% endfor %}
-    </div>
-  </div>
-</section>
-{% endif %}
 
 {% endblock %}

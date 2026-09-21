@@ -1209,3 +1209,91 @@
 @media (max-width: 420px) {
   .ofertas-grade, .porque-grade { grid-template-columns: 1fr 1fr; gap: var(--s-3); }
 }
+
+/* ═══════════════════════ rodada 2: capa com texto, promoção, ordem, busca */
+
+/* texto sobre o cartaz: da esquerda para a direita, gradiente que some */
+.vitrine-capa__slide { position: relative; }
+.vitrine-capa__sobre {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+  align-items: flex-start; gap: var(--s-2); padding: var(--s-8) var(--s-10);
+  width: min(58%, 560px); color: #fff; text-align: left;
+  background: linear-gradient(90deg, rgba(20, 10, 6, .82) 0%, rgba(20, 10, 6, .55) 60%, rgba(20, 10, 6, 0) 100%);
+  /* o gradiente precisa cobrir além da caixa de texto para o cartaz continuar limpo à direita */
+  padding-right: var(--s-16);
+  box-sizing: content-box;
+}
+.vitrine-capa__sobre strong {
+  font-family: var(--font-display); font-weight: 800; line-height: 1.08;
+  font-size: clamp(1.4rem, 3vw, 2.4rem); text-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+.vitrine-capa__sobre > span:not(.btn):not(.hero__badge) { font-size: var(--fs-md); opacity: .95; max-width: 420px; }
+.vitrine-capa__sobre .hero__badge { margin-bottom: 0; }
+.vitrine-capa__sobre .btn { margin-top: var(--s-2); }
+
+/* setas: no celular ficam menores em vez de sumir */
+@media (max-width: 620px) {
+  .vitrine-capa__seta { display: grid; width: 34px; height: 34px; background: rgba(255,255,255,.75); }
+  .vitrine-capa__seta--esq { left: var(--s-2); }
+  .vitrine-capa__seta--dir { right: var(--s-2); }
+  .vitrine-capa__sobre { width: 78%; padding: var(--s-4) var(--s-4); padding-right: var(--s-8); }
+  .vitrine-capa__sobre strong { font-size: 1.15rem; }
+  .vitrine-capa__sobre > span:not(.btn):not(.hero__badge) { display: none; }
+  .vitrine-capa__sobre .btn { padding: .5rem .9rem; font-size: var(--fs-xs); }
+}
+
+/* promoção em destaque (bloco com prazo) */
+.promo-destaque {
+  display: grid; grid-template-columns: 1.4fr 1fr; align-items: center; gap: var(--s-6);
+  background: linear-gradient(120deg, var(--promo-bg, var(--red)) 0%, color-mix(in srgb, var(--promo-bg, var(--red)) 75%, #000) 100%);
+  color: #fff; border-radius: var(--r-lg); padding: var(--s-7) var(--s-8); overflow: hidden;
+  box-shadow: var(--sh-3); transition: transform .24s var(--ease-out);
+}
+.promo-destaque:hover { transform: translateY(-3px); }
+.promo-destaque__texto { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); }
+.promo-destaque h2 { color: #fff; font-size: var(--fs-2xl); margin: 0; }
+.promo-destaque p { margin: 0; color: rgba(255,255,255,.9); max-width: 520px; }
+.promo-destaque__foto img {
+  display: block; width: 100%; max-height: 240px; object-fit: contain;
+  background: #fff; border-radius: var(--r-md); padding: var(--s-3);
+}
+@media (max-width: 720px) {
+  .promo-destaque { grid-template-columns: 1fr; padding: var(--s-5); }
+  .promo-destaque__foto img { max-height: 180px; }
+}
+
+/* ordem das seções (painel) */
+.ordem-secoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-width: 520px; }
+.ordem-secoes li {
+  display: flex; align-items: center; gap: var(--s-3); padding: 6px 8px 6px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+}
+.ordem-secoes__num {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff;
+  font-size: var(--fs-xs); font-weight: 700; display: grid; place-items: center; flex: none;
+}
+.ordem-secoes__rotulo { flex: 1; font-size: var(--fs-sm); font-weight: 600; }
+.ordem-secoes__acoes { display: flex; gap: 2px; }
+.ordem-secoes .icon-btn { width: 30px; height: 30px; }
+
+/* calculadora de frete (produto) */
+.frete-calc__campos { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.frete-calc__campos select { flex: 1 1 160px; min-width: 0; }
+.frete-calc__resultado { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--line); }
+
+/* busca no celular: botão redondo escuro com a lupa branca */
+.header__busca-movel-btn {
+  position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ink); color: #fff;
+}
+.tema-vitrine .header__busca-movel-btn { background: var(--red); }
+.header__busca-movel button svg { position: static; left: auto; }
+
+/* caixa de assinatura no produto (fechada por padrão) */
+.assinatura-caixa__pergunta { align-items: flex-start; }
+.assinatura-caixa__pergunta input { margin-top: 4px; }
+.assinatura-caixa__confirma {
+  display: flex; gap: var(--s-2); align-items: flex-start; margin-top: var(--s-3);
+  padding: var(--s-3); border-radius: var(--r-md); background: #EEF9F0; color: var(--ink-2);
+}

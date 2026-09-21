@@ -1,0 +1,15 @@
+{% if banners_secundarios %}
+<section class="section section--tight wrap">
+  <div class="secao-titulo" data-reveal>
+    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-medalha"></use></svg></span>Ofertas em destaque</h2>
+  </div>
+  <div class="ofertas-grade" data-stagger>
+    {% for b in banners_secundarios %}
+      <a href="{{ b.link|default:'/catalogo/' }}" class="ofertas-grade__item" aria-label="{{ b.titulo }}">
+        <img src="{{ b.imagem.url }}" alt="{{ b.titulo }}" loading="lazy">
+        {% if b.titulo %}<span class="ofertas-grade__legenda">{{ b.titulo }}</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

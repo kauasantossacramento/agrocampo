@@ -103,6 +103,10 @@ class Marca(TimeStampedModel, SluggedModel):
     descricao = models.TextField(blank=True)
     site = models.URLField(blank=True)
     destaque = models.BooleanField("exibir na vitrine de marcas", default=True)
+    sucesso = models.BooleanField(
+        "todos os produtos desta marca em Maiores sucessos", default=False,
+        help_text="Atalho para não marcar produto por produto.",
+    )
     ordem = models.PositiveIntegerField(default=0)
     publicado = models.BooleanField(default=True)
 
@@ -274,7 +278,10 @@ class Produto(TimeStampedModel, SluggedModel):
         help_text="Ouro, Prata ou Bronze. Vazio deixa o produto fora das vitrines por linha.",
     )
 
-    destaque = models.BooleanField("mais vendido", default=False)
+    destaque = models.BooleanField(
+        "maior sucesso", default=False,
+        help_text="Entra na vitrine Maiores sucessos da home. Marcas inteiras: no cadastro da marca.",
+    )
     lancamento = models.BooleanField(default=False)
     publicado = models.BooleanField(default=True)
     vendas = models.PositiveIntegerField(default=0, editable=False)

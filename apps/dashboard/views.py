@@ -313,7 +313,8 @@ def salvar_produto_rapido(request, produto_id):
                 )
                 produto.estoque = novo
         produto.publicado = request.POST.get("publicado") == "1"
-        produto.save(update_fields=["preco", "estoque", "publicado", "atualizado_em"])
+        produto.destaque = request.POST.get("destaque") == "1"
+        produto.save(update_fields=["preco", "estoque", "publicado", "destaque", "atualizado_em"])
         messages.success(request, f"{produto.nome[:40]} atualizado.")
     except (InvalidOperation, ValueError):
         messages.error(request, "Preço ou estoque inválido.")
@@ -419,6 +420,10 @@ def configuracoes(request):
             "form_regras": formularios.RegrasForm(instance=config),
             "form_entrega": formularios.EntregaForm(instance=config),
             "form_vitrines": formularios.VitrinesForm(instance=config),
+            # já na ordem salva, para a lista do painel refletir a home
+            "secoes_home_opcoes": [
+                (c, dict(SiteConfig.SECOES_HOME)[c]) for c in config.secoes_home()
+            ],
             "form_firebase": formularios.FirebaseForm(instance=config),
             "form_whatsapp": formularios.WhatsAppAutoForm(instance=config),
             "form_assistente": formularios.AssistenteForm(instance=config),

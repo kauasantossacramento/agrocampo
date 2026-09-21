@@ -301,3 +301,40 @@ pre, code { overflow-x: auto; max-width: 100%; }
 @media (min-width: 1500px) {
   :root { --wrap: 1340px; }
 }
+
+/* ========================================= revisão mobile de 21/09/2026
+   Carrinho e notificações no celular: o hambúrguer sumia com a pessoa
+   logada (cinco ícones na mesma linha), o painel de notificações saía da
+   tela e não rolava, e o balão do WhatsApp cobria o botão do cupom. */
+@media (max-width: 620px) {
+  /* cabeçalho: sempre cabe o hambúrguer; desejos vai para o menu */
+  .header__main { gap: var(--s-2); }
+  .header__actions { gap: 0; }
+  .header__actions .icon-btn { width: 38px; height: 38px; }
+  .header__desejos { display: none; }
+  .header__burger { flex: none; }
+  .logo { min-width: 0; flex: 1 1 auto; }
+  .logo img { height: min(var(--logo-h, 46px), 40px); max-width: 100%; object-fit: contain; }
+
+  /* painel de notificações (e o da conta) vira uma folha presa ao topo,
+     com a largura da tela e rolagem própria */
+  .dropdown { position: static; }
+  .dropdown__panel {
+    position: fixed; left: var(--s-3); right: var(--s-3); top: calc(var(--header-h) + 6px);
+    min-width: 0; max-height: min(70vh, 560px); overflow-y: auto;
+    -webkit-overflow-scrolling: touch; transform-origin: top center;
+  }
+  .notif__item { padding: var(--s-3) var(--s-2); }
+  .notif__title { font-size: var(--fs-sm); }
+
+  /* nada de conteúdo escondido atrás dos balões flutuantes */
+  main { padding-bottom: 84px; }
+  .zap { height: 48px; padding: 0 var(--s-3); right: var(--s-3); bottom: var(--s-3); }
+  .zap__balao { display: none; }
+  .zap svg { width: 24px; height: 24px; }
+
+  /* carrinho: cupom e botão em linha, sem estourar */
+  .checkout-grid form.row { flex-wrap: nowrap; }
+  .checkout-grid form.row input { min-width: 0; flex: 1; }
+  .checkout-grid form.row .btn { flex: none; padding-inline: var(--s-4); }
+}

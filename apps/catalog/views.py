@@ -8,6 +8,8 @@ from django.db.models import Max, Min, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.shipping.models import Cidade
+
 from .models import Avaliacao, Categoria, Especie, ListaDesejos, Marca, Produto
 
 ORDENACOES = {
@@ -149,6 +151,7 @@ def detalhe_produto(request, slug):
         "catalog/produto.html",
         {
             "mostrar_assistente": True,
+            "cidades_frete": Cidade.objects.atendidas().prefetch_related("localidades"),
             "produto": produto,
             "avaliacoes": avaliacoes,
             "ja_avaliou": ja_avaliou,

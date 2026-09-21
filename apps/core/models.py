@@ -152,6 +152,28 @@ class SiteConfig(TimeStampedModel):
         help_text="Trocar aqui muda o cabeçalho e a ordem dos blocos da home na hora.",
     )
 
+    # -------------------------------------------------------------- capa
+    # Dois blocos podem abrir a home: o carrossel de slides (cartazes com
+    # link) e a apresentação (vídeo/foto grande). O lojista liga um, outro
+    # ou os dois. Por padrão só o carrossel.
+    capa_slides_ativa = models.BooleanField(
+        "mostrar o carrossel de slides", default=True,
+    )
+    capa_apresentacao_ativa = models.BooleanField(
+        "mostrar o banner de apresentação (vídeo/foto)", default=False,
+        help_text="O bloco grande de vídeo. Desligado, o carrossel abre a home sozinho.",
+    )
+
+    # ---------------------------------------------- ordem das seções da home
+    # Chaves separadas por vírgula, na ordem em que os blocos aparecem. O
+    # painel edita com setas; quem faltar aqui entra no fim, quem não existir
+    # é ignorado — assim uma seção nova nunca some por causa de config velha.
+    home_ordem = models.CharField(
+        "ordem das seções da home", max_length=400, blank=True,
+        default="sucessos,ouro,prata,bronze,especies,categorias,faixas,oferta,"
+                "promocoes,destaques,lancamentos,assinatura,porque,blog,newsletter,marcas",
+    )
+
     # ------------------------------------------------------- entrega
     entrega_a_partir_de = models.TimeField(
         "entregas a partir de",
@@ -293,8 +315,14 @@ class SiteConfig(TimeStampedModel):
         default=199,
         help_text="Deixe 0 para nunca dar frete grátis.",
     )
+    assinatura_visivel = models.BooleanField(
+        "mostrar a assinatura na loja", default=True,
+        help_text="Desligado, some do menu, dos cards, do produto e da home. "
+                  "As assinaturas já feitas continuam sendo processadas.",
+    )
     desconto_assinatura_padrao = models.PositiveIntegerField(
-        "desconto padrão da assinatura (%)", default=10
+        "desconto padrão da assinatura (%)", default=0,
+        help_text="0 desliga o desconto: a assinatura vira só comodidade de entrega.",
     )
     desconto_pix = models.PositiveIntegerField(
         "desconto no Pix (%)",
@@ -370,6 +398,38 @@ class SiteConfig(TimeStampedModel):
         if not base:
             return ""
         return f"{base}?text={quote(self.whatsapp_mensagem)}" if self.whatsapp_mensagem else base
+
+    # (chave, rótulo no painel) — a ordem aqui é a padrão
+    SECOES_HOME = [
+        ("sucessos", "Maiores sucessos"),
+        ("ouro", "Linha Ouro"),
+        ("prata", "Linha Prata"),
+        ("bronze", "Linha Bronze"),
+        ("especies", "Navegue pelo seu animal"),
+        ("categorias", "Compre por categoria"),
+        ("faixas", "Faixas de produtos (banners com fotos)"),
+        ("oferta", "Oferta especial do dia"),
+        ("promocoes", "Em promoção"),
+        ("destaques", "Ofertas em destaque (4 cartazes)"),
+        ("lancamentos", "Lançamentos do mês"),
+        ("assinatura", "Assinatura"),
+        ("porque", "Por que comprar"),
+        ("blog", "Blog"),
+        ("newsletter", "Newsletter"),
+        ("marcas", "Nossas marcas"),
+    ]
+
+    def secoes_home(self) -> list[str]:
+        """Chaves na ordem escolhida, completadas com as que faltarem."""
+        validas = [c for c, _ in self.SECOES_HOME]
+        escolhidas = [c.strip() for c in (self.home_ordem or "").split(",") if c.strip() in validas]
+        vistas = set()
+        ordem = []
+        for c in escolhidas + validas:
+            if c not in vistas:
+                vistas.add(c)
+                ordem.append(c)
+        return ordem
 
     def vitrines_por_linha(self):
         """Config das três vitrines, na ordem em que aparecem na home."""
@@ -547,3 +607,62 @@ class AssinanteNewsletter(TimeStampedModel):
 
     def __str__(self):
         return self.email
+
+
+class PromocaoDestaque(TimeStampedModel):
+    """Bloco de promoção que o lojista liga por um período, numa posição da home.
+
+    Diferente do banner, ele tem começo e fim e sabe onde entrar: "depois de
+    Maiores sucessos", "depois da Linha Ouro"… Passou o prazo, some sozinho.
+    """
+
+    titulo = models.CharField(max_length=120)
+    texto = models.TextField(blank=True, help_text="Condições, validade, o que quiser dizer.")
+    imagem = models.ImageField(upload_to="promocoes/", blank=True, help_text="Opcional.")
+    produto = models.ForeignKey(
+        "catalog.Produto", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="promocoes_destaque",
+        help_text="Opcional: puxa a foto e o link do produto quando não houver imagem/link próprios.",
+    )
+    link = models.CharField(max_length=300, blank=True)
+    texto_botao = models.CharField(max_length=40, blank=True, default="Aproveitar")
+    cor_fundo = models.CharField(max_length=20, default="#D62B20")
+    inicio = models.DateTimeField("visível a partir de")
+    fim = models.DateTimeField("visível até")
+    posicao = models.CharField(
+        "posição na home", max_length=20, default="sucessos",
+        help_text="Aparece logo depois desta seção.",
+    )
+    ordem = models.PositiveIntegerField(default=0)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["ordem", "-inicio"]
+        verbose_name = "promoção em destaque"
+        verbose_name_plural = "promoções em destaque"
+
+    def __str__(self):
+        return self.titulo
+
+    @property
+    def vigente(self) -> bool:
+        from django.utils import timezone
+
+        agora = timezone.now()
+        return self.ativo and self.inicio <= agora <= self.fim
+
+    @property
+    def destino(self) -> str:
+        if self.link:
+            return self.link
+        if self.produto_id:
+            return self.produto.get_absolute_url()
+        return "/catalogo/?promocao=1"
+
+    @property
+    def foto(self):
+        if self.imagem:
+            return self.imagem
+        if self.produto_id:
+            return self.produto.foto_principal
+        return None

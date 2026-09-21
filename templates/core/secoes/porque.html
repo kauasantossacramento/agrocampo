@@ -1,0 +1,23 @@
+{% if diferenciais %}
+<section class="section section--tight wrap">
+  <div class="secao-titulo" data-reveal>
+    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-escudo"></use></svg></span>Por que comprar na {{ site.nome_loja }}?</h2>
+  </div>
+  <div class="porque-grade" data-stagger>
+    {% if site.anos_de_mercado %}
+      <div class="porque-item">
+        <span class="porque-item__numero">{{ site.anos_de_mercado }}</span>
+        <strong>anos de mercado</strong>
+        <span class="small muted">Atendendo o campo e os animais da região.</span>
+      </div>
+    {% endif %}
+    {% for d in diferenciais|slice:":4" %}
+      <div class="porque-item">
+        <span class="porque-item__icone"><svg width="24" height="24"><use href="#i-{{ d.icone }}"></use></svg></span>
+        <strong>{{ d.titulo }}</strong>
+        {% if d.descricao %}<span class="small muted">{{ d.descricao }}</span>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

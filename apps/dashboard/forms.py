@@ -141,6 +141,7 @@ class AparenciaForm(_EstilizadoMixin, forms.ModelForm):
         model = SiteConfig
         fields = (
             "nome_loja", "chamada", "descricao", "layout_home",
+            "capa_slides_ativa", "capa_apresentacao_ativa",
             "logo", "logo_claro", "logo_altura", "favicon", "imagem_capa",
             "topbar_icone", "topbar_mensagem", "topbar_link_texto", "topbar_link_url",
         )
@@ -198,6 +199,7 @@ class RegrasForm(_EstilizadoMixin, forms.ModelForm):
             "desconto_assinatura_padrao", "desconto_pix",
             "blog_ativo",
             "pwa_convite_ativo", "pwa_convite_segundos", "pwa_convite_texto",
+            "assinatura_visivel",
         )
         widgets = {
             "frete_valor": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
@@ -244,7 +246,9 @@ class VitrinesForm(_EstilizadoMixin, forms.ModelForm):
             "vitrine_ouro_ativa", "vitrine_ouro_titulo",
             "vitrine_prata_ativa", "vitrine_prata_titulo",
             "vitrine_bronze_ativa", "vitrine_bronze_titulo",
+            "home_ordem",
         )
+        widgets = {"home_ordem": forms.HiddenInput()}
         labels = {
             "vitrine_ouro_titulo": "Título da vitrine Ouro",
             "vitrine_prata_titulo": "Título da vitrine Prata",

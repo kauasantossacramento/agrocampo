@@ -5,7 +5,7 @@ Agende diariamente:
 """
 from django.core.management.base import BaseCommand
 
-from apps.subscriptions.services import processar_vencidas
+from apps.subscriptions.services import lembrar_proximas, processar_vencidas
 
 
 class Command(BaseCommand):
@@ -32,9 +32,15 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"{vencidas.count()} assinatura(s) vencida(s)."))
             return
 
+        avisadas = lembrar_proximas()
         ciclos = processar_vencidas()
         pagos = sum(1 for c in ciclos if c.status == "pago")
-        falhas = len(ciclos) - pagos
+        lembretes = sum(1 for c in ciclos if c.status == "agendado")
+        falhas = len(ciclos) - pagos - lembretes
         self.stdout.write(
-            self.style.SUCCESS(f"{len(ciclos)} ciclo(s) processado(s): {pagos} pago(s), {falhas} falha(s).")
+            self.style.SUCCESS(
+                f"{len(ciclos)} ciclo(s): {pagos} cobrado(s) no cartão, "
+                f"{lembretes} lembrete(s) para pagar, {falhas} falha(s); "
+                f"{len(avisadas)} aviso(s) prévio(s)."
+            )
         )

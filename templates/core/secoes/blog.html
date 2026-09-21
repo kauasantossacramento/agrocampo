@@ -1,0 +1,23 @@
+{% if posts and site.blog_ativo %}
+<section class="section section--tight wrap">
+  <div class="secao-titulo" data-reveal>
+    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-lapis"></use></svg></span>Blog {{ site.nome_loja }}</h2>
+    <a href="{% url 'blog:lista' %}" class="secao-titulo__link">Ver todos →</a>
+  </div>
+  <div class="grid grid--3" data-stagger>
+    {% for post in posts %}
+      <a href="{{ post.get_absolute_url }}" class="card card--hover post-card" style="color:inherit;overflow:hidden">
+        <div class="post-card__media">
+          {% if post.capa %}<img src="{{ post.capa.url }}" alt="{{ post.titulo }}" loading="lazy">{% endif %}
+        </div>
+        <div style="padding:var(--s-5)">
+          {% if post.categoria %}<span class="badge" style="background:{{ post.categoria.cor }};color:#fff">{{ post.categoria.nome }}</span>{% endif %}
+          <h3 class="post-card__title" style="margin-block:var(--s-2)">{{ post.titulo }}</h3>
+          <p class="small muted" style="margin:0">{{ post.resumo|truncatewords:18 }}</p>
+          <p class="xs muted" style="margin:var(--s-3) 0 0">{{ post.tempo_leitura }} min de leitura</p>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

@@ -1,0 +1,27 @@
+{% if oferta_relampago %}
+<section class="section section--tight wrap">
+  <div class="secao-titulo" data-reveal>
+    <h2><span class="secao-titulo__icone secao-titulo__icone--quente"><svg width="18" height="18"><use href="#i-raio"></use></svg></span>Oferta especial — promoção do dia</h2>
+  </div>
+  <div class="flash" data-reveal="scale">
+    <div class="flash__inner">
+      <div>
+        <span class="badge badge--sale" style="margin-bottom:var(--s-3)">OFERTA POR TEMPO LIMITADO</span>
+        <h2>{{ oferta_relampago.nome }}</h2>
+        <p>Aproveite antes que acabe — de <s>R$ {{ oferta_relampago.preco_cheio|floatformat:2 }}</s>
+           por <strong style="color:var(--yellow);font-size:var(--fs-xl)">R$ {{ oferta_relampago.preco_atual|floatformat:2 }}</strong></p>
+        <div class="countdown" data-countdown="{{ oferta_relampago.promocao_ate|date:'c' }}"></div>
+        <a href="{{ oferta_relampago.get_absolute_url }}" class="btn btn--accent" style="margin-top:var(--s-5)">Aproveitar oferta</a>
+      </div>
+      <div>
+        {% with imagem=oferta_relampago.imagem_principal %}
+          {% if imagem %}
+            <img src="{{ imagem.imagem.url }}" alt="{{ oferta_relampago.nome }}"
+                 style="border-radius:var(--r-lg);background:#fff;padding:var(--s-4)" loading="lazy">
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}

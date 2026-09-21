@@ -1,0 +1,24 @@
+{% if especies %}
+<section class="section section--tight wrap">
+  <div class="secao-titulo" data-reveal>
+    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-folha"></use></svg></span>Navegue pelo seu animal</h2>
+    <a href="{% url 'catalog:especies' %}" class="secao-titulo__link">Ver todas →</a>
+  </div>
+  <div class="card card--pad" data-reveal>
+    <div class="species-grid">
+      {% for e in especies %}
+        <a href="{{ e.get_absolute_url }}" class="species-tile">
+          <span class="species-tile__circle">
+            {% if e.imagem %}
+              <img src="{{ e.imagem.url }}" alt="{{ e.nome }}" loading="lazy">
+            {% else %}
+              <svg width="30" height="30" aria-hidden="true"><use href="#c-{{ e.icone_svg }}"></use></svg>
+            {% endif %}
+          </span>
+          <span>{{ e.nome }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}

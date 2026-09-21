@@ -1,0 +1,25 @@
+{% load agro_extras %}
+{% comment %}
+  Promoções em destaque marcadas para entrar depois da seção `chave`
+  (o caminho da partial, ex.: core/secoes/sucessos.html).
+{% endcomment %}
+{% with chave_curta=chave|cut:"core/secoes/"|cut:".html" %}
+{% for promo in promocoes_por_secao|get_item:chave_curta %}
+<section class="section section--tight wrap">
+  <a href="{{ promo.destino }}" class="promo-destaque" style="--promo-bg:{{ promo.cor_fundo }}" data-reveal="scale">
+    <div class="promo-destaque__texto">
+      <span class="badge badge--sale">PROMOÇÃO</span>
+      <h2>{{ promo.titulo }}</h2>
+      {% if promo.texto %}<p>{{ promo.texto|linebreaksbr }}</p>{% endif %}
+      <span class="xs" style="opacity:.85">Válida até {{ promo.fim|date:"d/m" }}</span>
+      <span class="btn btn--accent" style="margin-top:var(--s-3)">{{ promo.texto_botao|default:"Aproveitar" }}</span>
+    </div>
+    {% with foto=promo.foto %}
+      {% if foto %}
+        <div class="promo-destaque__foto"><img src="{{ foto.url }}" alt="{{ promo.titulo }}" loading="lazy"></div>
+      {% endif %}
+    {% endwith %}
+  </a>
+</section>
+{% endfor %}
+{% endwith %}

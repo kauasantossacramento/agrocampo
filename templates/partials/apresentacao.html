@@ -26,24 +26,7 @@
                  {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
           {% endif %}
 
-          {% comment %}
-            O texto fica numa faixa abaixo da mídia, não sobre ela. A peça
-            que o lojista sobe já traz a arte pronta — cobrir o canto dela
-            com título e botão escondia justamente o que ele quis mostrar.
-          {% endcomment %}
-          {% if banner.titulo or banner.selo %}
-            <div class="apresentacao__texto">
-              {% if banner.selo %}<span class="apresentacao__selo">{{ banner.selo }}</span>{% endif %}
-              <strong>{{ banner.titulo }}</strong>
-              {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
-              {% if banner.destino %}
-                <span class="apresentacao__cta">
-                  {{ banner.texto_botao|default:"Ver produto" }}
-                  <svg width="14" height="14" aria-hidden="true"><use href="#i-seta-dir"></use></svg>
-                </span>
-              {% endif %}
-            </div>
-          {% endif %}
+          {# a peça já traz a arte pronta: nada de faixa de texto por baixo #}
         </{% if banner.destino %}a{% else %}div{% endif %}>
     {% endfor %}
   </div>

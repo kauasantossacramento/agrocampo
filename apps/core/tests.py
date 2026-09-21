@@ -768,9 +768,10 @@ class BannerDeApresentacaoTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        # este conjunto valida o desenho clássico da home
+        # este conjunto valida o desenho clássico da home, com a apresentação ligada
         config = SiteConfig.load()
         config.layout_home = SiteConfig.LayoutHome.CLASSICO
+        config.capa_apresentacao_ativa = True
         config.save()
         from apps.core.models import Banner
 
@@ -981,23 +982,26 @@ class OrdemDasVitrinesTests(TestCase):
     def test_ouro_prata_bronze_nesta_ordem(self):
         html = self.client.get(reverse("core:home")).content.decode()
 
-        ouro = html.index("Linha Ouro")
-        prata = html.index("Linha Prata")
-        bronze = html.index("Linha Bronze")
+        # os títulos das vitrines (os cards também dizem "Linha X", por isso o "— ")
+        ouro = html.index("— Linha Ouro")
+        prata = html.index("— Linha Prata")
+        bronze = html.index("— Linha Bronze")
 
         self.assertLess(ouro, prata)
         self.assertLess(prata, bronze)
 
-    def test_linha_ouro_vem_antes_do_mais_vendidos_geral(self):
+    def test_ordem_das_secoes_vem_do_painel(self):
+        """Padrão (21/09): Maiores sucessos abre; o lojista pode pôr Ouro antes."""
         html = self.client.get(reverse("core:home")).content.decode()
+        self.assertLess(html.index("Maiores sucessos"), html.index("— Linha Ouro"))
 
-        ouro = html.index("Linha Ouro")
-        # o texto do bloco geral muda conforme o estilo da home
-        geral = html.index(
-            "O que sai todo dia da nossa loja" if "O que sai todo dia" in html else "Maiores sucessos"
-        )
-
-        self.assertLess(ouro, geral)
+        config = SiteConfig.load()
+        config.home_ordem = "ouro,sucessos"
+        config.save()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertLess(html.index("— Linha Ouro"), html.index("Maiores sucessos"))
+        # as seções não listadas continuam entrando, no fim
+        self.assertIn("— Linha Prata", html)
 
 
 class ModalDeConteudoTests(TestCase):
@@ -1267,3 +1271,101 @@ class EstiloDaHomeTests(TestCase):
         self.assertContains(r, 'href="/catalogo/?q=ninho"')
         self.assertContains(r, "vitrine-capa__slide--texto")   # o sem imagem cai no texto
         self.assertContains(r, "data-hero-next")                # setas com 2+ slides
+
+
+class RodadaDoisTests(TestCase):
+    """Comprar agora, calculadora de frete, promoções com prazo, sucessos por marca."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Categoria, Marca, Produto
+        from apps.shipping.models import Cidade, Localidade
+
+        categoria = Categoria.objects.create(nome="Ração")
+        self.marca = Marca.objects.create(nome="Golden")
+        self.produto = Produto.objects.create(
+            sku="R-1", nome="Ração Golden 15kg", categoria=categoria, marca=self.marca,
+            preco=Decimal("100.00"), estoque=10, publicado=True,
+        )
+        self.valenca = Cidade.objects.create(nome="Valença", uf="BA", sede=True, frete=Decimal("8"))
+        self.ilha = Localidade.objects.create(cidade=self.valenca, nome="Tinharé", acesso_por_barco=True,
+                                              frete_adicional=Decimal("10"))
+
+    def test_comprar_agora_vai_direto_ao_checkout(self):
+        r = self.client.post(f"/carrinho/adicionar/{self.produto.slug}/", {"quantidade": 1, "comprar_agora": "1"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r["Location"], "/carrinho/checkout/")
+        r = self.client.post(f"/carrinho/adicionar/{self.produto.slug}/", {"quantidade": 1, "comprar_agora": "1"},
+                             HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(r.json()["redirecionar"], "/carrinho/checkout/")
+
+    def test_calculadora_de_frete_usa_a_regra_do_checkout(self):
+        r = self.client.get("/entrega/calcular/", {"cidade": self.valenca.id, "subtotal": "100"})
+        d = r.json()
+        self.assertTrue(d["atendida"])
+        self.assertEqual(d["valor"], "8,00")
+        r = self.client.get("/entrega/calcular/", {"cidade": self.valenca.id, "localidade": self.ilha.id, "subtotal": "100"})
+        self.assertEqual(r.json()["valor"], "18,00")
+        self.assertTrue(any("travessia" in a for a in r.json()["avisos"]))
+        # frete grátis acima do limite global (199), mas a travessia continua
+        r = self.client.get("/entrega/calcular/", {"cidade": self.valenca.id, "localidade": self.ilha.id, "subtotal": "300"})
+        self.assertEqual(r.json()["valor"], "10,00")
+        r = self.client.get("/entrega/calcular/", {"cidade": 999})
+        self.assertFalse(r.json()["atendida"])
+
+    def test_calculadora_aparece_no_produto(self):
+        r = self.client.get(self.produto.get_absolute_url())
+        self.assertContains(r, "data-frete-calc")
+        self.assertContains(r, "Valença/BA")
+        self.assertContains(r, "Comprar agora")
+
+    def test_promocao_em_destaque_so_no_prazo_e_na_posicao(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.core.models import PromocaoDestaque
+
+        agora = timezone.now()
+        PromocaoDestaque.objects.create(
+            titulo="Semana da ração", texto="10% em toda a linha", produto=self.produto,
+            inicio=agora - timedelta(days=1), fim=agora + timedelta(days=3), posicao="sucessos",
+        )
+        PromocaoDestaque.objects.create(
+            titulo="Já passou", inicio=agora - timedelta(days=9), fim=agora - timedelta(days=2), posicao="sucessos",
+        )
+        html = self.client.get("/").content.decode()
+        self.assertIn("Semana da ração", html)
+        self.assertNotIn("Já passou", html)
+        self.assertIn('class="promo-destaque"', html)
+
+    def test_maiores_sucessos_por_marca_inteira(self):
+        html = self.client.get("/").content.decode()
+        self.assertNotIn("Maiores sucessos", html)   # nada marcado ainda
+        self.marca.sucesso = True
+        self.marca.save()
+        html = self.client.get("/").content.decode()
+        self.assertIn("Maiores sucessos", html)
+        self.assertIn("Ração Golden 15kg", html)
+
+    def test_assinatura_desligada_some_da_loja(self):
+        self.produto.permite_assinatura = True
+        self.produto.save()
+        self.assertContains(self.client.get(self.produto.get_absolute_url()), "Deseja ativar a assinatura")
+        config = SiteConfig.load()
+        config.assinatura_visivel = False
+        config.save()
+        r = self.client.get(self.produto.get_absolute_url())
+        self.assertNotContains(r, "Deseja ativar a assinatura")
+        self.assertNotContains(r, "nav__link--accent")
+        # e o servidor ignora recorrente=1 mesmo que alguém force o POST
+        self.client.post(f"/carrinho/adicionar/{self.produto.slug}/", {"quantidade": 1, "recorrente": "1"})
+        from apps.cart.models import ItemCarrinho
+        self.assertFalse(ItemCarrinho.objects.filter(recorrente=True).exists())
+
+    def test_capa_desligada_nao_renderiza_o_carrossel(self):
+        config = SiteConfig.load()
+        config.capa_slides_ativa = False
+        config.save()
+        self.assertNotContains(self.client.get("/"), 'class="vitrine-capa wrap"')

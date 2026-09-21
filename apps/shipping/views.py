@@ -22,3 +22,41 @@ def onde_entregamos(request):
             "avisos": RegraEntrega.objects.filter(ativo=True, cidade__isnull=True),
         },
     )
+
+
+def calcular(request):
+    """Calculadora de frete da página do produto (JSON).
+
+    Recebe cidade, localidade (opcional) e subtotal; usa a mesma regra do
+    checkout, então o que aparece aqui é o que vai ser cobrado.
+    """
+    from decimal import Decimal, InvalidOperation
+    from types import SimpleNamespace
+
+    from django.http import JsonResponse
+
+    from .models import Localidade, calcular_frete
+
+    cidade = Cidade.objects.atendidas().filter(pk=request.GET.get("cidade") or 0).first()
+    localidade = None
+    if cidade and request.GET.get("localidade"):
+        localidade = Localidade.objects.filter(
+            pk=request.GET["localidade"], cidade=cidade, ativo=True
+        ).first()
+    try:
+        subtotal = Decimal(str(request.GET.get("subtotal", "0")).replace(",", "."))
+    except InvalidOperation:
+        subtotal = Decimal("0")
+
+    endereco = SimpleNamespace(cidade_atendida=cidade, localidade=localidade)
+    resultado = calcular_frete(endereco, subtotal)
+    return JsonResponse({
+        "atendida": resultado["atendida"],
+        "valor": f"{resultado['valor']:.2f}".replace(".", ","),
+        "gratis": resultado["valor"] == 0 and resultado["atendida"],
+        "prazo": resultado["prazo"].strftime("%d/%m") if resultado["prazo"] else "",
+        "prazo_extenso": (
+            resultado["prazo"].strftime("%A, %d/%m") if resultado["prazo"] else ""
+        ),
+        "avisos": resultado["avisos"],
+    })

@@ -1,0 +1,20 @@
+{% if marcas %}
+<section class="section section--tight wrap" style="padding-top:0">
+  <div class="secao-titulo" data-reveal>
+    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-medalha"></use></svg></span>Nossas marcas</h2>
+    <a href="{% url 'catalog:marcas' %}" class="secao-titulo__link">Ver todas →</a>
+  </div>
+  <div class="card marquee" style="padding-block:var(--s-4)">
+    <div class="marquee__track">
+      {% for _ in "12"|make_list %}
+        {% for m in marcas %}
+          <a href="{{ m.get_absolute_url }}" class="brand-chip" aria-label="{{ m.nome }}">
+            {% if m.logo %}<img src="{{ m.logo.url }}" alt="{{ m.nome }}" loading="lazy">
+            {% else %}<span class="brand-chip__text">{{ m.nome }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}

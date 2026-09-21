@@ -1,6 +1,7 @@
 """Home, páginas institucionais e newsletter."""
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -8,7 +9,19 @@ from django.views.decorators.http import require_POST
 from apps.blog.models import Post
 from apps.catalog.models import Categoria, Especie, Marca, Produto
 
-from .models import AssinanteNewsletter, Banner, Diferencial, Pagina, SiteConfig
+from .models import PromocaoDestaque, AssinanteNewsletter, Banner, Diferencial, Pagina, SiteConfig
+
+
+def _promocoes_por_secao():
+    """{chave_da_secao: [promoções vigentes]} — só o que está no prazo."""
+    agora = timezone.now()
+    grupos = {}
+    for promo in (
+        PromocaoDestaque.objects.filter(ativo=True, inicio__lte=agora, fim__gte=agora)
+        .select_related("produto")
+    ):
+        grupos.setdefault(promo.posicao, []).append(promo)
+    return grupos
 
 
 def home(request):
@@ -79,7 +92,13 @@ def home(request):
             ),
             "diferenciais": Diferencial.objects.publicados(),
             "categorias_destaque": Categoria.objects.publicados().filter(destaque_home=True)[:6],
-            "mais_vendidos": produtos.filter(destaque=True)[:8],
+            # Maiores sucessos: marcação manual no produto ou marca inteira
+            "mais_vendidos": produtos.filter(
+                Q(destaque=True) | Q(marca__sucesso=True)
+            ).distinct().order_by("-vendas", "-criado_em")[:8],
+            # ordem das seções e promoções vigentes por posição (estilo vitrine)
+            "secoes_home": [f"core/secoes/{c}.html" for c in config.secoes_home()],
+            "promocoes_por_secao": _promocoes_por_secao(),
             "lancamentos": produtos.filter(lancamento=True)[:8],
             "assinaveis": produtos.filter(permite_assinatura=True)[:4],
             "ofertas": ofertas,

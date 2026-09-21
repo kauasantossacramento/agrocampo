@@ -1,0 +1,14 @@
+{% if assinaveis and site.assinatura_visivel %}
+<section class="section section--tight wrap">
+  <div class="secao-titulo" data-reveal>
+    <h2><span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-refresh"></use></svg></span>Assinatura — nunca deixe faltar o essencial</h2>
+    <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="secao-titulo__link">Ver assináveis →</a>
+  </div>
+  <p class="small muted" style="margin:calc(-1 * var(--s-3)) 0 var(--s-5)">
+    Escolha a frequência{% if site.desconto_assinatura_padrao %}, economize {{ site.desconto_assinatura_padrao }}%{% endif %} e receba em casa. Pause ou cancele quando quiser.
+  </p>
+  <div class="grid grid--4" data-stagger>
+    {% for produto in assinaveis %}{% include 'partials/product_card.html' %}{% endfor %}
+  </div>
+</section>
+{% endif %}

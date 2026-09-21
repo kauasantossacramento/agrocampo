@@ -74,6 +74,11 @@
           é o desenho anterior — dá para voltar a qualquer momento, sem perder nada.
         </span>
       </div>
+      <div class="stack" style="gap:var(--s-2);margin-top:var(--s-3)">
+        <label class="switch-row">{{ form_aparencia.capa_slides_ativa }} {{ form_aparencia.capa_slides_ativa.label }}</label>
+        <label class="switch-row">{{ form_aparencia.capa_apresentacao_ativa }} {{ form_aparencia.capa_apresentacao_ativa.label }}</label>
+        <span class="help">Pode ligar um, outro ou os dois. Os cartazes ficam em Conteúdo › Banners.</span>
+      </div>
 
       <hr class="divider">
       <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Imagens</h3>
@@ -393,6 +398,26 @@
       </div>
     </div>
 
+    <hr class="divider">
+    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Ordem das seções da home</h3>
+    <p class="small muted" style="margin-bottom:var(--s-3)">
+      Vale para o estilo <strong>Vitrine</strong>. Use as setas; uma seção sem
+      conteúdo (sem produto na linha, sem post no blog) não aparece, mesmo listada.
+    </p>
+    {{ form_vitrines.home_ordem }}
+    <ol class="ordem-secoes" data-ordem-secoes data-campo="{{ form_vitrines.home_ordem.id_for_label }}">
+      {% for chave, rotulo in secoes_home_opcoes %}
+        <li data-chave="{{ chave }}">
+          <span class="ordem-secoes__num">{{ forloop.counter }}</span>
+          <span class="ordem-secoes__rotulo">{{ rotulo }}</span>
+          <span class="ordem-secoes__acoes">
+            <button type="button" class="icon-btn" data-mover="-1" aria-label="Subir {{ rotulo }}"><svg width="14" height="14" style="transform:rotate(180deg)"><use href="#i-seta-baixo"></use></svg></button>
+            <button type="button" class="icon-btn" data-mover="1" aria-label="Descer {{ rotulo }}"><svg width="14" height="14"><use href="#i-seta-baixo"></use></svg></button>
+          </span>
+        </li>
+      {% endfor %}
+    </ol>
+
     <button type="submit" class="btn btn--primary" style="margin-top:var(--s-5)">
       <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar vitrines
     </button>
@@ -428,6 +453,12 @@
       <div class="field">
         <label>Assinatura (%)</label>
         {{ form_regras.desconto_assinatura_padrao }}
+        <span class="help">{{ form_regras.desconto_assinatura_padrao.help_text }}</span>
+      </div>
+      <label class="switch-row" style="margin-top:var(--s-3)">
+        {{ form_regras.assinatura_visivel }} {{ form_regras.assinatura_visivel.label }}
+      </label>
+      <div class="field" hidden>
         <span class="help">Vale para todos os produtos assináveis sem percentual próprio.</span>
       </div>
       <div class="field">
@@ -848,6 +879,28 @@
 
 
 <script>
+  // Ordem das seções da home: setas movem o <li>, o campo oculto guarda as chaves
+  (function () {
+    const lista = document.querySelector('[data-ordem-secoes]');
+    if (!lista) return;
+    const campo = document.getElementById(lista.dataset.campo);
+    function gravar() {
+      const chaves = Array.from(lista.children).map(li => li.dataset.chave);
+      campo.value = chaves.join(',');
+      Array.from(lista.children).forEach((li, i) => { li.querySelector('.ordem-secoes__num').textContent = i + 1; });
+    }
+    lista.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mover]');
+      if (!b) return;
+      const li = b.closest('li');
+      const dir = parseInt(b.dataset.mover, 10);
+      if (dir < 0 && li.previousElementSibling) lista.insertBefore(li, li.previousElementSibling);
+      if (dir > 0 && li.nextElementSibling) lista.insertBefore(li.nextElementSibling, li);
+      gravar();
+    });
+    gravar();
+  })();
+
   // Sessão do WhatsApp: consulta o estado a cada 4 s enquanto a aba estiver visível
   (function () {
     const caixa = document.getElementById('whatsapp-sessao');

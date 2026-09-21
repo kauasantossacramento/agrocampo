@@ -57,7 +57,11 @@ def processar_ciclo(assinatura: Assinatura) -> CicloAssinatura:
     )
 
     if not assinatura.cartao:
-        return _falhar(ciclo, assinatura, "Nenhum cartão salvo para a cobrança recorrente.")
+        # Sem cartão salvo (assinatura fechada no Pix, por exemplo) a
+        # assinatura vira LEMBRETE: o pedido nasce aguardando pagamento e o
+        # cliente é avisado para pagar. Não conta como falha — ele não fez
+        # nada de errado, só não deixou cartão.
+        return _lembrar(ciclo, assinatura)
 
     if assinatura.produto.estoque < assinatura.quantidade:
         return _falhar(ciclo, assinatura, "Produto sem estoque para esta entrega.")
@@ -125,6 +129,75 @@ def _pedido_do_ciclo(assinatura) -> Pedido:
     )
     pedido.recalcular()
     return pedido
+
+
+def _lembrar(ciclo, assinatura) -> CicloAssinatura:
+    """Ciclo sem cartão: gera o pedido para o cliente pagar e avisa."""
+    pedido = _pedido_do_ciclo(assinatura)
+    ciclo.pedido = pedido
+    ciclo.status = CicloAssinatura.Status.AGENDADO
+    ciclo.processado_em = timezone.now()
+    ciclo.erro = ""
+    ciclo.save()
+
+    assinatura.proxima_entrega = assinatura.proxima_entrega + timedelta(
+        days=assinatura.frequencia_dias
+    )
+    assinatura.save(update_fields=["proxima_entrega", "atualizado_em"])
+
+    notificar(
+        destinatario=assinatura.usuario,
+        tipo=Notificacao.Tipo.ASSINATURA_RENOVADA,
+        nivel=Notificacao.Nivel.INFO,
+        titulo="Hora de renovar sua assinatura",
+        mensagem=(
+            f"{assinatura.quantidade}x {assinatura.produto.nome} está pronto para "
+            f"você pagar e receber. Pedido {pedido.numero}."
+        ),
+        link=pedido.get_absolute_url(),
+        pedido=pedido,
+        email=True,
+        whatsapp=True,
+    )
+    return ciclo
+
+
+def lembrar_proximas(dias_antes: int = 2) -> list:
+    """Aviso prévio: 'sua assinatura renova em N dias'. Uma vez por ciclo.
+
+    Vale para as duas modalidades — quem tem cartão sabe que vai ser
+    cobrado; quem não tem se prepara para pagar.
+    """
+    alvo = timezone.localdate() + timedelta(days=dias_antes)
+    avisadas = []
+    for assinatura in Assinatura.objects.filter(
+        status=Assinatura.Status.ATIVA, proxima_entrega=alvo,
+    ).select_related("produto", "usuario", "cartao"):
+        ja_avisou = Notificacao.objects.filter(
+            destinatario=assinatura.usuario,
+            tipo=Notificacao.Tipo.ASSINATURA_RENOVADA,
+            titulo__startswith="Sua assinatura renova",
+            criado_em__date=timezone.localdate(),
+            mensagem__icontains=assinatura.produto.nome,
+        ).exists()
+        if ja_avisou:
+            continue
+        como = (
+            f"vamos cobrar no cartão final {assinatura.cartao.ultimos_digitos}"
+            if assinatura.cartao else "você recebe o pedido para pagar"
+        )
+        notificar(
+            destinatario=assinatura.usuario,
+            tipo=Notificacao.Tipo.ASSINATURA_RENOVADA,
+            nivel=Notificacao.Nivel.INFO,
+            titulo=f"Sua assinatura renova em {dias_antes} dias",
+            mensagem=f"{assinatura.produto.nome} em {alvo:%d/%m} — {como}. Pause se não precisar.",
+            link="/assinaturas/",
+            email=True,
+            whatsapp=True,
+        )
+        avisadas.append(assinatura)
+    return avisadas
 
 
 def _falhar(ciclo, assinatura, motivo) -> CicloAssinatura:

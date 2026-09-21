@@ -1,0 +1,12 @@
+{% comment %}Vitrine da linha ouro — só aparece se houver produto nela.{% endcomment %}
+{% for vitrine in vitrines_linha %}{% if vitrine.classe == "ouro" %}
+<section class="section section--tight wrap vitrine-linha vitrine-linha--{{ vitrine.classe }}">
+  <div class="secao-titulo" data-reveal>
+    <h2 class="vitrine-linha__titulo"><span class="vitrine-linha__fita" aria-hidden="true"></span>{{ vitrine.titulo }}</h2>
+    <a href="{% url 'catalog:catalogo' %}?linha={{ vitrine.linha }}" class="secao-titulo__link">Ver a linha →</a>
+  </div>
+  <div class="grid grid--4" data-stagger>
+    {% for produto in vitrine.produtos %}{% include 'partials/product_card.html' %}{% endfor %}
+  </div>
+</section>
+{% endif %}{% endfor %}

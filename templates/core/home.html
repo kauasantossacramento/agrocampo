@@ -9,10 +9,11 @@
   HERO — cada banner traz o próprio texto e a própria imagem de capa. Sem
   imagem no banner, cai na capa padrão da loja; sem nenhuma, na figura do tema.
 {% endcomment %}
-{% if apresentacao %}
+{% if apresentacao and site.capa_apresentacao_ativa %}
   {% include 'partials/apresentacao.html' %}
 {% endif %}
 
+{% if site.capa_slides_ativa %}
 <section class="hero {% if apresentacao %}hero--secundario{% else %}hero--compacto-movel{% endif %}" data-hero>
   <div class="wrap">
     {% for banner in banners %}
@@ -53,6 +54,7 @@
     {% endif %}
   </div>
 </section>
+{% endif %}
 
 {% comment %}
   FAIXA DE GARANTIAS — sem texto fixo de reserva. Antes havia um fallback no
@@ -263,14 +265,14 @@
 {% endif %}
 
 {# ======================================================= ASSINATURA #}
-{% if assinaveis %}
+{% if assinaveis and site.assinatura_visivel %}
 <section class="section section--tight wrap">
   <div class="card card--pad" data-reveal style="background:linear-gradient(135deg,var(--cream-warm),#FFE9D4);border:none">
     <div class="section-head">
       <div class="section-head__title">
         <span class="eyebrow">Assinatura AgroCampo</span>
         <h2>Nunca deixe faltar o essencial</h2>
-        <p>Escolha a frequência, economize {{ site.desconto_assinatura_padrao }}% e receba em casa. Pause ou cancele quando quiser.</p>
+        <p>Escolha a frequência, {% if site.desconto_assinatura_padrao %}economize {{ site.desconto_assinatura_padrao }}% e {% endif %}receba em casa. Pause ou cancele quando quiser.</p>
         <span class="rule"></span>
       </div>
       <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="btn btn--dark">Ver produtos assináveis</a>

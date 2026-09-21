@@ -13,7 +13,7 @@ from typing import Callable
 from django import forms
 
 from apps.catalog.models import Categoria, Especie, Marca
-from apps.core.models import Banner, Diferencial, Pagina
+from apps.core.models import Banner, Diferencial, Pagina, PromocaoDestaque, SiteConfig
 from apps.orders.models import Cupom
 from apps.shipping.models import DIAS_SEMANA, Cidade, Localidade, RegraEntrega
 
@@ -124,7 +124,7 @@ class CategoriaForm(_EstilizadoMixin, forms.ModelForm):
 class MarcaForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Marca
-        fields = ("nome", "logo", "descricao", "site", "destaque", "ordem", "publicado")
+        fields = ("nome", "logo", "descricao", "site", "destaque", "sucesso", "ordem", "publicado")
         widgets = {"descricao": forms.Textarea(attrs={"rows": 2})}
 
 
@@ -240,6 +240,43 @@ class RegraEntregaForm(_EstilizadoMixin, forms.ModelForm):
 
 
 # ══════════════════════════════════════════════════════════ registro
+class PromocaoDestaqueForm(_EstilizadoMixin, forms.ModelForm):
+    """Bloco de promoção com prazo e posição na home."""
+
+    class Meta:
+        model = PromocaoDestaque
+        fields = ("titulo", "texto", "imagem", "produto", "link", "texto_botao",
+                  "cor_fundo", "inicio", "fim", "posicao", "ordem", "ativo")
+        widgets = {
+            "texto": forms.Textarea(attrs={"rows": 3}),
+            "inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+            "fim": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+            "cor_fundo": forms.TextInput(attrs={"type": "color"}),
+            "link": forms.TextInput(attrs={"placeholder": "Vazio usa o link do produto"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.catalog.models import Produto
+
+        self.fields["produto"].queryset = Produto.objects.filter(publicado=True).order_by("nome")
+        self.fields["produto"].required = False
+        self.fields["posicao"] = forms.ChoiceField(
+            label="Aparece logo depois de",
+            choices=[(c, r) for c, r in SiteConfig.SECOES_HOME],
+            initial=self.instance.posicao if self.instance.pk else "sucessos",
+        )
+        self.fields["posicao"].widget.attrs["class"] = CLASSE
+        for campo in ("inicio", "fim"):
+            self.fields[campo].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"]
+
+    def clean(self):
+        dados = super().clean()
+        if dados.get("inicio") and dados.get("fim") and dados["fim"] <= dados["inicio"]:
+            self.add_error("fim", "O fim precisa ser depois do início.")
+        return dados
+
+
 @dataclass
 class Secao:
     slug: str
@@ -299,6 +336,25 @@ SECOES: dict[str, Secao] = {
             ("Descrição", lambda o: o.descricao or "—"),
             ("Ordem", lambda o: o.ordem),
             ("No ar", lambda o: o.publicado),
+        ],
+    ),
+    "promocoes": Secao(
+        slug="promocoes", artigo="Nova", titulo="Promoções em destaque", singular="promoção",
+        model=PromocaoDestaque, form=PromocaoDestaqueForm, icone="i-raio",
+        descricao=(
+            "Um bloco chamativo com começo e fim, encaixado depois da seção que "
+            "você escolher. Passou o prazo, ele some sozinho."
+        ),
+        ordenacao=("ordem", "-inicio"),
+        busca=("titulo", "texto"),
+        relacionados=("produto",),
+        colunas=[
+            ("Título", lambda o: o.titulo),
+            ("Produto", lambda o: o.produto.nome if o.produto else "—"),
+            ("Início", lambda o: o.inicio.strftime("%d/%m %H:%M")),
+            ("Fim", lambda o: o.fim.strftime("%d/%m %H:%M")),
+            ("Depois de", lambda o: dict(SiteConfig.SECOES_HOME).get(o.posicao, o.posicao)),
+            ("No ar", lambda o: o.vigente),
         ],
     ),
     "paginas": Secao(

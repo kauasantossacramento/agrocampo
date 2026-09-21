@@ -3,9 +3,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.core.models import SiteConfig
 from apps.catalog.models import Produto
 from apps.orders.models import Cupom
 from apps.orders.services import EstoqueInsuficiente, criar_pedido_do_carrinho
@@ -60,7 +62,10 @@ def adicionar(request, slug):
     carrinho = obter_carrinho(request)
 
     quantidade = max(1, int(request.POST.get("quantidade", 1)))
-    recorrente = request.POST.get("recorrente") == "1" and produto.permite_assinatura
+    recorrente = (
+        request.POST.get("recorrente") == "1" and produto.permite_assinatura
+        and SiteConfig.load().assinatura_visivel
+    )
     frequencia = int(request.POST.get("frequencia", 30)) if recorrente else None
 
     variacao = None
@@ -82,6 +87,17 @@ def adicionar(request, slug):
 
     carrinho.adicionar(produto, quantidade, recorrente, frequencia, variacao=variacao)
     rotulo = f"{produto.nome} {variacao.rotulo}" if variacao else produto.nome
+
+    # "Comprar agora": mesmo caminho, mas segue direto para o checkout
+    if request.POST.get("comprar_agora"):
+        destino = reverse("cart:checkout")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({
+                "ok": True, "mensagem": f"{rotulo} adicionado. Indo para o pagamento…",
+                "quantidade": carrinho.quantidade_itens, "total": str(carrinho.total),
+                "redirecionar": destino,
+            })
+        return redirect(destino)
     return _resposta(request, carrinho, f"{rotulo} foi para o carrinho.")
 
 

@@ -6,4 +6,5 @@ app_name = "shipping"
 
 urlpatterns = [
     path("onde-entregamos/", views.onde_entregamos, name="onde_entregamos"),
+    path("calcular/", views.calcular, name="calcular"),
 ]

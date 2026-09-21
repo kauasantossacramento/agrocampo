@@ -1,0 +1,34 @@
+{% comment %}
+  Calculadora de frete da página do produto. Usa as cidades e localidades
+  cadastradas no painel; sem cidade cadastrada, não aparece — melhor nada
+  do que um "consulte" que não consulta.
+{% endcomment %}
+{% load agro_extras %}
+{% with cidades=cidades_frete|default:None %}{% endwith %}
+<div class="card card--pad frete-calc" data-frete-calc
+     data-url="{% url 'shipping:calcular' %}"
+     data-preco="{{ produto.preco_atual }}" style="margin-bottom:var(--s-5)">
+  <p class="filters__title" style="margin-bottom:var(--s-3)">
+    <svg width="16" height="16" style="vertical-align:-3px;color:var(--red)"><use href="#i-caminhao"></use></svg>
+    Calcular frete e prazo
+  </p>
+  <div class="frete-calc__campos">
+    <select data-frete-cidade aria-label="Cidade de entrega">
+      <option value="">Escolha a cidade</option>
+      {% for c in cidades_frete %}
+        <option value="{{ c.id }}">{{ c.nome }}/{{ c.uf }}</option>
+      {% endfor %}
+    </select>
+    <select data-frete-localidade aria-label="Ilha, povoado ou bairro" hidden>
+      <option value="">Bairro comum</option>
+      {% for c in cidades_frete %}{% for l in c.localidades.all %}{% if l.ativo %}
+        <option value="{{ l.id }}" data-cidade="{{ c.id }}">{{ l.nome }}{% if l.acesso_por_barco %} (travessia){% endif %}</option>
+      {% endif %}{% endfor %}{% endfor %}
+    </select>
+    <button type="button" class="btn btn--ghost btn--sm" data-frete-calcular>Calcular</button>
+  </div>
+  <div class="frete-calc__resultado small" data-frete-resultado hidden></div>
+  {% if not cidades_frete %}
+    <p class="xs muted" style="margin:var(--s-2) 0 0">A loja confirma a entrega com você pelo WhatsApp.</p>
+  {% endif %}
+</div>

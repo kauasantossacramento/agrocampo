@@ -1,0 +1,12 @@
+<section class="section section--tight wrap">
+  <div class="newsletter" data-reveal="scale">
+    <span class="eyebrow">Receba novidades e ofertas</span>
+    <h2 style="margin-top:var(--s-2)">Cadastre seu e-mail</h2>
+    <p class="lead" style="max-width:520px;margin-inline:auto">Promoções, dicas de manejo e avisos de reposição de estoque.</p>
+    <form class="newsletter__form" method="post" action="{% url 'core:newsletter' %}">
+      {% csrf_token %}
+      <input type="email" name="email" placeholder="seu@email.com.br" required aria-label="Seu e-mail">
+      <button type="submit" class="btn btn--primary">Cadastrar</button>
+    </form>
+  </div>
+</section>

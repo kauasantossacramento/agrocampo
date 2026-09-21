@@ -305,8 +305,10 @@
       if (!form) return;
       e.preventDefault();
 
-      const botao = $('[type=submit]', form);
+      const botao = (e.submitter && e.submitter.form === form) ? e.submitter : $('[type=submit]', form);
       const textoOriginal = botao ? botao.innerHTML : '';
+      const corpo = new FormData(form);
+      if (e.submitter && e.submitter.name) corpo.append(e.submitter.name, e.submitter.value || '1');
       if (botao) {
         botao.classList.add('is-loading');
         botao.innerHTML = '<span class="spinner"></span> Adicionando...';
@@ -315,12 +317,13 @@
       try {
         const resposta = await fetch(form.action, {
           method: 'POST',
-          body: new FormData(form),
+          body: corpo,
           headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf() },
         });
         const dados = await resposta.json();
         toast(dados.mensagem, dados.ok ? 'success' : 'error');
         if (dados.ok) atualizarContadorCarrinho(dados.quantidade);
+        if (dados.ok && dados.redirecionar) { location.href = dados.redirecionar; return; }
       } catch (erro) {
         form.submit(); // sem rede: cai no POST tradicional
         return;
@@ -663,4 +666,49 @@
   } else {
     iniciar();
   }
+})();
+
+/* ------------------------------------------- calculadora de frete (produto) */
+(function () {
+  const caixa = document.querySelector('[data-frete-calc]');
+  if (!caixa) return;
+  const cidade = caixa.querySelector('[data-frete-cidade]');
+  const local = caixa.querySelector('[data-frete-localidade]');
+  const botao = caixa.querySelector('[data-frete-calcular]');
+  const saida = caixa.querySelector('[data-frete-resultado]');
+  const opcoesLocal = Array.from(local.options);
+
+  function filtrarLocalidades() {
+    const id = cidade.value;
+    let tem = false;
+    opcoesLocal.forEach(o => {
+      if (!o.dataset.cidade) return;
+      const mostra = o.dataset.cidade === id;
+      o.hidden = !mostra;
+      if (mostra) tem = true;
+    });
+    local.value = '';
+    local.hidden = !tem;
+  }
+  cidade.addEventListener('change', filtrarLocalidades);
+  filtrarLocalidades();
+
+  async function calcular() {
+    if (!cidade.value) { saida.hidden = false; saida.textContent = 'Escolha a cidade.'; return; }
+    const qtd = document.querySelector('[data-qty-input]');
+    const subtotal = (parseFloat(caixa.dataset.preco) || 0) * (qtd ? parseInt(qtd.value, 10) || 1 : 1);
+    const p = new URLSearchParams({ cidade: cidade.value, localidade: local.value, subtotal: subtotal.toFixed(2) });
+    saida.hidden = false; saida.textContent = 'Calculando…';
+    try {
+      const r = await fetch(caixa.dataset.url + '?' + p.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const d = await r.json();
+      const valor = d.gratis ? '<strong style="color:var(--green)">Frete grátis</strong>' : '<strong>R$ ' + d.valor + '</strong>';
+      const prazo = d.prazo_extenso ? ' · entrega prevista ' + d.prazo_extenso : '';
+      const avisos = (d.avisos || []).map(a => '<div class="xs muted">' + a + '</div>').join('');
+      saida.innerHTML = valor + prazo + avisos;
+    } catch (e) {
+      saida.textContent = 'Não consegui calcular agora.';
+    }
+  }
+  botao.addEventListener('click', calcular);
 })();

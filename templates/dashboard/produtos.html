@@ -46,7 +46,7 @@
     <thead>
       <tr>
         <th>Foto</th><th>Produto</th><th>Categoria</th>
-        <th>Preço</th><th>Estoque</th><th>No ar</th><th></th>
+        <th>Preço</th><th>Estoque</th><th>No ar</th><th>Sucesso</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -89,6 +89,12 @@
             <label class="switch-row" style="gap:6px">
               <input form="f{{ p.id }}" type="checkbox" name="publicado" value="1"
                      {% if p.publicado %}checked{% endif %} aria-label="Publicar {{ p.nome }}">
+            </label>
+          </td>
+          <td data-rotulo="Sucesso">
+            <label class="switch-row" style="gap:6px" title="Entra em “Maiores sucessos” na home">
+              <input form="f{{ p.id }}" type="checkbox" name="destaque" value="1"
+                     {% if p.destaque %}checked{% endif %} aria-label="Maior sucesso: {{ p.nome }}">
             </label>
           </td>
           <td data-rotulo="Ações">
