@@ -39,7 +39,11 @@ def gerar_resposta(*, chave: str, modelo: str, instrucoes: str, historico: list[
         "contents": contents,
         "generationConfig": {
             "temperature": 0.5,
-            "maxOutputTokens": 600,
+            # os modelos 3.x gastam parte do limite "pensando": o limite baixo
+            # cortava a resposta no meio. Atendimento de loja não precisa de
+            # raciocínio longo, então ele fica desligado.
+            "maxOutputTokens": 2000,
+            "thinkingConfig": {"thinkingBudget": 0},
         },
         # a loja vende ração e remédio de animal; os filtros padrão às vezes
         # travam em "vermífugo" ou "carrapaticida" — afrouxa só o necessário
