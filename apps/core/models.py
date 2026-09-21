@@ -246,7 +246,7 @@ class SiteConfig(TimeStampedModel):
         help_text="aistudio.google.com › Get API key. Fica só no servidor.",
     )
     gemini_modelo = models.CharField(
-        "Gemini · modelo", max_length=60, default="gemini-2.5-flash", blank=True,
+        "Gemini · modelo", max_length=60, default="gemini-3.6-flash", blank=True,
     )
 
     # ------------------------------------------ vitrines por linha

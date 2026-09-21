@@ -19,6 +19,7 @@ from . import gemini
 from .models import ConversaAssistente
 
 MAX_HISTORICO = 8         # mensagens anteriores que vão para o modelo
+ACAO_COMPRAR = re.compile(r"\[\[\s*COMPRAR\s+codigo=([\w-]+)\s+qtd=(\d+)\s*\]\]", re.I)
 MAX_PRODUTOS = 8          # produtos por resposta no contexto
 LIMITE_POR_HORA = 40      # perguntas por sessão/hora — segura custo e abuso
 PALAVRAS_IGNORADAS = {
@@ -71,6 +72,7 @@ def _linha_produto(p: Produto) -> str:
     partes.append("· em estoque" if p.em_estoque else "· SEM estoque")
     if settings.SITE_URL:
         partes.append(f"· link: {settings.SITE_URL}{p.get_absolute_url()}")
+    partes.append(f"· codigo: {p.slug}")
     if p.resumo:
         partes.append(f"\n  {p.resumo[:160]}")
     return " ".join(partes)
@@ -90,6 +92,13 @@ def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
         "WhatsApp da loja. Nunca invente estoque, preço ou prazo. Não dê "
         "diagnóstico veterinário: para sintomas, oriente a procurar um veterinário. "
         "Quando indicar um produto, inclua o link dele.",
+        "COMPRA PELO CHAT: você consegue iniciar a compra. Quando o cliente disser "
+        "que quer comprar/levar/pedir um produto específico que está neste contexto, "
+        "confirme o produto e a quantidade (pergunte a quantidade se ele não disse) e, "
+        "assim que estiver claro, termine a resposta com uma linha exatamente neste "
+        "formato, usando o codigo do produto: [[COMPRAR codigo=<codigo> qtd=<numero>]]. "
+        "Só use essa linha para produtos em estoque listados aqui. Não invente códigos. "
+        "Diga em uma frase que o botão de compra vai aparecer na conversa.",
     ]
 
     contato = []
@@ -167,13 +176,15 @@ def responder(*, sessao: str, pergunta: str, historico: list[dict],
     mensagens = [m for m in historico[-MAX_HISTORICO:] if m.get("texto")]
     mensagens.append({"papel": "usuario", "texto": pergunta})
 
+    acao = None
     try:
         texto = gemini.gerar_resposta(
             chave=config.gemini_api_key,
-            modelo=config.gemini_modelo or "gemini-2.5-flash",
+            modelo=config.gemini_modelo or "gemini-3.6-flash",
             instrucoes=instrucoes,
             historico=mensagens,
         )
+        texto, acao = extrair_acao(texto)
         registro.resposta = texto
         ok = True
     except gemini.GeminiErro as exc:
@@ -182,7 +193,41 @@ def responder(*, sessao: str, pergunta: str, historico: list[dict],
         ok = False
 
     registro.save()
-    return {"texto": texto, "ok": ok}
+    resposta = {"texto": texto, "ok": ok}
+    if acao:
+        resposta["acao"] = acao
+    return resposta
+
+
+def extrair_acao(texto: str):
+    """Tira a marca [[COMPRAR ...]] do texto e devolve a ação estruturada.
+
+    A IA só *propõe*; quem confirma é o cliente, num botão. Produto que não
+    existe, sem estoque ou despublicado vira ação nenhuma.
+    """
+    m = ACAO_COMPRAR.search(texto or "")
+    if not m:
+        return texto, None
+    limpo = ACAO_COMPRAR.sub("", texto).strip()
+    produto = Produto.objects.vitrine().filter(slug=m.group(1)).first()
+    if not produto or not produto.em_estoque:
+        return limpo, None
+    qtd = max(1, min(int(m.group(2)), 50))
+    foto = produto.foto_principal
+    return limpo, {
+        "tipo": "comprar",
+        "produto": {
+            "slug": produto.slug, "nome": produto.nome,
+            "preco": f"R$ {produto.preco_atual:.2f}".replace(".", ","),
+            "foto": foto.url if foto else "",
+            "tem_variacoes": produto.tem_variacoes,
+            "variacoes": [
+                {"id": v.id, "rotulo": v.rotulo, "preco": f"R$ {v.preco_atual:.2f}".replace(".", ",")}
+                for v in produto.variacoes_disponiveis if v.em_estoque
+            ] if produto.tem_variacoes else [],
+        },
+        "quantidade": qtd,
+    }
 
 
 def _resposta_sem_ia(config, indisponivel=False) -> str:

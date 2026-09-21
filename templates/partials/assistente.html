@@ -6,6 +6,9 @@
 {% if site.assistente_ativo and mostrar_assistente %}
 <div class="silvinha" id="silvinha"
      data-url="{% url 'assistant:conversar' %}"
+     data-acao="{% url 'assistant:acao' %}"
+     data-logado="{% if user.is_authenticated %}1{% else %}0{% endif %}"
+     data-csrf="{{ csrf_token }}"
      {% if produto %}data-produto="{{ produto.slug }}"{% endif %}
      data-nome="{{ site.assistente_nome }}">
   <button type="button" class="silvinha__botao" data-silvinha-abrir

@@ -182,7 +182,7 @@ contato — e encaminha para o WhatsApp o que não sabe. Sem diagnóstico veteri
 
 Configuração em **Painel › Configurações › Silvinha**: interruptor, nome,
 avatar, primeira mensagem, orientações extras e a chave do Gemini
-(`aistudio.google.com`). Modelo padrão `gemini-2.5-flash`. Sem chave, ela
+(`aistudio.google.com`). Modelo padrão `gemini-3.6-flash`. Sem chave, ela
 responde com o WhatsApp da loja em vez de quebrar. Limite de 40 perguntas
 por hora por sessão. As conversas ficam em `ConversaAssistente` (últimas
 aparecem na aba).

@@ -1347,3 +1347,23 @@
   .ofertas-grade { grid-template-columns: 1fr; gap: var(--s-3); }
   .ofertas-grade--1 .ofertas-grade__item img { aspect-ratio: 16 / 9; }
 }
+
+/* compra e acesso dentro do chat da Silvinha */
+.silvinha__compra, .silvinha__acesso { max-width: 96%; width: 96%; }
+.silvinha__compra-topo { display: flex; gap: var(--s-3); align-items: center; margin-bottom: var(--s-2); }
+.silvinha__compra-topo img { width: 56px; height: 56px; object-fit: contain; border-radius: var(--r-sm); background: var(--cream); border: 1px solid var(--line); }
+.silvinha__compra-topo div { display: flex; flex-direction: column; line-height: 1.25; }
+.silvinha__compra-preco { color: var(--green-deep); font-weight: 700; }
+.silvinha__campo { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin: 6px 0; font-size: var(--fs-xs); color: var(--muted); }
+.silvinha__campo select { max-width: 60%; padding: 6px 8px; font-size: var(--fs-sm); }
+.silvinha__qtd { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+.silvinha__qtd button { width: 30px; height: 32px; background: var(--cream); font-weight: 700; }
+.silvinha__qtd input { width: 44px; text-align: center; border: 0; font-size: var(--fs-sm); }
+.silvinha__compra-btn { width: 100%; margin-top: 6px; justify-content: center; }
+.silvinha__compra-status { margin-top: 6px; min-height: 1em; }
+.silvinha__abas { display: flex; gap: 4px; margin-bottom: 8px; }
+.silvinha__abas button { flex: 1; padding: 6px; border-radius: var(--r-sm); background: var(--cream); font-size: var(--fs-xs); font-weight: 700; color: var(--muted); }
+.silvinha__abas button.is-ativa { background: var(--ink); color: #fff; }
+.silvinha__form-acesso { display: grid; gap: 6px; }
+.silvinha__form-acesso input { padding: 8px 10px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); }
+.silvinha__form-acesso .btn { justify-content: center; }

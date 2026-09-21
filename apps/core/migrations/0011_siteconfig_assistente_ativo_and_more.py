@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='siteconfig',
             name='gemini_modelo',
-            field=models.CharField(blank=True, default='gemini-2.5-flash', max_length=60, verbose_name='Gemini · modelo'),
+            field=models.CharField(blank=True, default='gemini-3.6-flash', max_length=60, verbose_name='Gemini · modelo'),
         ),
         migrations.AddField(
             model_name='siteconfig',

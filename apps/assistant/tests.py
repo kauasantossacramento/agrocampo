@@ -5,6 +5,7 @@ from unittest import mock
 
 from django.test import TestCase, override_settings
 
+from apps.accounts.models import User
 from apps.catalog.models import Categoria, Produto
 from apps.core.models import SiteConfig
 from apps.shipping.models import Cidade
@@ -74,7 +75,7 @@ class SilvinhaTests(TestCase):
         self.assertTrue(r.json()["ok"])
         corpo = post.call_args.kwargs["json"]
         self.assertEqual(post.call_args.kwargs["params"]["key"], "chave-teste")
-        self.assertIn("gemini-2.5-flash", post.call_args.args[0])
+        self.assertIn("gemini-3.6-flash", post.call_args.args[0])
         self.assertEqual(corpo["contents"][-1]["role"], "user")
         conversa = ConversaAssistente.objects.get()
         self.assertEqual(conversa.produto, self.racao)
@@ -129,3 +130,69 @@ class SilvinhaTests(TestCase):
         config.assistente_ativo = False
         config.save()
         self.assertNotContains(self.client.get("/"), 'id="silvinha"')
+
+
+class CompraPeloChatTests(TestCase):
+    """A IA propõe [[COMPRAR ...]], o cliente confirma; login/cadastro no chat."""
+
+    def setUp(self):
+        categoria = Categoria.objects.create(nome="Ração")
+        self.racao = Produto.objects.create(
+            sku="R-1", nome="Ração Golden 15kg", categoria=categoria,
+            preco=Decimal("289.90"), estoque=3, publicado=True,
+        )
+        config = SiteConfig.load()
+        config.assistente_ativo = True
+        config.gemini_api_key = "chave-teste"
+        config.save()
+
+    def _post(self, dados):
+        return self.client.post("/assistente/acao/", data=json.dumps(dados), content_type="application/json")
+
+    @mock.patch("apps.assistant.gemini.requests.post",
+                return_value=_gemini_ok("Boa escolha! O botão de compra vai aparecer.\n[[COMPRAR codigo=racao-golden-15kg qtd=2]]"))
+    def test_ia_propoe_a_compra_e_a_marca_some_do_texto(self, post):
+        r = self.client.post("/assistente/conversar/", data=json.dumps({"pergunta": "quero 2 rações golden"}),
+                             content_type="application/json")
+        d = r.json()
+        self.assertNotIn("[[COMPRAR", d["texto"])
+        self.assertEqual(d["acao"]["tipo"], "comprar")
+        self.assertEqual(d["acao"]["produto"]["slug"], "racao-golden-15kg")
+        self.assertEqual(d["acao"]["quantidade"], 2)
+        self.assertIn("codigo: racao-golden-15kg", services.montar_instrucoes("ração"))
+
+    @mock.patch("apps.assistant.gemini.requests.post",
+                return_value=_gemini_ok("Ok\n[[COMPRAR codigo=nao-existe qtd=1]]"))
+    def test_codigo_invalido_nao_vira_acao(self, post):
+        d = self.client.post("/assistente/conversar/", data=json.dumps({"pergunta": "x"}),
+                             content_type="application/json").json()
+        self.assertNotIn("acao", d)
+
+    def test_comprar_sem_login_pede_acesso(self):
+        d = self._post({"tipo": "comprar", "produto": self.racao.slug, "quantidade": 1}).json()
+        self.assertTrue(d["precisa_login"])
+
+    def test_cadastro_no_chat_loga_e_compra(self):
+        d = self._post({"tipo": "cadastrar", "nome": "Ana Souza", "email": "ana@exemplo.com",
+                        "telefone": "(75) 99999-0000", "senha": "senha-forte-123"}).json()
+        self.assertTrue(d["ok"]); self.assertTrue(d["criado"]); self.assertEqual(d["nome"], "Ana")
+        u = User.objects.get(email="ana@exemplo.com")
+        self.assertEqual(u.first_name, "Ana"); self.assertEqual(u.last_name, "Souza")
+        self.assertTrue(u.aceita_contato_whatsapp)
+        d = self._post({"tipo": "comprar", "produto": self.racao.slug, "quantidade": 2}).json()
+        self.assertTrue(d["ok"])
+        self.assertEqual(d["checkout"], "/carrinho/checkout/")
+        self.assertEqual(d["quantidade_carrinho"], 2)
+
+    def test_cadastro_invalido_devolve_erros(self):
+        d = self._post({"tipo": "cadastrar", "nome": "", "email": "x", "telefone": "1", "senha": "123"}).json()
+        self.assertFalse(d["ok"]); self.assertIn("email", d["erros"])
+
+    def test_login_no_chat(self):
+        User.objects.create_user(email="joao@exemplo.com", password="senha-forte-123", first_name="João")
+        d = self._post({"tipo": "entrar", "email": "joao@exemplo.com", "senha": "errada"}).json()
+        self.assertFalse(d["ok"])
+        d = self._post({"tipo": "entrar", "email": "JOAO@exemplo.com", "senha": "senha-forte-123"}).json()
+        self.assertTrue(d["ok"]); self.assertEqual(d["nome"], "João")
+        d = self._post({"tipo": "comprar", "produto": self.racao.slug, "quantidade": 5}).json()
+        self.assertFalse(d["ok"]); self.assertIn("estoque", d["erro"])

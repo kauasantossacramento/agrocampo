@@ -6,4 +6,5 @@ app_name = "assistant"
 
 urlpatterns = [
     path("conversar/", views.conversar, name="conversar"),
+    path("acao/", views.acao, name="acao"),
 ]
