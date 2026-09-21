@@ -327,6 +327,12 @@
     </div>
 
     <div class="field" style="margin-top:var(--s-4)">
+      <label for="{{ form_entrega.entrega_hora_limite.id_for_label }}">Pedidos até (hora de corte)</label>
+      {{ form_entrega.entrega_hora_limite }}
+      <span class="help">{{ form_entrega.entrega_hora_limite.help_text }} Os dias de viagem de cada cidade ficam em Conteúdo → Cidades atendidas.</span>
+    </div>
+
+    <div class="field" style="margin-top:var(--s-4)">
       <label for="{{ form_entrega.aviso_entrega.id_for_label }}">Aviso geral de entrega</label>
       {{ form_entrega.aviso_entrega }}
       <span class="help">Aparece no carrinho e no checkout. Vazio não mostra nada.</span>

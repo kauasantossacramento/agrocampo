@@ -216,10 +216,11 @@ class EntregaForm(_EstilizadoMixin, forms.ModelForm):
 
     class Meta:
         model = SiteConfig
-        fields = ("entrega_a_partir_de", "aviso_entrega",
+        fields = ("entrega_a_partir_de", "entrega_hora_limite", "aviso_entrega",
                   "whatsapp_flutuante", "whatsapp_mensagem")
         widgets = {
             "entrega_a_partir_de": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "entrega_hora_limite": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
             "aviso_entrega": forms.Textarea(attrs={
                 "rows": 3,
                 "placeholder": "Ex.: pedidos feitos após as 12h saem no dia seguinte.",
@@ -232,6 +233,7 @@ class EntregaForm(_EstilizadoMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["entrega_a_partir_de"].input_formats = ["%H:%M"]
+        self.fields["entrega_hora_limite"].input_formats = ["%H:%M"]
         self.fields["entrega_a_partir_de"].help_text = (
             "Aparece no checkout. Cada cidade pode ter um horário próprio."
         )

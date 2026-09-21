@@ -229,3 +229,66 @@ def alternar_desejo(request, slug):
         ListaDesejos.objects.create(usuario=request.user, produto=produto)
         messages.success(request, f"{produto.nome} salvo na lista de desejos.")
     return redirect(request.META.get("HTTP_REFERER", produto.get_absolute_url()))
+
+
+def sugestoes(request):
+    """Sugestões da busca enquanto a pessoa digita (JSON).
+
+    Com termo: categorias, marcas, espécies e produtos que batem. Sem termo:
+    "buscas populares" — categorias e espécies em destaque — para a caixa não
+    abrir vazia.
+    """
+    from django.db.models import Q
+    from django.http import JsonResponse
+
+    termo = (request.GET.get("q") or "").strip()[:60]
+    grupos = []
+
+    if len(termo) < 2:
+        populares = [
+            {"rotulo": c.nome, "url": c.get_absolute_url(), "icone": "pacote"}
+            for c in Categoria.objects.publicados().filter(destaque_home=True)[:4]
+        ] + [
+            {"rotulo": e.nome, "url": e.get_absolute_url(), "icone": "folha"}
+            for e in Especie.objects.publicados().filter(destaque_home=True)[:4]
+        ]
+        if populares:
+            grupos.append({"titulo": "Buscas populares", "itens": populares})
+        return JsonResponse({"grupos": grupos, "termo": termo})
+
+    atalhos = []
+    for c in Categoria.objects.publicados().filter(nome__icontains=termo)[:3]:
+        atalhos.append({"rotulo": c.nome, "url": c.get_absolute_url(), "icone": "pacote",
+                        "extra": f"{c.produtos.filter(publicado=True).count()} produtos"})
+    for m in Marca.objects.publicados().filter(nome__icontains=termo)[:2]:
+        atalhos.append({"rotulo": m.nome, "url": m.get_absolute_url(), "icone": "medalha", "extra": "marca"})
+    for e in Especie.objects.publicados().filter(nome__icontains=termo)[:2]:
+        atalhos.append({"rotulo": e.nome, "url": e.get_absolute_url(), "icone": "folha", "extra": "espécie"})
+    if atalhos:
+        grupos.append({"titulo": "Categorias, marcas e espécies", "itens": atalhos})
+
+    produtos = (
+        Produto.objects.vitrine()
+        .filter(Q(nome__icontains=termo) | Q(sku__iexact=termo) | Q(marca__nome__icontains=termo))
+        .select_related("marca")
+        .prefetch_related("imagens")
+        .order_by("-vendas", "nome")[:6]
+    )
+    itens = []
+    for p in produtos:
+        foto = p.foto_principal
+        itens.append({
+            "rotulo": p.nome,
+            "url": p.get_absolute_url(),
+            "extra": p.marca.nome if p.marca else "",
+            "preco": f"R$ {p.preco_atual:.2f}".replace(".", ","),
+            "a_partir": p.tem_variacoes,
+            "foto": foto.url if foto else "",
+        })
+    if itens:
+        grupos.append({"titulo": "Produtos", "itens": itens, "produtos": True})
+
+    return JsonResponse({
+        "grupos": grupos, "termo": termo,
+        "ver_todos": f"/busca/?q={termo}",
+    })

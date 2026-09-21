@@ -197,3 +197,54 @@ class SemFretePrometidoSemQuererTests(TestCase):
         valenca = Cidade.objects.get(nome="Valença")
         self.assertFalse(valenca.ativo)
         self.assertNotIn(valenca, Cidade.objects.atendidas())
+
+
+class HoraDeCorteEDiaDeViagemTests(BaseEntrega):
+    """A data de entrega: hora de corte da loja + antecedência + dia de viagem."""
+
+    def _agora(self, ano, mes, dia, hora):
+        from datetime import datetime
+
+        from django.utils import timezone
+
+        return timezone.make_aware(datetime(ano, mes, dia, hora, 0))
+
+    def test_antes_do_corte_conta_o_dia_do_pedido(self):
+        from apps.core.models import SiteConfig
+
+        config = SiteConfig.load()
+        config.entrega_hora_limite = time(14, 0)
+        config.save()
+        self.valenca.prazo_dias = 0
+        self.valenca.save()
+        # segunda 24/08/2026 às 10h, antes do corte: sai no mesmo dia
+        self.assertEqual(self.valenca.proxima_entrega(agora=self._agora(2026, 8, 24, 10)), date(2026, 8, 24))
+        # às 16h, depois do corte: dia seguinte
+        self.assertEqual(self.valenca.proxima_entrega(agora=self._agora(2026, 8, 24, 16)), date(2026, 8, 25))
+
+    def test_dia_de_viagem_manda_na_data(self):
+        from apps.core.models import SiteConfig
+
+        config = SiteConfig.load()
+        config.entrega_hora_limite = time(14, 0)
+        config.save()
+        # Taperoá: carro só na sexta. Pedido na quinta 27/08 às 10h com 1 dia de antecedência -> sexta 28
+        self.taperoa.prazo_dias = 1
+        self.taperoa.save()
+        self.assertEqual(self.taperoa.proxima_entrega(agora=self._agora(2026, 8, 27, 10)), date(2026, 8, 28))
+        # mesmo pedido às 16h (depois do corte): base sexta + 1 = sábado -> próxima sexta 04/09
+        self.assertEqual(self.taperoa.proxima_entrega(agora=self._agora(2026, 8, 27, 16)), date(2026, 9, 4))
+        # sem antecedência, pedido na própria sexta de manhã ainda vai na viagem do dia
+        self.taperoa.prazo_dias = 0
+        self.taperoa.save()
+        self.assertEqual(self.taperoa.proxima_entrega(agora=self._agora(2026, 8, 28, 9)), date(2026, 8, 28))
+
+    def test_sem_hora_de_corte_o_dia_conta_inteiro(self):
+        from apps.core.models import SiteConfig
+
+        config = SiteConfig.load()
+        config.entrega_hora_limite = None
+        config.save()
+        self.valenca.prazo_dias = 0
+        self.valenca.save()
+        self.assertEqual(self.valenca.proxima_entrega(agora=self._agora(2026, 8, 24, 23)), date(2026, 8, 24))

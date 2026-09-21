@@ -1369,3 +1369,79 @@ class RodadaDoisTests(TestCase):
         config.capa_slides_ativa = False
         config.save()
         self.assertNotContains(self.client.get("/"), 'class="vitrine-capa wrap"')
+
+
+class RodadaTresTests(TestCase):
+    """Sugestões da busca, vídeo no carrossel e grade de ofertas em destaque."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.catalog.models import Categoria, Marca, Produto
+
+        self.png = SimpleUploadedFile("c.png", (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+            b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"), content_type="image/png")
+        categoria = Categoria.objects.create(nome="Ração", destaque_home=True)
+        marca = Marca.objects.create(nome="Golden")
+        Produto.objects.create(sku="R-1", nome="Ração Golden 15kg", categoria=categoria, marca=marca,
+                               preco=Decimal("289.90"), estoque=3, publicado=True)
+        Produto.objects.create(sku="S-1", nome="Sal mineral", categoria=categoria,
+                               preco=Decimal("120"), estoque=3, publicado=True)
+
+    def test_sugestoes_com_termo(self):
+        d = self.client.get("/busca/sugestoes/", {"q": "raç"}).json()
+        titulos = [g["titulo"] for g in d["grupos"]]
+        self.assertIn("Produtos", titulos)
+        produtos = next(g for g in d["grupos"] if g.get("produtos"))["itens"]
+        self.assertEqual(produtos[0]["rotulo"], "Ração Golden 15kg")
+        self.assertEqual(produtos[0]["preco"], "R$ 289,90")
+        self.assertEqual(produtos[0]["extra"], "Golden")
+        atalhos = next(g for g in d["grupos"] if not g.get("produtos"))["itens"]
+        self.assertTrue(any(a["rotulo"] == "Ração" for a in atalhos))
+        self.assertEqual(d["ver_todos"], "/busca/?q=raç")
+
+    def test_sugestoes_sem_termo_traz_populares(self):
+        d = self.client.get("/busca/sugestoes/").json()
+        self.assertEqual(d["grupos"][0]["titulo"], "Buscas populares")
+        self.assertIn("Ração", [i["rotulo"] for i in d["grupos"][0]["itens"]])
+
+    def test_sugestoes_sem_resultado(self):
+        d = self.client.get("/busca/sugestoes/", {"q": "zzzz"}).json()
+        self.assertEqual(d["grupos"], [])
+
+    def test_header_tem_o_painel_de_sugestoes(self):
+        r = self.client.get("/")
+        self.assertContains(r, 'data-sugestoes="/busca/sugestoes/"', count=2)  # desktop + celular
+
+    def test_video_de_apresentacao_entra_no_carrossel(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        Banner.objects.filter(posicao__in=["hero", "apresentacao"]).delete()
+        Banner.objects.create(titulo="Cartaz", posicao=Banner.Posicao.HERO, imagem=self.png, ordem=2)
+        Banner.objects.create(
+            titulo="", posicao=Banner.Posicao.APRESENTACAO, ordem=1,
+            video=SimpleUploadedFile("loja.mp4", b"\x00\x00\x00\x18ftypmp42", content_type="video/mp4"),
+        )
+        html = self.client.get("/").content.decode()
+        self.assertIn("vitrine-capa__slide--video", html)
+        self.assertLess(html.index("vitrine-capa__slide--video"), html.index('class="vitrine-capa__slide" data-hero-slide'))
+        self.assertIn("data-hero-next", html)
+        self.assertNotIn("apresentacao__pilha", html)   # o bloco separado fica desligado
+
+    def test_ofertas_em_destaque_um_dois_e_desligado(self):
+        b1 = Banner.objects.create(titulo="Oferta A", posicao=Banner.Posicao.SECUNDARIO, imagem=self.png)
+        html = self.client.get("/").content.decode()
+        self.assertIn("ofertas-grade--1", html)
+        b2 = Banner.objects.create(titulo="Oferta B", posicao=Banner.Posicao.SECUNDARIO, imagem=self.png)
+        html = self.client.get("/").content.decode()
+        self.assertIn("ofertas-grade--2", html)
+        b2.publicado = False
+        b2.save()
+        self.assertIn("ofertas-grade--1", self.client.get("/").content.decode())
+        b1.publicado = False
+        b1.save()
+        self.assertNotIn("Ofertas em destaque", self.client.get("/").content.decode())

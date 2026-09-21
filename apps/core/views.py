@@ -68,12 +68,23 @@ def home(request):
         {
             "mostrar_assistente": True,
             # quatro banners menores, "ofertas em destaque" do estilo vitrine
+            # "Ofertas em destaque": cartazes que o lojista liga e desliga
+            # (publicado). Um ocupa a largura toda; dois ficam lado a lado.
             "banners_secundarios": [
                 b for b in Banner.objects.publicados()
-                .filter(posicao=Banner.Posicao.SECUNDARIO)[:8] if b.imagem
-            ][:4],
+                .filter(posicao=Banner.Posicao.SECUNDARIO)
+                .order_by("ordem", "-criado_em") if b.imagem
+            ],
             "vitrines_linha": vitrines,
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
+            # carrossel do estilo vitrine: cartazes + vídeos/fotos de apresentação,
+            # numa fita só, na ordem de cadastro
+            "slides": list(
+                Banner.objects.publicados()
+                .filter(posicao__in=[Banner.Posicao.HERO, Banner.Posicao.APRESENTACAO])
+                .prefetch_related("produtos")
+                .order_by("ordem", "-criado_em")
+            ),
             # com apresentação cadastrada ela assume o topo; sem ela, o hero
             # antigo entra em versão compacta no celular.
             # Só entram os que têm vídeo ou foto: um banner sem mídia não

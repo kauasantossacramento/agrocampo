@@ -230,6 +230,23 @@ marca o código anterior à mudança.
 - **Mobile**: hambúrguer sempre visível com a pessoa logada, notificações em folha
   rolável, balão do WhatsApp menor e sem cobrir botões.
 
+### Rodada de 21/09 (tarde) — busca, carrossel único, ofertas, prazo
+
+- **Busca com sugestões** (`/busca/sugestoes/`): ao digitar, categorias, marcas,
+  espécies e produtos com foto e preço; vazio mostra "buscas populares". Setas e
+  Enter navegam; funciona no cabeçalho e na busca do celular.
+- **Carrossel único**: cartazes (*Carrossel principal*) e vídeos/fotos
+  (*Vídeo ou foto de apresentação*) entram na mesma fita, na ordem de cadastro.
+  O bloco de apresentação separado continua existindo, desligado por padrão.
+- **Ofertas em destaque**: banners na posição *Oferta em destaque (cartaz na home)*,
+  ligados/desligados por *publicado*; 1 = largura total, 2 = lado a lado, 3+ = duas colunas.
+- **Prazo de entrega** = hora de corte da loja (Configurações › Entrega, padrão 14h)
+  + antecedência da cidade + **dia de viagem** da cidade (Cidades atendidas). Pedido
+  após o corte conta como do dia seguinte.
+- Catálogo no celular: painel de filtros sem teto de altura (não vaza mais sobre
+  a lista); busca duplicada da página escondida. Balão do WhatsApp sai das telas
+  de pagamento.
+
 ---
 
 ## Design system
@@ -281,7 +298,7 @@ Auditado com emulação real de device via CDP: **19 páginas × 9 larguras
 ## Testes
 
 ```bash
-python manage.py test          # 206 testes
+python manage.py test          # 215 testes
 ```
 
 Cobrem: preço de assinatura, máquina de estados do pedido, baixa e devolução de

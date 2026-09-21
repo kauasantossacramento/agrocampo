@@ -28,10 +28,27 @@
 {% if site.capa_slides_ativa %}
 <section class="vitrine-capa wrap" data-hero>
   <div class="vitrine-capa__quadro">
-    {% for banner in banners %}
-      {% if banner.imagem %}
-        <a href="{{ banner.link|default:'/catalogo/' }}" class="vitrine-capa__slide" data-hero-slide {% if not forloop.first %}hidden{% endif %}
-           aria-label="{{ banner.titulo }}">
+    {% for banner in slides %}
+      {% if banner.video %}
+        {# vídeo cadastrado em "Apresentação": entra como slide, mudo e em loop #}
+        <{% if banner.destino %}a href="{{ banner.destino }}"{% else %}div{% endif %} class="vitrine-capa__slide vitrine-capa__slide--video"
+           data-hero-slide {% if not forloop.first %}hidden{% endif %} {% if banner.titulo %}aria-label="{{ banner.titulo }}"{% endif %}>
+          <video autoplay muted loop playsinline preload="metadata"
+                 {% if banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
+            <source src="{{ banner.video.url }}">
+          </video>
+          {% if banner.titulo or banner.selo %}
+            <span class="vitrine-capa__sobre">
+              {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}
+              {% if banner.titulo %}<strong>{{ banner.titulo }}</strong>{% endif %}
+              {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
+              {% if banner.texto_botao and banner.destino %}<span class="btn btn--accent">{{ banner.texto_botao }}</span>{% endif %}
+            </span>
+          {% endif %}
+        </{% if banner.destino %}a{% else %}div{% endif %}>
+      {% elif banner.imagem %}
+        <a href="{{ banner.destino|default:'/catalogo/' }}" class="vitrine-capa__slide" data-hero-slide {% if not forloop.first %}hidden{% endif %}
+           aria-label="{{ banner.titulo|default:'Banner' }}">
           <img src="{{ banner.imagem.url }}" alt="{{ banner.titulo }}" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
           {% comment %}
             Texto opcional sobre o cartaz: entra pela esquerda, sobre um
@@ -55,7 +72,7 @@
             <h1>{{ banner.titulo }}</h1>
             <p>{{ banner.subtitulo }}</p>
             <div class="hero__cta">
-              <a href="{{ banner.link|default:'/catalogo/' }}" class="btn btn--accent btn--lg">{{ banner.texto_botao|default:"Ver catálogo" }}</a>
+              <a href="{{ banner.destino|default:'/catalogo/' }}" class="btn btn--accent btn--lg">{{ banner.texto_botao|default:"Ver catálogo" }}</a>
             </div>
           </div>
           {% include 'partials/hero_art.html' with imagem=site.imagem_capa %}
@@ -69,14 +86,13 @@
           <p>{{ site.descricao }}</p>
           <div class="hero__cta">
             <a href="{% url 'catalog:catalogo' %}" class="btn btn--accent btn--lg">Ver catálogo</a>
-            <a href="{% url 'catalog:catalogo' %}?assinatura=1" class="btn btn--outline-light btn--lg">Assine e economize</a>
           </div>
         </div>
         {% include 'partials/hero_art.html' %}
       </div>
     {% endfor %}
 
-    {% if banners|length > 1 %}
+    {% if slides|length > 1 %}
       <button type="button" class="vitrine-capa__seta vitrine-capa__seta--esq" data-hero-prev aria-label="Banner anterior">
         <svg width="22" height="22"><use href="#i-seta-esq"></use></svg>
       </button>
@@ -84,7 +100,7 @@
         <svg width="22" height="22"><use href="#i-seta-dir"></use></svg>
       </button>
       <div class="hero__dots">
-        {% for banner in banners %}
+        {% for banner in slides %}
           <button data-hero-dot class="hero__dot {% if forloop.first %}is-active{% endif %}" aria-label="Slide {{ forloop.counter }}"></button>
         {% endfor %}
       </div>

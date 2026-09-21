@@ -45,11 +45,14 @@
         {% endif %}
       </a>
 
-      <form class="header__search input-icon" action="{% url 'catalog:busca' %}" method="get" role="search">
+      <form class="header__search input-icon" action="{% url 'catalog:busca' %}" method="get" role="search"
+            data-sugestoes="{% url 'catalog:sugestoes' %}">
         <svg width="18" height="18"><use href="#i-busca"></use></svg>
-        <input type="search" name="q" value="{{ busca|default:'' }}"
-               placeholder="Busque por ração, sementes, medicamentos..." aria-label="Buscar produtos">
+        <input type="search" name="q" value="{{ busca|default:'' }}" autocomplete="off"
+               placeholder="Busque por ração, sementes, medicamentos..." aria-label="Buscar produtos"
+               aria-autocomplete="list" aria-expanded="false">
         <button type="submit">Buscar</button>
+        <div class="sugestoes" data-sugestoes-painel hidden role="listbox"></div>
       </form>
 
       <div class="header__actions">
@@ -126,13 +129,16 @@
   {% endcomment %}
   <div class="header__busca-movel">
     <div class="wrap">
-      <form class="input-icon" action="{% url 'catalog:busca' %}" method="get" role="search">
+      <form class="input-icon" action="{% url 'catalog:busca' %}" method="get" role="search"
+            data-sugestoes="{% url 'catalog:sugestoes' %}">
         <svg width="18" height="18"><use href="#i-busca"></use></svg>
-        <input type="search" name="q" value="{{ busca|default:'' }}"
-               placeholder="Busque por ração, sementes..." aria-label="Buscar produtos">
+        <input type="search" name="q" value="{{ busca|default:'' }}" autocomplete="off"
+               placeholder="Busque por ração, sementes..." aria-label="Buscar produtos"
+               aria-autocomplete="list" aria-expanded="false">
         <button type="submit" aria-label="Buscar" class="header__busca-movel-btn">
           <svg width="18" height="18" aria-hidden="true"><use href="#i-busca"></use></svg>
         </button>
+        <div class="sugestoes" data-sugestoes-painel hidden role="listbox"></div>
       </form>
     </div>
   </div>

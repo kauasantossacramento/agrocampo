@@ -46,12 +46,12 @@ class Cidade(TimeStampedModel):
     )
 
     dias_entrega = models.CharField(
-        "dias de entrega",
+        "dias de viagem / entrega",
         max_length=20,
         blank=True,
         help_text=(
-            "Dias da semana separados por vírgula (0=segunda … 6=domingo). "
-            "Ex.: 4 entrega só às sextas. Vazio = todos os dias úteis."
+            "Os dias em que o carro vai para esta cidade, separados por vírgula "
+            "(0=segunda … 6=domingo). Ex.: 4 = só às sextas. Vazio = todos os dias úteis."
         ),
     )
     horario_a_partir_de = models.TimeField(
@@ -60,8 +60,12 @@ class Cidade(TimeStampedModel):
         help_text="Vazio usa o horário padrão da loja.",
     )
     prazo_dias = models.PositiveIntegerField(
-        "prazo (dias)", default=1,
-        help_text="Dias até a entrega, contados do primeiro dia disponível.",
+        "antecedência (dias)", default=1,
+        help_text=(
+            "Dias entre o pedido e a viagem. 0 = sai no mesmo dia se o pedido "
+            "entrar antes da hora de corte; 1 = no dia seguinte, e assim por diante. "
+            "Depois disso a data cai no próximo dia de viagem."
+        ),
     )
 
     observacao = models.CharField(
@@ -110,9 +114,24 @@ class Cidade(TimeStampedModel):
             return f"somente às {nomes[dias[0]].lower()}s"
         return "às " + ", ".join(nomes[d].lower() for d in dias)
 
-    def proxima_entrega(self, a_partir_de: date | None = None) -> date:
-        """Primeira data de entrega possível, respeitando os dias e o prazo."""
-        referencia = (a_partir_de or date.today()) + timedelta(days=self.prazo_dias)
+    def proxima_entrega(self, a_partir_de: date | None = None, agora=None) -> date:
+        """Primeira data de entrega possível.
+
+        Regra, na ordem: (1) pedido depois da hora de corte da loja conta como
+        do dia seguinte; (2) soma a antecedência da cidade; (3) cai no próximo
+        dia de viagem — o dia em que o carro vai para lá. Cidade sem dias
+        marcados = dias úteis.
+        """
+        from django.utils import timezone
+
+        from apps.core.models import SiteConfig
+
+        agora = agora or timezone.localtime()
+        base = a_partir_de or agora.date()
+        corte = SiteConfig.load().entrega_hora_limite
+        if a_partir_de is None and corte and agora.time() > corte:
+            base += timedelta(days=1)
+        referencia = base + timedelta(days=self.prazo_dias)
         dias = self.dias
         for adiante in range(14):
             candidato = referencia + timedelta(days=adiante)

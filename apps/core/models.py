@@ -1,4 +1,5 @@
 """Modelos-base reutilizaveis e conteudo institucional da loja."""
+import datetime
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -179,6 +180,14 @@ class SiteConfig(TimeStampedModel):
         "entregas a partir de",
         null=True, blank=True,
         help_text="Horário padrão. Cada cidade pode ter o seu.",
+    )
+    entrega_hora_limite = models.TimeField(
+        "pedidos até (hora de corte)",
+        null=True, blank=True, default=datetime.time(14, 0),
+        help_text=(
+            "Pedido pago depois desta hora conta como do dia seguinte. "
+            "Vazio: o dia do pedido conta inteiro."
+        ),
     )
     aviso_entrega = models.TextField(
         "aviso geral de entrega",
@@ -473,9 +482,9 @@ class Banner(TimeStampedModel):
     class Posicao(models.TextChoices):
         HERO = "hero", "Carrossel principal"
         FAIXA = "faixa", "Faixa promocional"
-        SECUNDARIO = "secundario", "Banner secundário"
+        SECUNDARIO = "secundario", "Oferta em destaque (cartaz na home)"
         PRODUTOS = "produtos", "Faixa de produtos (fotos com link)"
-        APRESENTACAO = "apresentacao", "Apresentação (vídeo ou foto no topo)"
+        APRESENTACAO = "apresentacao", "Vídeo ou foto de apresentação (entra no carrossel)"
 
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=220, blank=True)

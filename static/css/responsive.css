@@ -55,13 +55,19 @@ pre, code { overflow-x: auto; max-width: 100%; }
 @media (max-width: 860px) {
   .catalog { grid-template-columns: 1fr; }
 
+  /* a busca da própria página duplica a do cabeçalho no celular */
+  .catalog__busca { display: none; }
+
   /* filtros recolhidos por padrão: o primeiro produto fica logo abaixo */
   .filters { position: static; }
   .filters__toggle { display: inline-flex; }
   .filters .accordion__panel { max-height: 0; overflow: hidden; }
   .filters.is-open .accordion__panel {
-    max-height: 1600px;
+    /* sem teto: com muitas marcas o painel passava de 1600px e o resto
+       vazava por cima da lista de produtos */
+    max-height: none;
     overflow: visible;
+    transition: none;
     margin-top: var(--s-4);
     padding: var(--s-5);
     background: var(--surface);

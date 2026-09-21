@@ -712,3 +712,81 @@
   }
   botao.addEventListener('click', calcular);
 })();
+
+/* ------------------------------------------------- busca com sugestões */
+(function () {
+  const forms = document.querySelectorAll('form[data-sugestoes]');
+  if (!forms.length) return;
+  const esc = (t) => String(t || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const icone = (n) => '<svg width="15" height="15" aria-hidden="true"><use href="#i-' + n + '"></use></svg>';
+
+  forms.forEach((form) => {
+    const input = form.querySelector('input[name="q"]');
+    const painel = form.querySelector('[data-sugestoes-painel]');
+    if (!input || !painel) return;
+    let timer = null, ultimo = '', ativo = -1, controlador = null;
+
+    function render(d) {
+      if (!d.grupos || !d.grupos.length) {
+        if (d.termo && d.termo.length >= 2) {
+          painel.innerHTML = '<div class="sugestoes__vazio">Nada para “' + esc(d.termo) + '”. Tente outra palavra.</div>';
+          abrir();
+        } else fechar();
+        return;
+      }
+      let html = '';
+      d.grupos.forEach((g) => {
+        html += '<div class="sugestoes__grupo">' + esc(g.titulo) + '</div>';
+        g.itens.forEach((it) => {
+          if (g.produtos) {
+            html += '<a class="sugestoes__item sugestoes__item--produto" href="' + esc(it.url) + '" role="option">'
+              + (it.foto ? '<img src="' + esc(it.foto) + '" alt="" loading="lazy">' : '<span class="sugestoes__semfoto"></span>')
+              + '<span class="sugestoes__texto"><strong>' + esc(it.rotulo) + '</strong>'
+              + (it.extra ? '<span class="sugestoes__extra">' + esc(it.extra) + '</span>' : '')
+              + '<span class="sugestoes__preco">' + (it.a_partir ? 'a partir de ' : '') + esc(it.preco) + '</span></span></a>';
+          } else {
+            html += '<a class="sugestoes__item" href="' + esc(it.url) + '" role="option">' + icone(it.icone || 'busca')
+              + '<span class="sugestoes__texto"><strong>' + esc(it.rotulo) + '</strong></span>'
+              + (it.extra ? '<span class="sugestoes__extra">' + esc(it.extra) + '</span>' : '') + '</a>';
+          }
+        });
+      });
+      if (d.ver_todos) html += '<a class="sugestoes__todos" href="' + esc(d.ver_todos) + '">Ver todos os resultados para “' + esc(d.termo) + '” →</a>';
+      painel.innerHTML = html;
+      ativo = -1;
+      abrir();
+    }
+    function abrir() { painel.hidden = false; input.setAttribute('aria-expanded', 'true'); }
+    function fechar() { painel.hidden = true; input.setAttribute('aria-expanded', 'false'); ativo = -1; }
+
+    async function buscar() {
+      const termo = input.value.trim();
+      if (termo === ultimo && !painel.hidden) return;
+      ultimo = termo;
+      if (controlador) controlador.abort();
+      controlador = new AbortController();
+      try {
+        const r = await fetch(form.dataset.sugestoes + '?q=' + encodeURIComponent(termo), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: controlador.signal,
+        });
+        render(await r.json());
+      } catch (e) { /* abortado ou sem rede: a busca normal continua funcionando */ }
+    }
+
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(buscar, 180); });
+    input.addEventListener('focus', () => { clearTimeout(timer); timer = setTimeout(buscar, 120); });
+    input.addEventListener('keydown', (e) => {
+      const itens = painel.querySelectorAll('a');
+      if (painel.hidden || !itens.length) { if (e.key === 'Escape') fechar(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        ativo = e.key === 'ArrowDown' ? (ativo + 1) % itens.length : (ativo - 1 + itens.length) % itens.length;
+        itens.forEach((a, i) => a.classList.toggle('is-ativo', i === ativo));
+        itens[ativo].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && ativo >= 0) {
+        e.preventDefault(); location.href = itens[ativo].href;
+      } else if (e.key === 'Escape') fechar();
+    });
+    document.addEventListener('click', (e) => { if (!form.contains(e.target)) fechar(); });
+  });
+})();
