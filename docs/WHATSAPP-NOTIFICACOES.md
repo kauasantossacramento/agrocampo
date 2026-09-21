@@ -1,7 +1,11 @@
 # Notificação por WhatsApp após a compra
 
-**Status:** avaliação técnica. Nada foi ligado em produção.
-**Data:** 22/08/2026
+**Status:** decisão tomada em 20/09/2026 — o lojista optou pelo **caminho 2
+(WhatsApp Web automatizado)**, ciente do risco de banimento, mantendo o
+caminho 1 (wa.me) como fallback. Implementado em `deploy/whatsapp/` +
+`apps/notifications/whatsapp.py`, com interruptor no painel. O caminho 3
+(API oficial) segue documentado abaixo para quando o volume justificar.
+**Data:** 22/08/2026 (avaliação) · 20/09/2026 (decisão)
 **Para:** decisão do lojista sobre qual caminho seguir.
 
 ---

@@ -48,6 +48,7 @@ LOCAL_APPS = [
     "apps.notifications",
     "apps.dashboard",
     "apps.blog",
+    "apps.assistant",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -162,6 +163,13 @@ CART_SESSION_KEY = "agrocampo_cart_id"
 
 # Fallback de credenciais Stone usado apenas no bootstrap inicial.
 # A fonte de verdade em runtime e o model payments.PaymentProvider.
+# Serviço interno que controla a sessão do WhatsApp Web (deploy/whatsapp/).
+# Vazio = envio automático indisponível; o painel mostra o motivo.
+WHATSAPP_WEB_URL = env("WHATSAPP_WEB_URL", default="").rstrip("/")
+WHATSAPP_WEB_TOKEN = env("WHATSAPP_WEB_TOKEN", default="")
+# Endereço público da loja, usado nos links enviados por WhatsApp/e-mail.
+SITE_URL = env("SITE_URL", default="").rstrip("/")
+
 STONE_BOOTSTRAP = {
     "environment": env("STONE_ENVIRONMENT", default="sandbox"),
     "client_id": env("STONE_CLIENT_ID", default=""),

@@ -71,6 +71,11 @@ services:
       STONE_MERCHANT_ID: ${STONE_MERCHANT_ID:-}
       STONE_WEBHOOK_SECRET: ${STONE_WEBHOOK_SECRET:-}
       STONE_PIX_KEY: ${STONE_PIX_KEY:-}
+      SITE_URL: ${SITE_URL:-https://agrocampo.online}
+      # avisos automáticos pelo WhatsApp Web (deploy/whatsapp/); o
+      # interruptor fica no painel, aqui só o endereço interno e o token
+      WHATSAPP_WEB_URL: http://whatsapp:3000
+      WHATSAPP_WEB_TOKEN: ${WHATSAPP_WEB_TOKEN:-}
     volumes:
       - media:/app/media
       - estaticos:/app/staticfiles
@@ -145,10 +150,36 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # --------------------------------- WhatsApp Web (avisos automáticos)
+  # Sessão do WhatsApp Web controlada pelo servidor. NÃO é a API oficial e
+  # pode render banimento do número — ver deploy/whatsapp/README.md.
+  whatsapp:
+    build:
+      context: ./deploy/whatsapp
+    image: agrocampo/whatsapp:latest
+    container_name: agrocampo-whatsapp
+    restart: unless-stopped
+    environment:
+      # sem token o serviço se recusa a subir (server.js) — de propósito
+      WHATSAPP_WEB_TOKEN: ${WHATSAPP_WEB_TOKEN:-}
+    volumes:
+      - whatsapp_sessao:/dados
+    networks:
+      - interna
+    # o Chromium precisa de /dev/shm maior que os 64 MB padrão do Docker
+    shm_size: 256m
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1G }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
 volumes:
   dados_db:
   media:
   estaticos:
+  whatsapp_sessao:
 
 networks:
   interna:

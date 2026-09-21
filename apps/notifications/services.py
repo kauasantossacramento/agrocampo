@@ -16,8 +16,13 @@ def notificar(
     link="",
     pedido=None,
     email=False,
+    whatsapp=False,
 ):
-    """Cria a notificação in-app e, opcionalmente, dispara o e-mail."""
+    """Cria a notificação in-app e, opcionalmente, dispara e-mail e WhatsApp.
+
+    O WhatsApp só sai se o cliente autorizou contato e o envio automático
+    estiver ligado no painel — e nunca derruba o fluxo se o robô cair.
+    """
     notificacao = Notificacao.objects.create(
         destinatario=destinatario,
         publico=publico,
@@ -41,6 +46,16 @@ def notificar(
             notificacao.save(update_fields=["enviada_por_email"])
         except Exception:  # pragma: no cover - e-mail nunca derruba o fluxo
             pass
+    if whatsapp and destinatario and destinatario.aceita_contato_whatsapp and destinatario.telefone:
+        from . import whatsapp as canal_whatsapp
+
+        if canal_whatsapp.ativo():
+            canal_whatsapp.enviar(
+                destinatario.telefone,
+                canal_whatsapp.texto_da_notificacao(notificacao, destinatario.primeiro_nome),
+                pedido=pedido,
+                notificacao=notificacao,
+            )
     return notificacao
 
 

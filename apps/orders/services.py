@@ -129,6 +129,7 @@ def separar_pedido(pedido: Pedido, autor=None) -> Pedido:
             link=pedido.get_absolute_url(),
             pedido=pedido,
             email=True,
+            whatsapp=True,
         )
         notificar_lojistas(
             tipo=Notificacao.Tipo.PEDIDO_NOVO,
@@ -148,6 +149,7 @@ def separar_pedido(pedido: Pedido, autor=None) -> Pedido:
             link=pedido.get_absolute_url(),
             pedido=pedido,
             email=True,
+            whatsapp=True,
         )
 
     _criar_assinaturas(pedido)
@@ -210,6 +212,7 @@ def marcar_enviado(pedido: Pedido, lojista, codigo_rastreio="") -> Pedido:
         link=pedido.get_absolute_url(),
         pedido=pedido,
         email=True,
+        whatsapp=True,
     )
     return pedido
 

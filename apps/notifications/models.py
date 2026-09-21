@@ -90,3 +90,37 @@ class Notificacao(TimeStampedModel):
         if not self.lida_em:
             self.lida_em = timezone.now()
             self.save(update_fields=["lida_em"])
+
+
+class MensagemWhatsApp(TimeStampedModel):
+    """Trilha de cada aviso enviado (ou tentado) pelo WhatsApp automático.
+
+    Existe para o lojista enxergar o que saiu e o que falhou sem precisar
+    abrir log de container.
+    """
+
+    class Status(models.TextChoices):
+        ENVIADA = "enviada", "Enviada"
+        FALHOU = "falhou", "Falhou"
+        IGNORADA = "ignorada", "Ignorada"
+
+    notificacao = models.ForeignKey(
+        Notificacao, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="mensagens_whatsapp",
+    )
+    pedido = models.ForeignKey(
+        "orders.Pedido", null=True, blank=True, on_delete=models.CASCADE,
+        related_name="mensagens_whatsapp",
+    )
+    numero = models.CharField(max_length=20, help_text="Só dígitos, com DDI.")
+    texto = models.TextField()
+    status = models.CharField(max_length=10, choices=Status.choices)
+    erro = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        verbose_name = "mensagem de WhatsApp"
+        verbose_name_plural = "mensagens de WhatsApp"
+
+    def __str__(self):
+        return f"{self.numero} - {self.get_status_display()}"
