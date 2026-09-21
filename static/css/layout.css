@@ -1288,7 +1288,6 @@
   background: var(--ink); color: #fff;
 }
 .tema-vitrine .header__busca-movel-btn { background: var(--red); }
-.header__busca-movel button svg { position: static; left: auto; }
 
 /* caixa de assinatura no produto (fechada por padrão) */
 .assinatura-caixa__pergunta { align-items: flex-start; }
@@ -1296,4 +1295,38 @@
 .assinatura-caixa__confirma {
   display: flex; gap: var(--s-2); align-items: flex-start; margin-top: var(--s-3);
   padding: var(--s-3); border-radius: var(--r-md); background: #EEF9F0; color: var(--ink-2);
+}
+
+/* lupa branca no botão da busca mobile: a regra genérica de .input-icon svg
+   (absoluta, cinza, à esquerda) não vale para o ícone que está DENTRO do botão */
+.header__busca-movel .input-icon button svg,
+.header__busca-movel-btn svg {
+  position: static; left: auto; top: auto; transform: none;
+  color: #fff; stroke: #fff; pointer-events: none;
+}
+
+/* slide de texto: no celular o conteúdo define a altura; pontos e setas
+   dividem uma barra própria abaixo do slide — nada flutuando por cima do texto */
+@media (max-width: 620px) {
+  .vitrine-capa__quadro { padding-bottom: 0; background: var(--surface); }
+  .vitrine-capa__slide--texto {
+    min-height: 0; padding: var(--s-6) var(--s-5) var(--s-5);
+    background: linear-gradient(160deg, var(--hero-bg, var(--red)) 0%, var(--hero-bg, #C0241A) 100%);
+  }
+  .vitrine-capa__slide--texto .hero__content { padding-block: 0; }
+  .vitrine-capa__slide--texto h1 { font-size: 1.55rem; margin-bottom: var(--s-2); }
+  .vitrine-capa__slide--texto p { font-size: var(--fs-sm); margin-bottom: var(--s-4); }
+  .vitrine-capa__slide--texto .hero__cta .btn { width: 100%; justify-content: center; }
+  /* a barra: os pontos ficam no fluxo (regra geral do responsive) e as setas
+     se apoiam nela */
+  .vitrine-capa .hero__dots { background: none; padding-block: 14px; }
+  .vitrine-capa .hero__dot { background: rgba(0,0,0,.18); box-shadow: none; }
+  .vitrine-capa .hero__dot.is-active { background: var(--red); }
+  .vitrine-capa__seta {
+    top: auto; bottom: 6px; transform: none; width: 34px; height: 34px;
+    background: var(--cream-warm); color: var(--ink); box-shadow: none;
+  }
+  .vitrine-capa__seta:hover { transform: none; }
+  .vitrine-capa__seta--esq { left: var(--s-3); }
+  .vitrine-capa__seta--dir { right: var(--s-3); }
 }
