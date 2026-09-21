@@ -169,6 +169,8 @@ WHATSAPP_WEB_URL = env("WHATSAPP_WEB_URL", default="").rstrip("/")
 WHATSAPP_WEB_TOKEN = env("WHATSAPP_WEB_TOKEN", default="")
 # Endereço público da loja, usado nos links enviados por WhatsApp/e-mail.
 SITE_URL = env("SITE_URL", default="").rstrip("/")
+# Caminho do admin técnico do Django (só desenvolvedor). Sem a barra inicial.
+ADMIN_PATH = env("DJANGO_ADMIN_PATH", default="dev-admin/").strip("/") + "/"
 
 STONE_BOOTSTRAP = {
     "environment": env("STONE_ENVIRONMENT", default="sandbox"),

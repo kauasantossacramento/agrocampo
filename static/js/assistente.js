@@ -42,6 +42,22 @@
     return d;
   }
 
+  /* ---- produtos citados na resposta: cartões com foto, preço e link ---- */
+  function cartoesProdutos(produtos) {
+    const el = document.createElement('div');
+    el.className = 'silvinha__produtos';
+    el.innerHTML = produtos.map(p =>
+      '<a class="silvinha__produto" href="' + esc(p.url) + '">'
+      + (p.foto ? '<img src="' + esc(p.foto) + '" alt="" loading="lazy">' : '<span class="silvinha__produto-semfoto"></span>')
+      + '<span class="silvinha__produto-texto"><strong>' + esc(p.nome) + '</strong>'
+      + '<span class="silvinha__produto-preco">' + (p.a_partir ? 'a partir de ' : '') + esc(p.preco) + '</span>'
+      + (p.em_estoque ? '' : '<span class="xs" style="color:var(--red)">esgotado</span>')
+      + '</span><span class="silvinha__produto-ver">Ver →</span></a>'
+    ).join('');
+    lista.appendChild(el);
+    lista.scrollTop = lista.scrollHeight;
+  }
+
   /* ---- cartão de compra: a IA propõe, a pessoa confirma num botão ---- */
   function cartaoCompra(acao) {
     const p = acao.produto;
@@ -211,6 +227,7 @@
       espera.innerHTML = render(texto);
       historico.push({ papel: 'usuario', texto: pergunta }, { papel: 'assistente', texto });
       guardar();
+      if (dados.produtos && dados.produtos.length) cartoesProdutos(dados.produtos);
       if (dados.acao && dados.acao.tipo === 'comprar') cartaoCompra(dados.acao);
     } catch (err) {
       espera.classList.remove('is-pensando');

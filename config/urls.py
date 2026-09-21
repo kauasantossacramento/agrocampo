@@ -3,8 +3,18 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+# O admin do Django é ferramenta do desenvolvedor: caminho próprio (configurável
+# por DJANGO_ADMIN_PATH) e só para usuários com a marca `desenvolvedor`. O
+# lojista tem o painel — nenhuma tela do sistema aponta para cá.
+def _so_desenvolvedor(request):
+    u = request.user
+    return bool(u.is_active and u.is_superuser and getattr(u, "desenvolvedor", False))
+
+
+admin.site.has_permission = _so_desenvolvedor
+
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(settings.ADMIN_PATH, admin.site.urls),
     path("conta/", include("apps.accounts.urls")),
     path("carrinho/", include("apps.cart.urls")),
     path("pedidos/", include("apps.orders.urls")),

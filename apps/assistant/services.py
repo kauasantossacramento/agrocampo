@@ -19,6 +19,10 @@ from . import gemini
 from .models import ConversaAssistente
 
 MAX_HISTORICO = 8         # mensagens anteriores que vão para o modelo
+LINK_PRODUTO = re.compile(r"https?://[^\s)]*/produto/([\w-]+)/?")
+URL_QUALQUER = re.compile(r"https?://[^\s)\]]+")
+# o modelo às vezes escreve [Nome](codigo) ou [Nome](url) em markdown
+LINK_MD = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 ACAO_COMPRAR = re.compile(r"\[\[\s*COMPRAR\s+codigo=([\w-]+)\s+qtd=(\d+)(?:\s+assinar=(\d+))?\s*\]\]", re.I)
 MAX_PRODUTOS = 8          # produtos por resposta no contexto
 LIMITE_POR_HORA = 40      # perguntas por sessão/hora — segura custo e abuso
@@ -91,7 +95,8 @@ def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
         "contexto. Se não souber, diga que não tem essa informação e ofereça o "
         "WhatsApp da loja. Nunca invente estoque, preço ou prazo. Não dê "
         "diagnóstico veterinário: para sintomas, oriente a procurar um veterinário. "
-        "Quando indicar um produto, inclua o link dele.",
+        "Quando indicar um produto, escreva o link completo dele (começando com http), "
+        "sem markdown de link — o site transforma o link num cartão com foto.",
         "COMPRA PELO CHAT: você consegue iniciar a compra. Quando o cliente disser "
         "que quer comprar/levar/pedir um produto específico que está neste contexto, "
         "confirme o produto e a quantidade (pergunte a quantidade se ele não disse) e, "
@@ -196,9 +201,68 @@ def responder(*, sessao: str, pergunta: str, historico: list[dict],
 
     registro.save()
     resposta = {"texto": texto, "ok": ok}
+    if ok:
+        resposta["texto"], resposta["produtos"] = produtos_citados(texto)
     if acao:
         resposta["acao"] = acao
     return resposta
+
+
+def produtos_citados(texto: str):
+    """Produtos cujo link aparece na resposta viram cartões com foto.
+
+    O link cru sai do texto (o cartão já leva lá) e uma linha que era só
+    "- Nome: link" some junto, para não sobrar uma lista de dois-pontos.
+    """
+    slugs = []
+    # markdown [Nome](codigo) / [Nome](url): guarda o código e deixa só o nome
+    def _md(m):
+        alvo = m.group(2)
+        slug = (LINK_PRODUTO.search(alvo).group(1) if LINK_PRODUTO.search(alvo)
+                else alvo.strip("/").split("/")[-1])
+        if re.fullmatch(r"[\w-]+", slug) and slug not in slugs:
+            slugs.append(slug)
+        return m.group(1)
+    texto = LINK_MD.sub(_md, texto or "")
+    # qualquer URL cujo último trecho seja um código de produto (o modelo às
+    # vezes troca o domínio): o cartão leva ao endereço certo
+    for url in URL_QUALQUER.findall(texto):
+        slug = url.rstrip("/").split("/")[-1]
+        if re.fullmatch(r"[\w-]+", slug) and slug not in slugs:
+            slugs.append(slug)
+    if not slugs:
+        return texto, []
+    encontrados = {p.slug: p for p in Produto.objects.vitrine().filter(slug__in=slugs).prefetch_related("imagens")}
+    slugs = [s for s in slugs if s in encontrados]
+    if not slugs:
+        return texto, []
+    cartoes = []
+    for slug in slugs:
+        p = encontrados.get(slug)
+        if not p:
+            continue
+        foto = p.foto_principal
+        cartoes.append({
+            "slug": p.slug, "nome": p.nome, "url": p.get_absolute_url(),
+            "preco": f"R$ {p.preco_atual:.2f}".replace(".", ","),
+            "a_partir": p.tem_variacoes, "foto": foto.url if foto else "",
+            "em_estoque": p.em_estoque,
+        })
+    if not cartoes:
+        return texto, []
+    def _tira(m):
+        return "" if m.group(0).rstrip("/").split("/")[-1] in encontrados else m.group(0)
+    limpo = URL_QUALQUER.sub(_tira, texto)
+    linhas = []
+    for linha in limpo.splitlines():
+        # "- Ração Golden: " (sobrou só o rótulo) ou "Confira nos links:" sem links
+        if re.fullmatch(r"\s*[-•*]?\s*[^:]{0,80}:\s*", linha):
+            continue
+        if re.search(r"\b(links?|neste link|nestes links)\b", linha, re.I) and ":" in linha and not re.search(r"https?://", linha):
+            continue
+        linhas.append(linha.rstrip())
+    limpo = re.sub(r"\n{3,}", "\n\n", "\n".join(linhas)).strip()
+    return limpo or texto, cartoes
 
 
 def extrair_acao(texto: str):

@@ -5,7 +5,7 @@ views são genéricas — assim banners, categorias, marcas, espécies, cupons e
 páginas ganham a mesma tela, sem sete arquivos quase iguais.
 
 O admin do Django deixa de aparecer para o lojista: fica só para o analista,
-via `/admin/`.
+via o caminho técnico do admin, restrito a quem tem a marca `desenvolvedor`.
 """
 from dataclasses import dataclass, field
 from typing import Callable

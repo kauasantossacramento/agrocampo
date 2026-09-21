@@ -34,7 +34,7 @@ python manage.py runserver
 | Lojista | `lojista@agrocampo.com.br` | `agrocampo123` |
 | Cliente | `cliente@agrocampo.com.br` | `agrocampo123` |
 
-Rotas principais: `/` (loja) · `/painel/` (lojista) · `/admin/` (Django) ·
+Rotas principais: `/` (loja) · `/painel/` (lojista) · admin do Django em `DJANGO_ADMIN_PATH` (padrão `/dev-admin/`, só usuários com a marca `desenvolvedor`) ·
 `/api/v1/` (API).
 
 ---
@@ -44,7 +44,7 @@ Rotas principais: `/` (loja) · `/painel/` (lojista) · `/admin/` (Django) ·
 O adquirente é configurado **pelo banco de dados**, não por deploy.
 
 1. Entre em **Painel › Configurações › Editar credenciais** (ou
-   `/admin/payments/provedorpagamento/`).
+   o admin técnico).
 2. Preencha os campos da seção *Credenciais Stone*:
 
 | Campo | Para que serve |

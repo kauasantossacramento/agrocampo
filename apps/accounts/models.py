@@ -45,6 +45,10 @@ class User(AbstractUser):
         "celular / WhatsApp", max_length=20, blank=True,
         help_text="É por aqui que a loja avisa sobre falta de produto e entrega.",
     )
+    desenvolvedor = models.BooleanField(
+        "acesso técnico (admin do Django)", default=False,
+        help_text="Só quem mantém o sistema. O lojista usa o painel, nunca o admin.",
+    )
     aceita_contato_whatsapp = models.BooleanField(
         "pode ser chamado no WhatsApp", default=True,
         help_text="Para falar sobre o pedido quando faltar algum item.",

@@ -1214,6 +1214,7 @@ class EstiloDaHomeTests(TestCase):
 
     def test_vitrine_e_o_padrao_e_traz_a_estrutura_nova(self):
         self.assertEqual(SiteConfig.load().layout_home, SiteConfig.LayoutHome.VITRINE)
+        self._config(whatsapp="(75) 98816-7389")   # o atalho da topbar é o WhatsApp
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
         self.assertTemplateUsed(r, "core/home_vitrine.html")
@@ -1445,3 +1446,39 @@ class RodadaTresTests(TestCase):
         b1.publicado = False
         b1.save()
         self.assertNotIn("Ofertas em destaque", self.client.get("/").content.decode())
+
+
+class AdminSoParaDesenvolvedorTests(TestCase):
+    """O admin do Django é do desenvolvedor: caminho próprio e marca `desenvolvedor`."""
+
+    def setUp(self):
+        from django.conf import settings
+
+        from apps.accounts.models import User
+
+        self.caminho = "/" + settings.ADMIN_PATH
+        self.lojista = User.objects.create_user(
+            email="loja@exemplo.com", password="senha-forte-123",
+            papel=User.Papel.ADMIN, is_staff=True, is_superuser=True,
+        )
+
+    def test_admin_nao_esta_em_admin_barra(self):
+        self.client.force_login(self.lojista)
+        self.assertEqual(self.client.get("/admin/").status_code, 404)
+
+    def test_superusuario_sem_marca_nao_entra(self):
+        self.client.force_login(self.lojista)
+        r = self.client.get(self.caminho)
+        self.assertNotEqual(r.status_code, 200)   # manda para o login do admin
+
+    def test_desenvolvedor_entra(self):
+        self.lojista.desenvolvedor = True
+        self.lojista.save()
+        self.client.force_login(self.lojista)
+        self.assertEqual(self.client.get(self.caminho).status_code, 200)
+
+    def test_painel_nao_cita_o_admin_nem_para_superusuario(self):
+        self.client.force_login(self.lojista)
+        html = self.client.get("/painel/configuracoes/").content.decode()
+        self.assertNotIn("/admin/", html)
+        self.assertNotIn("Django", html)

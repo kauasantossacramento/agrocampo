@@ -52,7 +52,7 @@ def status_sessao() -> dict:
     if not configurado():
         return {
             "estado": "nao_configurado", "qr": None, "numero": "",
-            "detalhe": "WHATSAPP_WEB_URL e WHATSAPP_WEB_TOKEN não definidos no ambiente.",
+            "detalhe": "Entre em contato com o suporte KS TEC para ativar a funcionalidade.",
         }
     try:
         resposta = requests.get(
@@ -99,7 +99,7 @@ def enviar(numero: str, texto: str, *, pedido=None, notificacao=None,
         registro.erro = "Número inválido."
     elif not configurado():
         registro.status = MensagemWhatsApp.Status.IGNORADA
-        registro.erro = "Serviço não configurado."
+        registro.erro = "Serviço não ativado — fale com o suporte KS TEC."
     elif not ignorar_interruptor and not ativo():
         registro.status = MensagemWhatsApp.Status.IGNORADA
         registro.erro = "Envio automático desligado no painel."

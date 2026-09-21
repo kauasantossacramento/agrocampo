@@ -2,11 +2,11 @@
 
 > Loja virtual em **https://agrocampo.online**. Este manual cobre tudo o que existe
 > no sistema, na ordem em que as pessoas usam: a loja (cliente), o painel do
-> lojista, o admin técnico, os serviços de fundo (WhatsApp, Silvinha, assinaturas)
+> lojista, os serviços de fundo (WhatsApp, Silvinha, assinaturas)
 > e a operação no servidor. Os prints estão na pasta `prints/` ao lado deste
 > arquivo — sempre em duas versões quando faz diferença: **computador** e **celular**.
 >
-> Atualizado em 21/09/2026 (código `main`, 221 testes automatizados verdes).
+> Atualizado em 21/09/2026 (código `main`, 227 testes automatizados verdes).
 
 ---
 
@@ -24,7 +24,7 @@
 10. [Assinaturas](#10-assinaturas)
 11. [WhatsApp automático](#11-whatsapp-automático)
 12. [Pagamentos (Stone)](#12-pagamentos-stone)
-13. [Admin técnico (Django)](#13-admin-técnico-django)
+13. [Acesso técnico](#13-acesso-técnico)
 14. [Aplicativo (PWA)](#14-aplicativo-pwa)
 15. [Operação no servidor](#15-operação-no-servidor)
 16. [Perguntas frequentes e problemas comuns](#16-perguntas-frequentes-e-problemas-comuns)
@@ -41,13 +41,14 @@ com entrega própria na região de Valença/BA. O sistema tem três camadas:
 |---|---|---|
 | **Loja** | clientes | `https://agrocampo.online/` |
 | **Painel do lojista** | equipe da loja | `https://agrocampo.online/painel/` |
-| **Admin técnico** | analista/desenvolvedor | `https://agrocampo.online/admin/` |
+| **Acesso técnico** | só o desenvolvedor (KS TEC) | caminho reservado, fora deste manual |
 
 Serviços que rodam sozinhos: cobrança/lembrete das assinaturas (todo dia às 6h),
 envio de avisos por WhatsApp (quando ligado) e a assistente Silvinha (IA do Google).
 
 O que o lojista **nunca precisa** fazer: mexer em código, subir arquivo no servidor
-ou entrar no admin técnico. Tudo do dia a dia está no painel.
+ou usar qualquer tela técnica. **Tudo** do dia a dia está no painel — o sistema não
+mostra nenhuma tela de administração técnica ao lojista.
 
 ---
 
@@ -57,7 +58,7 @@ ou entrar no admin técnico. Tudo do dia a dia está no painel.
 |---|---|---|
 | **Cliente** | loja, carrinho, pedidos, assinaturas, endereços | `/conta/entrar/` |
 | **Lojista** (operador) | tudo do cliente + **Painel** | mesmo login; o menu da conta ganha "Painel do lojista" |
-| **Admin** (superusuário) | tudo do lojista + **/admin/** | mesmo login |
+| **Administrador da loja** | tudo do lojista (é o mesmo painel, com todas as abas) | mesmo login |
 
 O login é por **e-mail e senha**. O cadastro pede nome, e-mail, **WhatsApp** (obrigatório —
 é por ele que a loja fala com o cliente se faltar um item) e senha de 8+ caracteres.
@@ -74,8 +75,7 @@ Para trocar a senha do administrador da loja: Perfil → alterar senha, ou pelo 
 
 ### 3.1 Home
 
-A home tem o estilo **Vitrine** (padrão) — barra superior com *Rastrear meu pedido* e
-*WhatsApp*, logo grande, busca larga, menu escuro com *Promoções* e *Lançamentos* em
+A home tem o estilo **Vitrine** (padrão) — barra superior com o atalho do *WhatsApp*, logo grande, busca larga, menu escuro com *Promoções* e *Lançamentos* em
 destaque, carrossel de banners e seções divididas com título, ícone e "ver todos".
 O estilo **Clássico** (o desenho anterior) continua disponível em Configurações › Aparência.
 
@@ -163,7 +163,8 @@ o atendente combina troca ou devolução pelo WhatsApp.
 
 A Silvinha aparece na **home** e nas **páginas de produto** (canto inferior esquerdo).
 Ela responde com o que está no banco: catálogo publicado (filtrado pela pergunta),
-cidades atendidas e dias de viagem, frete, horário, contato. Não inventa preço nem prazo,
+cidades atendidas e dias de viagem, frete, horário, contato. **Os produtos que ela cita
+aparecem como cartões com foto, preço e link** logo abaixo da resposta. Não inventa preço nem prazo,
 não dá diagnóstico veterinário e encaminha ao WhatsApp o que não sabe. A conversa
 sobrevive à navegação entre páginas.
 
@@ -177,6 +178,10 @@ tamanho, quantidade, opção de assinatura quando o produto permite). Ao tocar e
   WhatsApp, senha**), entra automaticamente, junta o carrinho anônimo e segue para o pagamento.
 
 A IA só *propõe*; quem confirma é sempre o botão do cliente.
+
+![Silvinha citando produtos com foto e preço (computador)](prints/loja-silvinha-produtos-desktop.png)
+
+![Silvinha citando produtos (celular)](prints/loja-silvinha-produtos-celular.png)
 
 ![Silvinha propondo a compra e pedindo o cadastro (computador)](prints/loja-silvinha-compra-desktop.png)
 
@@ -296,7 +301,7 @@ uma lista com busca e o botão "Novo…" que abre o formulário em modal.
 | **Entrega** | entregas a partir de (hora), **pedidos até (hora de corte)**, aviso geral, balão do WhatsApp e mensagem. ![](prints/painel-config-entrega-desktop.png) |
 | **Vitrines** | título e interruptor de cada linha (Ouro/Prata/Bronze) e a **ordem das seções da home**. ![](prints/painel-config-vitrines-desktop.png) |
 | **Contato** | telefone, WhatsApp, e-mail, endereço, horário, CNPJ, redes, ano de fundação, texto do rodapé. ![](prints/painel-config-contato-desktop.png) |
-| **WhatsApp** | interruptor do envio automático, sessão (QR Code), teste, últimas mensagens — ver seção 11. ![](prints/painel-config-whatsapp-desktop.png) |
+| **WhatsApp** | interruptor do envio automático, sessão (QR Code), teste, últimas mensagens — ver seção 11. Se aparecer "Funcionalidade não ativada", fale com o suporte KS TEC. ![](prints/painel-config-whatsapp-desktop.png) |
 | **Silvinha** | ver seção 4. |
 | **Notificações** | Firebase (push para o app), opcional. ![](prints/painel-config-notificacoes-desktop.png) |
 | **Avançado** | atalhos para todo o conteúdo, limpar catálogo de demonstração. ![](prints/painel-config-avancado-desktop.png) |
@@ -395,14 +400,12 @@ Stone devolve (é ele que permite a cobrança automática da assinatura).
 
 ---
 
-## 13. Admin técnico (Django)
+## 13. Acesso técnico
 
-`/admin/` é a ferramenta do analista: acesso cru a todas as tabelas (usuários, pedidos,
-pagamentos, webhooks, conversas da Silvinha, mensagens de WhatsApp…). O lojista não
-precisa dele; tudo do dia a dia está no painel.
-
-![Admin](prints/admin-django-desktop.png)
-![Admin — produtos](prints/admin-django-produtos-desktop.png)
+Não existe tela técnica para o lojista. O cadastro cru das tabelas (ferramenta do
+desenvolvedor) fica num caminho reservado, só entra quem tem a marca *desenvolvedor*,
+e nenhuma tela do sistema aponta para lá. Precisa de algo que o painel não faz?
+**Fale com o suporte KS TEC.**
 
 ---
 
@@ -447,9 +450,9 @@ Entrega › Cidades atendidas.
 **A Silvinha só manda para o WhatsApp.** Falta a chave do Gemini (Configurações ›
 Silvinha) ou o modelo está errado (use `gemini-3.6-flash`).
 
-**WhatsApp automático "Serviço não configurado".** Falta `WHATSAPP_WEB_TOKEN` no `.env`
-do servidor. "Aguardando QR": leia o QR na aba. "Erro/indisponível": o WhatsApp mudou o
-protocolo — atualizar o serviço (`deploy/whatsapp/README.md`).
+**WhatsApp automático "Funcionalidade não ativada".** Fale com o suporte KS TEC.
+"Aguardando QR": leia o QR na aba. "Erro/indisponível": o WhatsApp mudou o protocolo —
+o suporte atualiza o serviço.
 
 **O ícone do app continua antigo.** Reinstale o app no celular.
 
@@ -468,6 +471,7 @@ protocolo — atualizar o serviço (`deploy/whatsapp/README.md`).
 | `loja-busca-sugestoes-*.png` | busca com sugestões ao digitar |
 | `loja-catalogo-desktop.png` / `loja-catalogo-filtros-celular.png` | catálogo e filtros |
 | `loja-produto-*.png` | produto com assinatura aberta e frete calculado |
+| `loja-silvinha-produtos-*.png` | Silvinha citando produtos como cartões com foto |
 | `loja-silvinha-compra-*.png` | Silvinha propondo compra e pedindo acesso |
 | `loja-carrinho-*.png`, `loja-checkout-entrega-*.png`, `loja-pagamento-*.png` | compra em três passos |
 | `loja-meus-pedidos-desktop.png`, `loja-pedido-detalhe-celular.png` | pedidos do cliente |
@@ -482,4 +486,3 @@ protocolo — atualizar o serviço (`deploy/whatsapp/README.md`).
 | `painel-estoque-desktop.png`, `painel-metricas-desktop.png`, `painel-assinaturas-desktop.png`, `painel-auditoria-desktop.png` | demais telas do painel |
 | `painel-conteudo-*.png` | banners, promoções, cidades, localidades, avisos, marcas, cupons |
 | `painel-config-*.png` | cada aba de Configurações |
-| `admin-django-*.png` | admin técnico |

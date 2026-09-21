@@ -196,3 +196,43 @@ class CompraPeloChatTests(TestCase):
         self.assertTrue(d["ok"]); self.assertEqual(d["nome"], "João")
         d = self._post({"tipo": "comprar", "produto": self.racao.slug, "quantidade": 5}).json()
         self.assertFalse(d["ok"]); self.assertIn("estoque", d["erro"])
+
+
+class CartoesDeProdutoTests(TestCase):
+    def setUp(self):
+        categoria = Categoria.objects.create(nome="Ração")
+        self.racao = Produto.objects.create(sku="R-1", nome="Ração Golden 15kg", categoria=categoria,
+                                            preco=Decimal("289.90"), estoque=3, publicado=True)
+        self.comedouro = Produto.objects.create(sku="C-1", nome="Comedouro Inox", categoria=categoria,
+                                                preco=Decimal("79.90"), estoque=0, publicado=True)
+
+    def test_links_de_produto_viram_cartoes_e_saem_do_texto(self):
+        texto = ("Temos a Ração Golden por R$ 289,90 e o Comedouro Inox.\n\n"
+                 "Você pode conferir mais detalhes nestes links:\n"
+                 "- Ração Golden: https://agrocampo.online/produto/racao-golden-15kg/\n"
+                 "- Comedouro: https://agrocampo.online/produto/comedouro-inox/\n\n"
+                 "Se quiser, me avise a quantidade!")
+        limpo, cartoes = services.produtos_citados(texto)
+        self.assertEqual([c["slug"] for c in cartoes], ["racao-golden-15kg", "comedouro-inox"])
+        self.assertEqual(cartoes[0]["preco"], "R$ 289,90")
+        self.assertTrue(cartoes[0]["em_estoque"]); self.assertFalse(cartoes[1]["em_estoque"])
+        self.assertNotIn("http", limpo)
+        self.assertNotIn("nestes links", limpo)
+        self.assertNotIn("- Ração Golden:", limpo)
+        self.assertIn("Se quiser, me avise a quantidade!", limpo)
+
+    def test_sem_links_nada_muda(self):
+        limpo, cartoes = services.produtos_citados("Oi! Como posso ajudar?")
+        self.assertEqual(cartoes, []); self.assertEqual(limpo, "Oi! Como posso ajudar?")
+
+    def test_markdown_de_link_vira_cartao_e_nome_limpo(self):
+        texto = "Temos a [Ração Golden 15kg](racao-golden-15kg) por R$ 289,90 e o [Comedouro Inox](https://x/produto/comedouro-inox/)."
+        limpo, cartoes = services.produtos_citados(texto)
+        self.assertEqual([c["slug"] for c in cartoes], ["racao-golden-15kg", "comedouro-inox"])
+        self.assertEqual(limpo, "Temos a Ração Golden 15kg por R$ 289,90 e o Comedouro Inox.")
+
+    def test_url_com_dominio_errado_ainda_vira_cartao(self):
+        limpo, cartoes = services.produtos_citados("Veja: http://loja.com/racao-golden-15kg e fim.")
+        self.assertEqual(cartoes[0]["slug"], "racao-golden-15kg")
+        self.assertEqual(cartoes[0]["url"], "/produto/racao-golden-15kg/")
+        self.assertNotIn("http", limpo)

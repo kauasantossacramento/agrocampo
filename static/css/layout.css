@@ -1367,3 +1367,21 @@
 .silvinha__form-acesso { display: grid; gap: 6px; }
 .silvinha__form-acesso input { padding: 8px 10px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--r-sm); }
 .silvinha__form-acesso .btn { justify-content: center; }
+
+/* produtos citados pela Silvinha */
+.silvinha__produtos { display: grid; gap: 6px; width: 100%; max-width: 100%; align-self: stretch; }
+.silvinha__mensagens { overflow-x: hidden; }
+.silvinha__produto {
+  display: flex; align-items: center; gap: var(--s-3); padding: 8px 10px; min-width: 0;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; color: var(--ink);
+  transition: transform .18s var(--ease-out), box-shadow .18s ease;
+}
+.silvinha__produto:hover { transform: translateY(-2px); box-shadow: var(--sh-2); }
+.silvinha__produto img, .silvinha__produto-semfoto {
+  width: 56px; height: 56px; flex: none; object-fit: contain; border-radius: var(--r-sm);
+  background: var(--cream); border: 1px solid var(--line);
+}
+.silvinha__produto-texto { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; font-size: var(--fs-sm); }
+.silvinha__produto-texto strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.silvinha__produto-preco { color: var(--green-deep); font-weight: 700; }
+.silvinha__produto-ver { font-size: var(--fs-xs); font-weight: 700; color: var(--red); white-space: nowrap; }

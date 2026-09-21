@@ -12,9 +12,6 @@
     </span>
     <div class="topbar__pills">
       {% if site.layout_home == 'vitrine' %}
-        <a href="{% url 'orders:lista' %}" class="topbar__atalho">
-          <svg width="13" height="13"><use href="#i-pacote"></use></svg>Rastrear meu pedido
-        </a>
         {% if site.whatsapp_url %}
           <a href="{{ site.whatsapp_url_com_mensagem }}" target="_blank" rel="noopener" class="topbar__atalho">
             <svg width="13" height="13"><use href="#i-whatsapp"></use></svg>WhatsApp

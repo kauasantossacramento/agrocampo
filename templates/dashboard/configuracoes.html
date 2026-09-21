@@ -623,8 +623,8 @@
         </label>
         {% if not whatsapp_configurado %}
           <p class="small" style="color:var(--red);margin-top:var(--s-3)">
-            O serviço não está configurado no servidor (falta <code>WHATSAPP_WEB_TOKEN</code>
-            no <code>.env</code>). O interruptor não terá efeito até isso ser resolvido.
+            O envio automático ainda não está ativado neste servidor. Entre em contato
+            com o <strong>suporte KS TEC</strong> para ativar a funcionalidade.
           </p>
         {% endif %}
         <button type="submit" class="btn btn--primary" style="margin-top:var(--s-5)">
@@ -818,12 +818,6 @@
           <span>Transações com a Stone</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
       </div>
-      {% if user.is_superuser %}
-        <p class="xs muted" style="margin-top:var(--s-4)">
-          Cadastro técnico do Django (só para analista):
-          <a href="/admin/">/admin/</a>
-        </p>
-      {% endif %}
     </div>
   </div>
 
@@ -924,7 +918,7 @@
       desconectado: 'Desconectado',
       erro: 'Erro na sessão',
       indisponivel: 'Serviço fora do ar',
-      nao_configurado: 'Serviço não configurado no servidor',
+      nao_configurado: 'Funcionalidade não ativada',
     };
     async function consultar() {
       if (document.hidden) return;
