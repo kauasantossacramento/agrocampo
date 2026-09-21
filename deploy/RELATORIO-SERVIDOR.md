@@ -486,3 +486,11 @@ já cadastrado passou a ser o primeiro slide do carrossel. Verificado: `/`,
   **despublicados** (fica só o vídeo por enquanto; religar em Conteúdo › Banners);
   **Valença/BA** cadastrada como cidade sede, **frete grátis**, viagem **às sextas**,
   antecedência 0. Conferido: `/entrega/calcular/` → grátis, próxima sexta.
+
+### 10.7 Sétima entrega (21/09/2026) — compra pelo chat e Gemini ligado
+
+`215a35f → 2acd53d`, só o `web` recriado, sem migração. Dados: chave do Gemini
+cadastrada no painel (SiteConfig, não no `.env`), modelo `gemini-3.6-flash`
+(o 2.5 responde 404 para contas novas), assistente **ligada**. Verificado em
+produção: conversa com intenção de compra devolve a ação com o produto e a
+quantidade certos; `acao/comprar` sem login pede acesso.
