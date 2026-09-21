@@ -468,3 +468,12 @@ bater com o fim do desconto de assinatura e da etapa de aprovação):
 garantia 3 → "Assinatura sem compromisso / Receba de novo sem precisar
 pedir"; banner 2 → "Assine e nunca deixe faltar."; banner de apresentação
 sem o título "."; página Entregas e prazos → "Pedidos pagos até as 14h".
+
+### 10.5 Sexta entrega (21/09/2026, tarde) — busca, carrossel único, prazo
+
+Só o `web` recriado; backup automático antes (`/root/backup-agrocampo-20260921-*.sql.gz`).
+Código `6fc3104 → 9162e9b`. Migrações aditivas: `core.0015`, `core.0016`
+(hora de corte, padrão 14h), `shipping.0002` (rótulos). O vídeo de apresentação
+já cadastrado passou a ser o primeiro slide do carrossel. Verificado: `/`,
+`/busca/sugestoes/`, `/carrinho/`, `/catalogo/` → 200; `agrocampo.yml` e
+`nuvem.center` inalterados.
