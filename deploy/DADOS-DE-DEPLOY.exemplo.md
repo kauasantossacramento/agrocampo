@@ -7,7 +7,7 @@
 > Ao clonar o projeto num ambiente novo, copie este arquivo para
 > `deploy/DADOS-DE-DEPLOY.md` e preencha os campos entre `< >`.
 
-Atualizado em 23/08/2026.
+Atualizado em 21/09/2026.
 
 ---
 
@@ -234,3 +234,12 @@ Nada disso foi preenchido, de propósito — são dados do negócio, não meus:
 - A chave SSH `nuvem-center-prod` dá acesso **root ao servidor inteiro**,
   incluindo o Nuvem Center e todos os tenants. Ela não pertence só a este
   projeto.
+
+## Serviços adicionais (desde 21/09/2026)
+
+| | |
+|---|---|
+| Container `agrocampo-whatsapp` | sessão do WhatsApp Web; QR em Painel › Configurações › WhatsApp |
+| `WHATSAPP_WEB_TOKEN` | no `.env` do servidor (gerado com `openssl rand -hex 32`); compartilhado entre `web` e `whatsapp` |
+| `SITE_URL` | `https://agrocampo.online` — prefixo dos links nas mensagens |
+| Chave do Gemini (Silvinha) | cadastrada **no painel**, não no `.env` |

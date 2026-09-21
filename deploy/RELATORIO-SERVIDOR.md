@@ -384,3 +384,71 @@ meu naquele diretório:
 ```
 
 Esse valor está igual desde a primeira instalação, em 21/08.
+
+### 10.3 Quarta entrega (21/09/2026) — itinerário, WhatsApp automático, Silvinha e home vitrine
+
+Mesmo procedimento; **um container novo** neste stack (`agrocampo-whatsapp`).
+Nada fora de `/opt/agrocampo` foi tocado.
+
+```bash
+docker exec agrocampo-db pg_dump -U agrocampo agrocampo | gzip > /root/backup-agrocampo-20260921-0652.sql.gz   # 39 KB
+cd /opt/agrocampo && git pull --ff-only origin main        # 8ab8a68 -> ce5eb0e
+# .env: acrescentadas WHATSAPP_WEB_TOKEN (openssl rand -hex 32) e SITE_URL
+docker compose build web && docker compose build whatsapp
+docker compose run --rm --no-deps web python manage.py migrate
+docker compose up -d --no-deps web
+docker compose up -d --no-deps whatsapp
+```
+
+Migrações aplicadas (todas aditivas):
+
+| App | Migração |
+|---|---|
+| assistant | `0001_initial` (tabela `ConversaAssistente`) |
+| core | `0011_siteconfig_assistente_ativo_and_more` (campos do WhatsApp automático e da Silvinha) |
+| core | `0012_layout_home_e_logo_maior` (campo `layout_home`; `logo_altura` 46 → 64 só em quem estava no padrão) |
+| notifications | `0003_mensagemwhatsapp` (tabela de log) |
+
+Container novo:
+
+| Container | Imagem | Limite | Função |
+|---|---|---|---|
+| `agrocampo-whatsapp` | `agrocampo/whatsapp:latest` (build local, Node 20 + Chromium) | 1 CPU / 1 GB, `shm_size` 256 MB | sessão do WhatsApp Web; só na rede `agrocampo_interna`, sem porta publicada |
+
+Volume novo: `agrocampo_whatsapp_sessao` (pareamento persistido).
+
+> **Risco assumido pelo lojista:** o envio automático usa o WhatsApp Web por
+> robô (whatsapp-web.js), não a API oficial. Viola os Termos do WhatsApp e o
+> número pareado pode ser banido. Interruptor em Painel › Configurações ›
+> WhatsApp; desligado, o `wa.me` manual continua. Ver `deploy/whatsapp/README.md`.
+
+Verificação depois do deploy:
+
+| Item | Resultado |
+|---|---|
+| `/`, `/catalogo/`, `/entrega/onde-entregamos/` | 200 · home já no estilo **vitrine** (`class="tema-vitrine"`) |
+| `/painel/`, `/painel/itinerario/` | 302 para o login (esperado) |
+| `/assistente/conversar/` (GET) | 405 — só aceita POST (esperado) |
+| `agrocampo-whatsapp` | up; log `QR gerado — aguardando leitura`; o Django enxerga o serviço (`estado: aguardando_qr`) |
+| `agrocampo-web` | recriado, `healthy` |
+| `agrocampo-db`, `-nginx`, `-cron` | **não recriados** (4 semanas de uptime) |
+| md5 `agrocampo.yml` | `79ae25137eede851e1a4ce31fa2c3c23` — inalterado |
+| Containers `nuvem-*` | 32 no ar, sem reinício; `nuvem.center` → 200 |
+| Consumo | whatsapp 277 MB, web 184 MB, db 35 MB, nginx 11 MB |
+
+Estado dos dados: nada pré-preenchido. Ficam com o lojista:
+
+- Chave do Gemini e interruptor da Silvinha (Painel › Configurações › Silvinha).
+- Leitura do QR com o chip **dedicado** e interruptor do WhatsApp automático.
+- Logo nova (Aparência) e cartazes 16:5 para o carrossel (Conteúdo › Banners).
+
+Reversão desta entrega:
+
+```bash
+# só o layout: Painel › Configurações › Aparência › Estilo da home → Clássico (sem deploy)
+# código inteiro:
+cd /opt/agrocampo && git checkout 8ab8a68
+docker compose build web && docker compose up -d --no-deps web
+docker compose stop whatsapp && docker compose rm -f whatsapp
+gunzip -c /root/backup-agrocampo-20260921-0652.sql.gz | docker exec -i agrocampo-db psql -U agrocampo agrocampo  # só se quiser descartar dados novos
+```
