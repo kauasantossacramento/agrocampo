@@ -257,6 +257,34 @@ class VitrinesForm(_EstilizadoMixin, forms.ModelForm):
             )
 
 
+class WhatsAppAutoForm(_EstilizadoMixin, forms.ModelForm):
+    """Só o interruptor. O resto (QR, status, teste) é ação, não campo."""
+
+    class Meta:
+        model = SiteConfig
+        fields = ("whatsapp_auto_ativo",)
+
+
+class AssistenteForm(_EstilizadoMixin, forms.ModelForm):
+    class Meta:
+        model = SiteConfig
+        fields = (
+            "assistente_ativo", "assistente_nome", "assistente_imagem",
+            "assistente_boas_vindas", "assistente_instrucoes",
+            "gemini_api_key", "gemini_modelo",
+        )
+        widgets = {
+            "assistente_instrucoes": forms.Textarea(attrs={
+                "rows": 5,
+                "placeholder": "Ex.: só indique produtos que estão no site. "
+                               "Para receita veterinária, mande falar com a loja.",
+            }),
+            "gemini_api_key": forms.PasswordInput(render_value=True, attrs={
+                "autocomplete": "off", "placeholder": "AIza…",
+            }),
+        }
+
+
 class FirebaseForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = SiteConfig

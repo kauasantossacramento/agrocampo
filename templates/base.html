@@ -35,6 +35,7 @@
 
   {% block whatsapp_balao %}{% include 'partials/whatsapp_balao.html' %}{% endblock %}
   {% include 'partials/pwa_convite.html' %}
+  {% include 'partials/assistente.html' %}
 
   {# mensagens do Django viram toasts via JS #}
   {% for message in messages %}
@@ -42,6 +43,7 @@
   {% endfor %}
 
   <script src="{% static 'js/app.js' %}" defer></script>
+  {% if site.assistente_ativo and mostrar_assistente %}<script src="{% static 'js/assistente.js' %}" defer></script>{% endif %}
   <script>
     // registra o service worker do PWA (silencioso se o navegador nao suportar)
     if ('serviceWorker' in navigator) {

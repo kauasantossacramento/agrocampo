@@ -25,6 +25,12 @@
   <button type="button" class="aba" data-aba="contato">
     <svg width="15" height="15"><use href="#i-whatsapp"></use></svg>Contato
   </button>
+  <button type="button" class="aba" data-aba="whatsapp">
+    <svg width="15" height="15"><use href="#i-whatsapp"></use></svg>WhatsApp
+  </button>
+  <button type="button" class="aba" data-aba="assistente">
+    <svg width="15" height="15"><use href="#i-chat"></use></svg>Silvinha
+  </button>
   <button type="button" class="aba" data-aba="firebase">
     <svg width="15" height="15"><use href="#i-sino"></use></svg>Notificações
   </button>
@@ -540,6 +546,177 @@
   </form>
 </section>
 
+
+{# ══════════════════════════════════════════ WHATSAPP AUTOMÁTICO #}
+<section data-painel-aba="whatsapp" hidden>
+  <div class="grid" style="grid-template-columns:1.2fr 1fr;gap:var(--s-5);align-items:start">
+    <div class="stack" style="gap:var(--s-5)">
+      <form method="post" action="{% url 'dashboard:salvar_config' 'whatsapp' %}" class="card card--pad">
+        {% csrf_token %}
+        <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Avisos automáticos pelo WhatsApp</h2>
+        <p class="small muted" style="margin-bottom:var(--s-4)">
+          Quando ligado, o cliente recebe no WhatsApp: <em>pedido confirmado</em>,
+          <em>item em falta — vamos falar com você</em> e <em>saiu para entrega</em>.
+          Só para quem autorizou contato no cadastro.
+        </p>
+
+        <div class="aviso-risco">
+          <strong>Risco que você precisa conhecer.</strong> Este envio usa o
+          <em>WhatsApp Web</em> controlado pelo servidor — não é a API oficial da
+          Meta. Isso viola os Termos de Serviço do WhatsApp e o número pareado
+          <strong>pode ser banido sem aviso</strong>. Use um chip dedicado à loja,
+          nunca o número principal. Desligado, o botão "Chamar no WhatsApp" dos
+          pedidos continua funcionando normalmente.
+        </div>
+
+        <label class="switch-row">
+          {{ form_whatsapp.whatsapp_auto_ativo }} Enviar os avisos automaticamente
+        </label>
+        {% if not whatsapp_configurado %}
+          <p class="small" style="color:var(--red);margin-top:var(--s-3)">
+            O serviço não está configurado no servidor (falta <code>WHATSAPP_WEB_TOKEN</code>
+            no <code>.env</code>). O interruptor não terá efeito até isso ser resolvido.
+          </p>
+        {% endif %}
+        <button type="submit" class="btn btn--primary" style="margin-top:var(--s-5)">
+          <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar
+        </button>
+      </form>
+
+      <div class="card card--pad">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Últimas mensagens</h3>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Quando</th><th>Para</th><th>Pedido</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for m in mensagens_whatsapp %}
+                <tr title="{{ m.texto }}{% if m.erro %} — {{ m.erro }}{% endif %}">
+                  <td class="xs muted nowrap">{{ m.criado_em|date:"d/m H:i" }}</td>
+                  <td class="small">{{ m.numero }}</td>
+                  <td class="small">{% if m.pedido %}<a href="{% url 'dashboard:pedido' m.pedido.numero %}">{{ m.pedido.numero }}</a>{% else %}—{% endif %}</td>
+                  <td>
+                    <span class="badge {% if m.status == 'enviada' %}badge--green{% elif m.status == 'falhou' %}badge--red{% else %}badge--amber{% endif %}">{{ m.get_status_display }}</span>
+                    {% if m.erro %}<div class="xs muted">{{ m.erro|truncatechars:60 }}</div>{% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="muted center" style="padding:var(--s-6)">Nenhuma mensagem ainda.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack" style="gap:var(--s-5)">
+      <div class="card card--pad" id="whatsapp-sessao" data-status-url="{% url 'dashboard:whatsapp_status' %}">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Sessão do WhatsApp</h3>
+        <p class="small" data-whatsapp-estado>Consultando…</p>
+        <div data-whatsapp-qr hidden style="text-align:center;margin:var(--s-4) 0">
+          <img alt="QR Code para parear" style="width:240px;height:240px;border-radius:var(--r-md);border:1px solid var(--line)">
+          <p class="xs muted" style="margin-top:var(--s-2)">
+            No celular: WhatsApp › Aparelhos conectados › Conectar aparelho.
+          </p>
+        </div>
+        <form method="post" action="{% url 'dashboard:whatsapp_desconectar' %}" data-whatsapp-desconectar hidden
+              data-confirmar="Encerrar a sessão? Será preciso ler o QR de novo.">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--ghost btn--sm">Desconectar este número</button>
+        </form>
+      </div>
+
+      <form method="post" action="{% url 'dashboard:whatsapp_teste' %}" class="card card--pad">
+        {% csrf_token %}
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Enviar um teste</h3>
+        <p class="xs muted" style="margin-bottom:var(--s-3)">Funciona mesmo com o interruptor desligado.</p>
+        <div class="field">
+          <label>Número com DDD</label>
+          <input type="tel" name="numero" class="campo" placeholder="(75) 99999-0000" data-mask="telefone" required>
+        </div>
+        <button type="submit" class="btn btn--primary btn--sm" style="margin-top:var(--s-3)">Enviar teste</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+{# ═══════════════════════════════════════════ ASSISTENTE (SILVINHA) #}
+<section data-painel-aba="assistente" hidden>
+  <div class="grid" style="grid-template-columns:1.2fr 1fr;gap:var(--s-5);align-items:start">
+    <form method="post" enctype="multipart/form-data"
+          action="{% url 'dashboard:salvar_config' 'assistente' %}" class="card card--pad">
+      {% csrf_token %}
+      <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Assistente virtual</h2>
+      <p class="small muted" style="margin-bottom:var(--s-4)">
+        Um chat na home e nas páginas de produto. Ela responde com o que está no
+        site — catálogo, cidades atendidas, horário — e manda para o WhatsApp o
+        que não souber. Usa o Gemini, do Google; cada conversa custa centavos.
+      </p>
+
+      <label class="switch-row">
+        {{ form_assistente.assistente_ativo }} Mostrar a assistente na loja
+      </label>
+
+      <div class="grid grid--2" style="gap:var(--s-4);margin-top:var(--s-4)">
+        <div class="field">
+          <label>Nome</label>
+          {{ form_assistente.assistente_nome }}
+        </div>
+        <div class="field">
+          <label>Foto / avatar</label>
+          {{ form_assistente.assistente_imagem }}
+          <span class="help">Quadrada. Sem foto aparece a inicial do nome.</span>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:var(--s-4)">
+        <label>Primeira mensagem</label>
+        {{ form_assistente.assistente_boas_vindas }}
+      </div>
+
+      <div class="field" style="margin-top:var(--s-4)">
+        <label>Orientações extras para ela</label>
+        {{ form_assistente.assistente_instrucoes }}
+        <span class="help">{{ form_assistente.assistente_instrucoes.help_text }}</span>
+      </div>
+
+      <hr class="divider">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Gemini (Google)</h3>
+      <div class="grid grid--2" style="gap:var(--s-4)">
+        <div class="field">
+          <label>Chave da API</label>
+          {{ form_assistente.gemini_api_key }}
+          <span class="help">aistudio.google.com › <em>Get API key</em>. Fica só no servidor.
+            {% if config.gemini_api_key %}<span class="badge badge--green">cadastrada</span>{% endif %}</span>
+        </div>
+        <div class="field">
+          <label>Modelo</label>
+          {{ form_assistente.gemini_modelo }}
+          <span class="help">Deixe <code>gemini-2.5-flash</code>, salvo orientação contrária.</span>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn--primary" style="margin-top:var(--s-6)">
+        <svg width="15" height="15"><use href="#i-check"></use></svg>Salvar assistente
+      </button>
+    </form>
+
+    <div class="card card--pad">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">O que perguntaram por último</h3>
+      <div class="stack" style="gap:var(--s-3)">
+        {% for c in conversas_assistente %}
+          <div class="small" style="border-bottom:1px solid var(--line);padding-bottom:var(--s-2)">
+            <div class="xs muted">{{ c.criado_em|date:"d/m H:i" }}{% if c.produto %} · {{ c.produto.nome|truncatechars:36 }}{% endif %}{% if c.falhou %} · <span style="color:var(--red)">falhou</span>{% endif %}</div>
+            <div class="strong">{{ c.pergunta|truncatechars:120 }}</div>
+            <div class="muted">{{ c.resposta|truncatechars:160 }}</div>
+          </div>
+        {% empty %}
+          <p class="muted small">Nenhuma conversa ainda.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
 {# ══════════════════════════════════════════════════════ AVANÇADO #}
 <section data-painel-aba="avancado" hidden>
   <div class="grid grid--2" style="gap:var(--s-5);align-items:start">
@@ -657,4 +834,45 @@
   </div>
 </section>
 
+
+<script>
+  // Sessão do WhatsApp: consulta o estado a cada 4 s enquanto a aba estiver visível
+  (function () {
+    const caixa = document.getElementById('whatsapp-sessao');
+    if (!caixa) return;
+    const estadoEl = caixa.querySelector('[data-whatsapp-estado]');
+    const qrBox = caixa.querySelector('[data-whatsapp-qr]');
+    const qrImg = qrBox.querySelector('img');
+    const desconectar = caixa.querySelector('[data-whatsapp-desconectar]');
+    desconectar.addEventListener('submit', (e) => { if (!confirm(desconectar.dataset.confirmar)) e.preventDefault(); });
+    const rotulos = {
+      conectado: 'Conectado e pronto para enviar',
+      aguardando_qr: 'Aguardando leitura do QR Code',
+      autenticando: 'Pareado, carregando…',
+      iniciando: 'Iniciando o serviço…',
+      desconectado: 'Desconectado',
+      erro: 'Erro na sessão',
+      indisponivel: 'Serviço fora do ar',
+      nao_configurado: 'Serviço não configurado no servidor',
+    };
+    async function consultar() {
+      if (document.hidden) return;
+      try {
+        const r = await fetch(caixa.dataset.statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const d = await r.json();
+        let texto = rotulos[d.estado] || d.estado;
+        if (d.numero) texto += ' — +' + d.numero;
+        if (d.detalhe) texto += '. ' + d.detalhe;
+        estadoEl.textContent = texto;
+        estadoEl.style.color = d.estado === 'conectado' ? 'var(--green)' : (d.estado === 'aguardando_qr' ? 'var(--ink)' : 'var(--red)');
+        if (d.qr) { qrImg.src = d.qr; qrBox.hidden = false; } else { qrBox.hidden = true; }
+        desconectar.hidden = d.estado !== 'conectado';
+      } catch (e) {
+        estadoEl.textContent = 'Não consegui consultar o serviço.';
+      }
+    }
+    consultar();
+    setInterval(consultar, 4000);
+  })();
+</script>
 {% endblock %}

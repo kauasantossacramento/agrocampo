@@ -159,6 +159,49 @@ class SiteConfig(TimeStampedModel):
         help_text="Texto já preenchido quando o cliente abre a conversa.",
     )
 
+
+    # ------------------------------------ WhatsApp automático (WhatsApp Web)
+    # Interruptor do envio automático de avisos de pedido pelo serviço
+    # `whatsapp` do compose (whatsapp-web.js). O endereço e o token do
+    # serviço vêm do ambiente, porque são infraestrutura; aqui fica só a
+    # decisão do lojista de ligar ou não.
+    whatsapp_auto_ativo = models.BooleanField(
+        "enviar avisos de pedido pelo WhatsApp automaticamente",
+        default=False,
+        help_text=(
+            "Usa uma sessão do WhatsApp Web controlada pelo servidor. Esse "
+            "formato não é oficial e o número pode ser banido pelo WhatsApp."
+        ),
+    )
+
+    # ------------------------------------------ assistente virtual (Silvinha)
+    assistente_ativo = models.BooleanField("assistente virtual ligada", default=False)
+    assistente_nome = models.CharField(
+        "nome da assistente", max_length=40, default="Silvinha"
+    )
+    assistente_imagem = models.ImageField(
+        "foto / avatar", upload_to="site/", blank=True,
+        help_text="Quadrada, de preferência. Sem imagem aparece a inicial do nome.",
+    )
+    assistente_boas_vindas = models.CharField(
+        "primeira mensagem", max_length=200, blank=True,
+        default="Oi! Eu sou a Silvinha, da AgroCampo. Posso ajudar a escolher um produto ou tirar dúvida sobre entrega?",
+    )
+    assistente_instrucoes = models.TextField(
+        "orientações extras", blank=True,
+        help_text=(
+            "O que ela deve saber ou evitar. Ex.: 'não prometa prazo para "
+            "cidades fora da lista', 'sugira ração Golden para cães adultos'."
+        ),
+    )
+    gemini_api_key = models.CharField(
+        "Gemini · chave da API", max_length=200, blank=True,
+        help_text="aistudio.google.com › Get API key. Fica só no servidor.",
+    )
+    gemini_modelo = models.CharField(
+        "Gemini · modelo", max_length=60, default="gemini-2.5-flash", blank=True,
+    )
+
     # ------------------------------------------ vitrines por linha
     vitrine_ouro_titulo = models.CharField(
         max_length=60, blank=True, default="Mais vendidos — Linha Ouro"

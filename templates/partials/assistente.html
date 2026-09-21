@@ -1,0 +1,58 @@
+{% comment %}
+  Silvinha — assistente virtual. Só entra na home e na página de produto
+  (quem inclui passa `mostrar_assistente`), e só se o lojista ligou.
+  A foto da personagem vem do painel; sem foto, a inicial do nome.
+{% endcomment %}
+{% if site.assistente_ativo and mostrar_assistente %}
+<div class="silvinha" id="silvinha"
+     data-url="{% url 'assistant:conversar' %}"
+     {% if produto %}data-produto="{{ produto.slug }}"{% endif %}
+     data-nome="{{ site.assistente_nome }}">
+  <button type="button" class="silvinha__botao" data-silvinha-abrir
+          aria-expanded="false" aria-controls="silvinha-janela"
+          aria-label="Conversar com {{ site.assistente_nome }}">
+    {% if site.assistente_imagem %}
+      <img src="{{ site.assistente_imagem.url }}" alt="" class="silvinha__avatar">
+    {% else %}
+      <span class="silvinha__avatar silvinha__avatar--inicial">{{ site.assistente_nome|first|upper }}</span>
+    {% endif %}
+    <span class="silvinha__chamada">
+      <strong>{{ site.assistente_nome }}</strong>
+      <span>Posso ajudar?</span>
+    </span>
+  </button>
+
+  <section class="silvinha__janela" id="silvinha-janela" hidden
+           role="dialog" aria-label="Conversa com {{ site.assistente_nome }}">
+    <header class="silvinha__topo">
+      {% if site.assistente_imagem %}
+        <img src="{{ site.assistente_imagem.url }}" alt="" class="silvinha__avatar silvinha__avatar--sm">
+      {% else %}
+        <span class="silvinha__avatar silvinha__avatar--sm silvinha__avatar--inicial">{{ site.assistente_nome|first|upper }}</span>
+      {% endif %}
+      <div>
+        <strong>{{ site.assistente_nome }}</strong>
+        <span class="xs">Assistente virtual da {{ site.nome_loja }}</span>
+      </div>
+      <button type="button" class="icon-btn" data-silvinha-fechar aria-label="Fechar">
+        <svg width="18" height="18"><use href="#i-x"></use></svg>
+      </button>
+    </header>
+
+    <div class="silvinha__mensagens" data-silvinha-mensagens aria-live="polite">
+      <div class="silvinha__msg silvinha__msg--ela">{{ site.assistente_boas_vindas }}</div>
+    </div>
+
+    <form class="silvinha__form" data-silvinha-form>
+      <input type="text" name="pergunta" maxlength="600" autocomplete="off"
+             placeholder="Escreva sua dúvida…" aria-label="Sua mensagem" required>
+      <button type="submit" class="btn btn--primary" aria-label="Enviar">
+        <svg width="18" height="18"><use href="#i-seta-dir"></use></svg>
+      </button>
+    </form>
+    <p class="silvinha__rodape xs muted">
+      Respostas automáticas — para receita ou sintoma, procure um veterinário.
+    </p>
+  </section>
+</div>
+{% endif %}

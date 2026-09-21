@@ -48,6 +48,7 @@ def home(request):
         request,
         "core/home.html",
         {
+            "mostrar_assistente": True,
             "vitrines_linha": vitrines,
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
             # com apresentação cadastrada ela assume o topo; sem ela, o hero

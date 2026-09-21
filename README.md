@@ -147,6 +147,48 @@ templates/        base + partials + uma pasta por app
 
 ---
 
+## Itinerário de entrega
+
+**Painel › Itinerário** lista os pedidos em separação (ou já na rua) agrupados
+por cidade → ilha/localidade → bairro, ordenados pela rua, com quem recebe,
+telefone, endereço, referência e itens. Botão *Imprimir* gera a folha do
+entregador (A4, sem a moldura do painel). Filtros: status, cidade e "pagos
+até" uma data.
+
+---
+
+## WhatsApp automático (WhatsApp Web)
+
+Avisos de pedido (*confirmado*, *item em falta*, *saiu para entrega*) enviados
+pelo serviço `whatsapp` do compose — `deploy/whatsapp/`, Node + whatsapp-web.js.
+
+> **Risco:** não é a API oficial da Meta. Viola os Termos do WhatsApp e o
+> número pareado pode ser banido. Use um chip dedicado. O lojista optou por
+> este caminho ciente disso; há um interruptor em **Painel › Configurações ›
+> WhatsApp** e o link `wa.me` manual continua valendo.
+
+Para ligar: defina `WHATSAPP_WEB_TOKEN` no `.env` (`openssl rand -hex 32`),
+suba o serviço, leia o QR na aba WhatsApp do painel e ative o interruptor.
+Cada envio fica registrado em `MensagemWhatsApp` (aba mostra os últimos).
+Detalhes e operação em `deploy/whatsapp/README.md`.
+
+---
+
+## Assistente Silvinha (Gemini)
+
+Chat na home e nas páginas de produto. Responde só com o que está no banco —
+catálogo publicado (filtrado pela pergunta), cidades atendidas, frete, horário,
+contato — e encaminha para o WhatsApp o que não sabe. Sem diagnóstico veterinário.
+
+Configuração em **Painel › Configurações › Silvinha**: interruptor, nome,
+avatar, primeira mensagem, orientações extras e a chave do Gemini
+(`aistudio.google.com`). Modelo padrão `gemini-2.5-flash`. Sem chave, ela
+responde com o WhatsApp da loja em vez de quebrar. Limite de 40 perguntas
+por hora por sessão. As conversas ficam em `ConversaAssistente` (últimas
+aparecem na aba).
+
+---
+
 ## Design system
 
 Tokens em `static/css/design-system.css`. Nada de cor ou espaço hard-coded nos
@@ -196,7 +238,7 @@ Auditado com emulação real de device via CDP: **19 páginas × 9 larguras
 ## Testes
 
 ```bash
-python manage.py test          # 45 testes
+python manage.py test          # 187 testes
 ```
 
 Cobrem: preço de assinatura, máquina de estados do pedido, baixa e devolução de

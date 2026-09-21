@@ -148,6 +148,7 @@ def detalhe_produto(request, slug):
         request,
         "catalog/produto.html",
         {
+            "mostrar_assistente": True,
             "produto": produto,
             "avaliacoes": avaliacoes,
             "ja_avaliou": ja_avaliou,
