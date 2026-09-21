@@ -452,3 +452,13 @@ docker compose build web && docker compose up -d --no-deps web
 docker compose stop whatsapp && docker compose rm -f whatsapp
 gunzip -c /root/backup-agrocampo-20260921-0652.sql.gz | docker exec -i agrocampo-db psql -U agrocampo agrocampo  # só se quiser descartar dados novos
 ```
+
+### 10.4 Quinta entrega (21/09/2026, manhã) — capa, seções, promoções, compra
+
+Só o `web` foi recriado. Backup: `/root/backup-agrocampo-20260921-0746.sql.gz`.
+Código `9189dae → e29310a`. Migrações (aditivas): `catalog.0008`, `core.0013`,
+`core.0014`. Dados alterados pelas migrações, de propósito: `desconto_assinatura_padrao`
+10 → **0** (decisão do lojista) e o interruptor da apresentação (vídeo) **desligado**
+por padrão — o carrossel de slides abre a home sozinho. Verificado: `/` 200 com 11
+seções, `/entrega/calcular/` 200, manifest com os ícones novos, `agrocampo.yml`
+inalterado, `nuvem.center` 200, `db/nginx/cron/whatsapp` não recriados.
