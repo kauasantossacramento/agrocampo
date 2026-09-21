@@ -1,0 +1,100 @@
+{% extends 'dashboard/base_painel.html' %}
+
+{% block painel_title %}Itinerário de entrega{% endblock %}
+{% block painel_heading %}Itinerário de entrega{% endblock %}
+
+{% block painel_content %}
+<form method="get" class="row itinerario__filtros" style="gap:var(--s-3);margin-bottom:var(--s-5);flex-wrap:wrap;align-items:end">
+  <div class="field" style="margin:0">
+    <label class="xs muted">Mostrar</label>
+    <select name="status" style="width:auto" onchange="this.form.submit()">
+      <option value="separacao" {% if filtro == 'separacao' %}selected{% endif %}>Em separação (vão sair)</option>
+      <option value="enviado" {% if filtro == 'enviado' %}selected{% endif %}>Enviados (na rua)</option>
+      <option value="todos" {% if filtro == 'todos' %}selected{% endif %}>Os dois</option>
+    </select>
+  </div>
+  <div class="field" style="margin:0">
+    <label class="xs muted">Cidade</label>
+    <select name="cidade" style="width:auto" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      {% for c in cidades %}
+        <option value="{{ c.id }}" {% if cidade_id == c.id|stringformat:'s' %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field" style="margin:0">
+    <label class="xs muted">Pagos até</label>
+    <input type="date" name="dia" value="{{ dia|date:'Y-m-d' }}" style="width:auto" onchange="this.form.submit()">
+  </div>
+  <button type="submit" class="btn btn--primary btn--sm">Filtrar</button>
+  <span class="spacer" style="flex:1"></span>
+  <button type="button" class="btn btn--ghost btn--sm" onclick="window.print()">
+    <svg width="15" height="15"><use href="#i-pacote"></use></svg>Imprimir
+  </button>
+</form>
+
+<div class="itinerario" data-reveal>
+  <header class="itinerario__cabecalho">
+    <div>
+      <h2 style="font-size:var(--fs-lg)">{{ site.nome_loja }} — roteiro de entrega</h2>
+      <p class="small muted">
+        {{ hoje|date:"l, d/m/Y" }} ·
+        {{ total }} parada{{ total|pluralize }}
+        {% if filtro == 'separacao' %}em separação{% elif filtro == 'enviado' %}na rua{% else %}em separação e na rua{% endif %}
+      </p>
+    </div>
+    {% if site.entrega_a_partir_de %}
+      <p class="small strong">Saída a partir das {{ site.entrega_a_partir_de|time:"H:i" }}</p>
+    {% endif %}
+  </header>
+
+  {% for cidade in grupos %}
+    <section class="itinerario__cidade">
+      <h3 class="itinerario__titulo-cidade">
+        {{ cidade.rotulo }}
+        {% if cidade.sede %}<span class="badge badge--green">sede</span>{% endif %}
+        <span class="muted small">· {{ cidade.total }} parada{{ cidade.total|pluralize }}</span>
+      </h3>
+
+      {% for local in cidade.localidades %}
+        <h4 class="itinerario__titulo-local">{{ local.rotulo }}</h4>
+        <ol class="itinerario__lista">
+          {% for parada in local.paradas %}
+            <li class="itinerario__parada {% if parada.contato_pendente %}is-pendente{% endif %}">
+              <div class="itinerario__quem">
+                <strong>{{ parada.recebe }}</strong>
+                {% if parada.telefone %}
+                  <a href="tel:{{ parada.telefone }}" class="itinerario__fone">{{ parada.telefone }}</a>
+                {% else %}
+                  <span class="muted xs">sem telefone</span>
+                {% endif %}
+                <a href="{% url 'dashboard:pedido' parada.pedido.numero %}" class="xs muted nowrap">{{ parada.pedido.numero }}</a>
+              </div>
+              <div class="itinerario__onde">
+                {{ parada.logradouro }}{% if parada.numero %}, {{ parada.numero }}{% endif %}{% if parada.complemento %} · {{ parada.complemento }}{% endif %}
+                {% if parada.zona_rural %}<span class="badge badge--amber">zona rural</span>{% endif %}
+                {% if parada.referencia %}<div class="xs muted">Ref.: {{ parada.referencia }}</div>{% endif %}
+              </div>
+              <div class="itinerario__oque small">
+                {% for item in parada.itens %}<div>{{ item }}</div>{% endfor %}
+                <div class="strong" style="margin-top:2px">R$ {{ parada.pedido.total|floatformat:2 }}</div>
+              </div>
+              {% if parada.contato_pendente or parada.observacoes %}
+                <div class="itinerario__aviso xs">
+                  {% if parada.contato_pendente %}<strong>Item em falta — combinar com o cliente.</strong> {% endif %}
+                  {{ parada.observacoes }}
+                </div>
+              {% endif %}
+              <div class="itinerario__check" aria-hidden="true">☐ entregue</div>
+            </li>
+          {% endfor %}
+        </ol>
+      {% endfor %}
+    </section>
+  {% empty %}
+    <div class="card card--pad center muted" style="padding:var(--s-12)">
+      Nenhum pedido para entregar com este filtro.
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

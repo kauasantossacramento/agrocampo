@@ -44,6 +44,9 @@
     <a href="{% url 'dashboard:gestao' 'cidades' %}" class="panel__link {% if secao == 'entrega' %}is-active{% endif %}">
       <svg width="16" height="16"><use href="#i-caminhao"></use></svg>Entrega
     </a>
+    <a href="{% url 'dashboard:itinerario' %}" class="panel__link {% if secao == 'itinerario' %}is-active{% endif %}">
+      <svg width="16" height="16"><use href="#i-mapa"></use></svg>Itinerário
+    </a>
     <a href="{% url 'dashboard:auditoria' 'pagamentos' %}" class="panel__link {% if secao == 'auditoria' %}is-active{% endif %}">
       <svg width="16" height="16"><use href="#i-escudo"></use></svg>Auditoria
     </a>
@@ -58,7 +61,7 @@
   </aside>
 
   <div class="panel__main">
-    <div class="row row--between" style="margin-bottom:var(--s-6);flex-wrap:wrap;gap:var(--s-3)">
+    <div class="row row--between panel__topo" style="margin-bottom:var(--s-6);flex-wrap:wrap;gap:var(--s-3)">
       <h1 style="font-size:var(--fs-xl)">{% block painel_heading %}Pedidos{% endblock %}</h1>
 
       <div class="dropdown" data-dropdown>

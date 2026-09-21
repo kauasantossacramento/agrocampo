@@ -14,7 +14,9 @@ from django.views.decorators.http import require_POST
 from decimal import Decimal, InvalidOperation
 
 from apps.catalog.models import Categoria, Marca, MovimentoEstoque, Produto
-from apps.notifications.models import Notificacao
+from apps.assistant.models import ConversaAssistente
+from apps.notifications import whatsapp as canal_whatsapp
+from apps.notifications.models import MensagemWhatsApp, Notificacao
 from apps.orders.models import Pedido
 from apps.orders.services import (
     EstoqueInsuficiente,
@@ -202,6 +204,42 @@ def enviar(request, numero):
 
 
 @operador_requerido
+def itinerario(request):
+    """Lista de entregas do dia, agrupada por cidade e localidade, para imprimir."""
+    from datetime import date
+
+    from apps.shipping.models import Cidade
+
+    from .itinerario import montar_itinerario
+
+    filtro = request.GET.get("status", "separacao")
+    cidade_id = request.GET.get("cidade") or None
+    dia = None
+    if request.GET.get("dia"):
+        try:
+            dia = date.fromisoformat(request.GET["dia"])
+        except ValueError:
+            dia = None
+
+    grupos, total = montar_itinerario(filtro=filtro, cidade_id=cidade_id, dia=dia)
+    return render(
+        request,
+        "dashboard/itinerario.html",
+        {
+            "secao": "itinerario",
+            "grupos": grupos,
+            "total": total,
+            "filtro": filtro,
+            "cidade_id": str(cidade_id or ""),
+            "dia": dia,
+            "hoje": date.today(),
+            "cidades": Cidade.objects.all(),
+            "metricas": _metricas(),
+        },
+    )
+
+
+@operador_requerido
 def estoque(request):
     produtos = Produto.objects.select_related("categoria").order_by("estoque")
     if request.GET.get("critico") == "1":
@@ -382,6 +420,11 @@ def configuracoes(request):
             "form_entrega": formularios.EntregaForm(instance=config),
             "form_vitrines": formularios.VitrinesForm(instance=config),
             "form_firebase": formularios.FirebaseForm(instance=config),
+            "form_whatsapp": formularios.WhatsAppAutoForm(instance=config),
+            "form_assistente": formularios.AssistenteForm(instance=config),
+            "whatsapp_configurado": canal_whatsapp.configurado(),
+            "mensagens_whatsapp": MensagemWhatsApp.objects.select_related("pedido")[:20],
+            "conversas_assistente": ConversaAssistente.objects.order_by("-criado_em")[:15],
             "form_provedor": formularios.ProvedorPagamentoForm(instance=provedor),
             "provedores": ProvedorPagamento.objects.all(),
             "provedor": provedor,
@@ -564,6 +607,8 @@ SECOES_CONFIG = {
     "entrega": ("EntregaForm", "Entrega e WhatsApp"),
     "vitrines": ("VitrinesForm", "Vitrines da home"),
     "firebase": ("FirebaseForm", "Notificações push"),
+    "whatsapp": ("WhatsAppAutoForm", "WhatsApp automático"),
+    "assistente": ("AssistenteForm", "Assistente virtual"),
 }
 
 
@@ -846,3 +891,38 @@ def auditoria(request, tipo):
             "metricas": _metricas(),
         },
     )
+
+
+# ═══════════════════════════════════════════ WhatsApp automático (ações)
+@operador_requerido
+def whatsapp_status(request):
+    """Estado da sessão + QR, consultado pelo painel a cada poucos segundos."""
+    return JsonResponse(canal_whatsapp.status_sessao())
+
+
+@operador_requerido
+@require_POST
+def whatsapp_desconectar(request):
+    if canal_whatsapp.desconectar():
+        messages.success(request, "Sessão do WhatsApp encerrada. Leia o QR de novo para parear.")
+    else:
+        messages.error(request, "Não consegui falar com o serviço do WhatsApp.")
+    return redirect(f"{reverse('dashboard:configuracoes')}?aba=whatsapp")
+
+
+@operador_requerido
+@require_POST
+def whatsapp_teste(request):
+    """Manda uma mensagem de teste para o número digitado, ignorando o interruptor."""
+    numero = request.POST.get("numero", "").strip()
+    registro = canal_whatsapp.enviar(
+        numero,
+        f"Teste do AgroCampo: se você leu isto, o WhatsApp automático está funcionando. "
+        f"({timezone.localtime():%d/%m %H:%M})",
+        ignorar_interruptor=True,
+    )
+    if registro.status == MensagemWhatsApp.Status.ENVIADA:
+        messages.success(request, f"Mensagem de teste enviada para {registro.numero}.")
+    else:
+        messages.error(request, f"Não enviou: {registro.erro}")
+    return redirect(f"{reverse('dashboard:configuracoes')}?aba=whatsapp")

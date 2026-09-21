@@ -760,3 +760,64 @@ class LinhasDeExemploTests(TestCase):
         meu.refresh_from_db()
         # o mais caro do catálogo, mas o lojista disse Bronze
         self.assertEqual(meu.linha, Produto.Linha.BRONZE)
+
+
+class ItinerarioTests(BasePedido):
+    """A lista de entrega agrupa por cidade e localidade e traz quem recebe."""
+
+    def setUp(self):
+        super().setUp()
+        from apps.shipping.models import Cidade, Localidade
+
+        self.valenca = Cidade.objects.create(nome="Valença", uf="BA", sede=True, frete=Decimal("8"))
+        self.ilha = Localidade.objects.create(
+            cidade=self.valenca, nome="Ilha de Tinharé", acesso_por_barco=True
+        )
+        endereco = self.cliente.enderecos.first()
+        endereco.cidade_atendida = self.valenca
+        endereco.localidade = self.ilha
+        endereco.destinatario = "Dona Maria"
+        endereco.save()
+        self.cliente.telefone = "(75) 99999-0000"
+        self.cliente.save()
+
+    def _pedido_em_separacao(self):
+        from apps.orders.services import separar_pedido
+
+        pedido = self._pedido()
+        pedido.endereco_entrega = self.cliente.enderecos.first()
+        pedido.telefone_cliente = "(75) 99999-0000"
+        pedido.save()
+        pedido.mudar_status(Pedido.Status.PAGO)
+        return separar_pedido(pedido)
+
+    def test_agrupa_por_cidade_e_localidade(self):
+        from apps.dashboard.itinerario import montar_itinerario
+
+        pedido = self._pedido_em_separacao()
+        grupos, total = montar_itinerario("separacao")
+        self.assertEqual(total, 1)
+        self.assertEqual(grupos[0]["rotulo"], "Valença/BA")
+        self.assertTrue(grupos[0]["sede"])
+        self.assertEqual(grupos[0]["localidades"][0]["rotulo"], "Ilha de Tinharé")
+        parada = grupos[0]["localidades"][0]["paradas"][0]
+        self.assertEqual(parada["recebe"], "Dona Maria")
+        self.assertEqual(parada["telefone"], "(75) 99999-0000")
+        self.assertEqual(parada["pedido"], pedido)
+        self.assertIn("1x Ração Golden 15kg", parada["itens"])
+
+    def test_filtro_por_status(self):
+        from apps.dashboard.itinerario import montar_itinerario
+
+        self._pedido_em_separacao()
+        _, na_rua = montar_itinerario("enviado")
+        self.assertEqual(na_rua, 0)
+
+    def test_pagina_do_painel_imprime_a_lista(self):
+        self._pedido_em_separacao()
+        self.client.force_login(self.lojista)
+        resposta = self.client.get("/painel/itinerario/")
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "Dona Maria")
+        self.assertContains(resposta, "Ilha de Tinharé")
+        self.assertContains(resposta, "(75) 99999-0000")

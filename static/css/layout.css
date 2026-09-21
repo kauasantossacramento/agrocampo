@@ -943,3 +943,135 @@
   padding: 0; font-size: inherit; line-height: inherit;
 }
 .link-produto:hover { color: var(--red); text-decoration: underline; }
+
+/* ═══════════════════════════════ itinerário de entrega (painel) */
+.itinerario { background: #fff; border-radius: var(--r-lg); padding: var(--s-6); box-shadow: var(--shadow-sm); }
+.itinerario__cabecalho {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s-4);
+  padding-bottom: var(--s-4); margin-bottom: var(--s-5); border-bottom: 2px solid var(--ink);
+}
+.itinerario__cidade { margin-bottom: var(--s-7); break-inside: avoid-page; }
+.itinerario__titulo-cidade {
+  display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-md);
+  padding: var(--s-2) 0; border-bottom: 1px solid var(--line);
+}
+.itinerario__titulo-local {
+  font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+  margin: var(--s-4) 0 var(--s-2);
+}
+.itinerario__lista { list-style: none; counter-reset: parada; display: grid; gap: var(--s-2); }
+.itinerario__parada {
+  counter-increment: parada;
+  display: grid; grid-template-columns: 1.1fr 1.4fr 1.2fr auto; gap: var(--s-3);
+  align-items: start; padding: var(--s-3) var(--s-3) var(--s-3) 2.4rem;
+  border: 1px solid var(--line); border-radius: var(--r-md); position: relative;
+  break-inside: avoid;
+}
+.itinerario__parada::before {
+  content: counter(parada); position: absolute; left: .75rem; top: .8rem;
+  width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--ink); color: #fff;
+  font-size: var(--fs-xs); font-weight: 700; display: grid; place-items: center;
+}
+.itinerario__parada.is-pendente { border-color: var(--yellow); background: #FFFBEA; }
+.itinerario__quem { display: flex; flex-direction: column; gap: 2px; }
+.itinerario__fone { font-weight: 600; color: var(--ink); }
+.itinerario__aviso { grid-column: 1 / -1; color: var(--ink-soft); }
+.itinerario__check { font-size: var(--fs-sm); white-space: nowrap; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .itinerario__parada { grid-template-columns: 1fr 1fr; }
+  .itinerario__oque { grid-column: 1 / -1; }
+}
+
+@media print {
+  .panel { display: block; }
+  .panel__aside, .panel__topo, .itinerario__filtros, .toast-stack { display: none !important; }
+  .panel__main { padding: 0; background: #fff; }
+  .itinerario { box-shadow: none; padding: 0; }
+  .itinerario__parada { grid-template-columns: 1.1fr 1.4fr 1.2fr auto; page-break-inside: avoid; }
+  .itinerario__parada.is-pendente { background: #fff; border: 2px solid #000; }
+  a { color: inherit; text-decoration: none; }
+}
+
+/* ═══════════════════════════════ Silvinha (assistente virtual) */
+/* fica à esquerda para não brigar com o balão do WhatsApp, à direita */
+.silvinha { position: fixed; left: var(--s-5); bottom: var(--s-5); z-index: 910; }
+.silvinha__botao {
+  display: inline-flex; align-items: center; gap: var(--s-3);
+  height: 56px; padding: 0 var(--s-4) 0 6px; border: 0; cursor: pointer;
+  border-radius: 999px; background: var(--ink); color: #fff;
+  box-shadow: 0 6px 22px rgba(34, 24, 18, .35);
+  transition: transform .24s var(--ease-spring), box-shadow .24s ease;
+}
+.silvinha__botao:hover { transform: translateY(-3px); }
+.silvinha__avatar {
+  width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none;
+  border: 2px solid var(--yellow); background: var(--cream);
+}
+.silvinha__avatar--inicial {
+  display: grid; place-items: center; font: 800 1.25rem/1 Poppins, sans-serif; color: var(--red);
+}
+.silvinha__avatar--sm { width: 36px; height: 36px; font-size: 1rem; }
+.silvinha__chamada { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
+.silvinha__chamada strong { font-family: Poppins, sans-serif; font-size: var(--fs-sm); }
+.silvinha__chamada span { font-size: var(--fs-xs); opacity: .8; }
+
+.silvinha__janela {
+  position: absolute; left: 0; bottom: 68px;
+  width: min(370px, calc(100vw - 2 * var(--s-5)));
+  display: flex; flex-direction: column;
+  background: #fff; border-radius: var(--r-lg);
+  box-shadow: 0 18px 50px rgba(34, 24, 18, .28);
+  overflow: hidden;
+  animation: silvinha-entra .22s var(--ease-out);
+}
+@keyframes silvinha-entra { from { opacity: 0; transform: translateY(10px); } }
+.silvinha__topo {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); background: var(--ink); color: #fff;
+}
+.silvinha__topo > div { display: flex; flex-direction: column; line-height: 1.2; flex: 1; }
+.silvinha__topo strong { font-family: Poppins, sans-serif; }
+.silvinha__topo .icon-btn { color: #fff; }
+.silvinha__mensagens {
+  height: min(52vh, 380px); overflow-y: auto; padding: var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-2); background: var(--cream);
+}
+.silvinha__msg {
+  max-width: 88%; padding: var(--s-2) var(--s-3); border-radius: 14px;
+  font-size: var(--fs-sm); line-height: 1.45; word-break: break-word;
+}
+.silvinha__msg--ela { align-self: flex-start; background: #fff; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.silvinha__msg--eu { align-self: flex-end; background: var(--red); color: #fff; border-bottom-right-radius: 4px; }
+.silvinha__msg a { color: var(--red); text-decoration: underline; }
+.silvinha__msg--eu a { color: #fff; }
+.silvinha__msg.is-pensando { display: flex; gap: 4px; padding: var(--s-3); }
+.silvinha__msg.is-pensando span {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+  animation: silvinha-pensa 1s infinite ease-in-out;
+}
+.silvinha__msg.is-pensando span:nth-child(2) { animation-delay: .15s; }
+.silvinha__msg.is-pensando span:nth-child(3) { animation-delay: .3s; }
+@keyframes silvinha-pensa { 0%, 80%, 100% { opacity: .3; transform: scale(.8); } 40% { opacity: 1; transform: none; } }
+.silvinha__form { display: flex; gap: var(--s-2); padding: var(--s-3); border-top: 1px solid var(--line); }
+.silvinha__form input { flex: 1; min-width: 0; }
+.silvinha__form .btn { padding: 0 var(--s-3); }
+.silvinha__rodape { padding: 0 var(--s-3) var(--s-3); margin: 0; }
+
+@media (max-width: 620px) {
+  .silvinha { left: var(--s-3); bottom: var(--s-3); }
+  .silvinha__chamada { display: none; }
+  .silvinha__botao { padding: 0 6px; }
+  .silvinha__janela { width: calc(100vw - 2 * var(--s-3)); }
+  .silvinha.is-aberta .silvinha__botao { display: none; }
+  .silvinha.is-aberta .silvinha__janela { bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .silvinha__janela, .silvinha__msg.is-pensando span { animation: none; }
+}
+
+/* aviso de risco (painel): amarelo forte, para ser lido de verdade */
+.aviso-risco {
+  background: #FFF4CC; border-left: 4px solid var(--yellow); border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4); font-size: var(--fs-sm); line-height: 1.5; margin-bottom: var(--s-4);
+}

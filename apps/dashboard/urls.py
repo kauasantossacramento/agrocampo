@@ -11,6 +11,7 @@ urlpatterns = [
     path("pedidos/<str:numero>/aprovar/", views.aprovar, name="aprovar"),
     path("pedidos/<str:numero>/recusar/", views.recusar, name="recusar"),
     path("pedidos/<str:numero>/enviar/", views.enviar, name="enviar"),
+    path("itinerario/", views.itinerario, name="itinerario"),
     path("produtos/", views.produtos, name="produtos"),
     path("produtos/<int:produto_id>/salvar/", views.salvar_produto_rapido, name="salvar_produto"),
     path("produtos/limpar/", views.limpar_catalogo_view, name="limpar_catalogo"),
@@ -34,4 +35,7 @@ urlpatterns = [
     path("conteudo/<slug:slug>/<int:pk>/excluir/", views.gestao_excluir, name="gestao_excluir"),
     path("auditoria/<slug:tipo>/", views.auditoria, name="auditoria"),
     path("notificacoes/lidas/", views.marcar_notificacoes_lidas, name="notificacoes_lidas"),
+    path("whatsapp/status/", views.whatsapp_status, name="whatsapp_status"),
+    path("whatsapp/desconectar/", views.whatsapp_desconectar, name="whatsapp_desconectar"),
+    path("whatsapp/teste/", views.whatsapp_teste, name="whatsapp_teste"),
 ]
