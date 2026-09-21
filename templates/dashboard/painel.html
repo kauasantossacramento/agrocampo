@@ -72,21 +72,13 @@
         <div class="summary__row"><span>Pagamento</span><span>{{ selecionado.pagamento_atual.get_metodo_display|default:"—" }}</span></div>
 
         {% if selecionado.status == 'aguardando_aprovacao' %}
-          <div class="row" style="gap:var(--s-2);margin-top:var(--s-5)">
-            <form method="post" action="{% url 'dashboard:aprovar' selecionado.numero %}" style="flex:1">
-              {% csrf_token %}
-              <button type="submit" class="btn btn--block btn--sm" style="background:var(--green);color:#fff">
-                <svg width="14" height="14"><use href="#i-check"></use></svg>Aprovar
-              </button>
-            </form>
-            <form method="post" action="{% url 'dashboard:recusar' selecionado.numero %}" style="flex:1">
-              {% csrf_token %}
-              <input type="hidden" name="motivo" value="Produto sem estoque no momento da conferência">
-              <button type="submit" class="btn btn--ghost btn--block btn--sm" style="color:var(--red);border-color:var(--red)">
-                <svg width="14" height="14"><use href="#i-x"></use></svg>Sem estoque
-              </button>
-            </form>
-          </div>
+          {# pedido antigo: segue para o fluxo atual, sem aprovação #}
+          <form method="post" action="{% url 'dashboard:aprovar' selecionado.numero %}" style="margin-top:var(--s-5)">
+            {% csrf_token %}
+            <button type="submit" class="btn btn--dark btn--block btn--sm">
+              <svg width="14" height="14"><use href="#i-pacote"></use></svg>Enviar para separação
+            </button>
+          </form>
         {% elif selecionado.status == 'em_separacao' %}
           <form method="post" action="{% url 'dashboard:enviar' selecionado.numero %}" class="stack" style="margin-top:var(--s-5);gap:var(--s-2)">
             {% csrf_token %}

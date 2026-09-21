@@ -10,6 +10,7 @@ em paralelo para alimentar o PWA/app mobile.
 ---
 
 **Manual completo do sistema, com prints (computador e celular):** [`docs/manual/MANUAL.md`](docs/manual/MANUAL.md).
+**Apresentação em A4/PDF** para o lojista: [`docs/manual/apresentacao/AgroCampo-apresentacao.pdf`](docs/manual/apresentacao/AgroCampo-apresentacao.pdf).
 
 ---
 

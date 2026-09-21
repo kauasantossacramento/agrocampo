@@ -117,20 +117,19 @@
     {% endif %}
 
     <div class="card card--pad">
-      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Decisão</h3>
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Próximo passo</h3>
 
+      {% comment %}
+        Não há mais etapa de aprovação: pedido pago entra direto em separação.
+        Os poucos pedidos antigos que ficaram parados no status legado ganham um
+        botão para seguir o fluxo novo — sem "aprovar" nem "recusar".
+      {% endcomment %}
       {% if pedido.status == 'aguardando_aprovacao' %}
+        <p class="small muted">Pedido antigo, da época em que havia conferência manual.</p>
         <form method="post" action="{% url 'dashboard:aprovar' pedido.numero %}">
           {% csrf_token %}
-          <button type="submit" class="btn btn--block" style="background:var(--green);color:#fff" {% if faltantes %}disabled{% endif %}>
-            <svg width="15" height="15"><use href="#i-check"></use></svg>Aprovar e baixar estoque
-          </button>
-        </form>
-        <form method="post" action="{% url 'dashboard:recusar' pedido.numero %}" class="stack" style="margin-top:var(--s-3);gap:var(--s-2)">
-          {% csrf_token %}
-          <input type="text" name="motivo" value="Produto sem estoque no momento da conferência" aria-label="Motivo da recusa">
-          <button type="submit" class="btn btn--ghost btn--block" style="color:var(--red);border-color:var(--red)">
-            <svg width="15" height="15"><use href="#i-x"></use></svg>Recusar pedido
+          <button type="submit" class="btn btn--dark btn--block">
+            <svg width="15" height="15"><use href="#i-pacote"></use></svg>Enviar para separação
           </button>
         </form>
       {% elif pedido.status == 'em_separacao' %}

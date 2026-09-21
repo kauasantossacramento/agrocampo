@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>AgroCampo — Apresentação do sistema</title>
+<style>
+  /* ---------------------------------------------------------------- A4
+     Documento pensado para impressão: cada .folha é uma página A4 com
+     margem interna. Na tela ele aparece do mesmo jeito, uma folha embaixo
+     da outra, para conferir antes de exportar. */
+  @page { size: A4; margin: 0; }
+
+  :root {
+    --vermelho: #D62B20;
+    --vermelho-escuro: #A81F17;
+    --amarelo: #FFC72C;
+    --tinta: #221812;
+    --tinta-2: #4A3D33;
+    --cinza: #8A7C70;
+    --linha: rgba(42, 32, 25, .14);
+    --creme: #FFF8F0;
+    --creme-2: #FFF1E4;
+    --azul-ks: #1226E8;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #E9E4DE; }
+  body {
+    font-family: "Segoe UI", Inter, system-ui, sans-serif;
+    color: var(--tinta-2); font-size: 10.2pt; line-height: 1.5;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  .folha {
+    position: relative;
+    width: 210mm; min-height: 297mm; padding: 16mm 15mm 15mm;
+    margin: 0 auto 8mm; background: #fff; overflow: hidden;
+    page-break-after: always; break-after: page;
+  }
+  .folha:last-child { page-break-after: auto; break-after: auto; }
+
+  h1, h2, h3, h4 { font-family: Poppins, "Segoe UI", sans-serif; color: var(--tinta); margin: 0; }
+  h2 { font-size: 17pt; letter-spacing: -.01em; }
+  h3 { font-size: 12.5pt; margin-bottom: 2mm; }
+  h4 { font-size: 10.5pt; margin-bottom: 1.5mm; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+  li { margin-bottom: 1.2mm; }
+  strong { color: var(--tinta); }
+  code { background: var(--creme-2); padding: 0 1mm; border-radius: 2px; font-size: 9pt; }
+
+  /* -------------------------------------------------------- cabeçalhos */
+  .topo {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 6mm; padding-bottom: 3mm; margin-bottom: 6mm;
+    border-bottom: 2px solid var(--linha);
+  }
+  .topo img.agro { height: 11mm; }
+  .topo img.ks { height: 7mm; }
+  .topo .secao { font-family: Poppins, sans-serif; font-weight: 700; font-size: 9pt;
+    color: var(--vermelho); text-transform: uppercase; letter-spacing: .09em; }
+
+  .rodape {
+    position: absolute; left: 15mm; right: 15mm; bottom: 9mm;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 7.6pt; color: var(--cinza); border-top: 1px solid var(--linha); padding-top: 2.5mm;
+  }
+  .rodape b { color: var(--azul-ks); }
+
+  /* ------------------------------------------------------------- capa */
+  .capa { background: linear-gradient(150deg, var(--vermelho) 0%, var(--vermelho-escuro) 100%); color: #fff; }
+  .capa h1 { color: #fff; font-size: 30pt; line-height: 1.1; margin-bottom: 4mm; }
+  .capa .sub { font-size: 12pt; opacity: .93; max-width: 120mm; }
+  .capa .marca-agro { height: 26mm; margin-bottom: 12mm; filter: brightness(0) invert(1); }
+  .capa .faixa { height: 2.5mm; width: 46mm; background: var(--amarelo); border-radius: 2mm; margin: 7mm 0; }
+  .capa .dados { margin-top: 10mm; font-size: 10pt; line-height: 1.8; }
+  .capa .dados span { display: inline-block; min-width: 34mm; opacity: .78; }
+  .capa .assinatura {
+    position: absolute; left: 15mm; right: 15mm; bottom: 15mm;
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid rgba(255,255,255,.35); padding-top: 4mm;
+  }
+  .capa .assinatura img { height: 9mm; filter: brightness(0) invert(1); }
+  .capa .assinatura .txt { font-size: 8.6pt; opacity: .88; text-align: right; }
+
+  /* --------------------------------------------------------- elementos */
+  .chamada {
+    background: var(--creme); border-left: 3.5mm solid var(--amarelo);
+    border-radius: 0 2mm 2mm 0; padding: 3.5mm 4mm; margin: 0 0 5mm;
+  }
+  .chamada.risco { border-left-color: var(--vermelho); background: #FDEEEC; }
+  .chamada p:last-child { margin-bottom: 0; }
+
+  .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .grade-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+
+  .cartao { border: 1px solid var(--linha); border-radius: 2.5mm; padding: 3.5mm 4mm; background: #fff; }
+  .cartao h4 { display: flex; align-items: center; gap: 2mm; }
+  .cartao .num {
+    width: 6mm; height: 6mm; border-radius: 50%; background: var(--vermelho); color: #fff;
+    font-size: 8.5pt; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  }
+  .cartao p { font-size: 9.4pt; margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 4mm; font-size: 9.3pt; }
+  th, td { text-align: left; padding: 2mm 2.5mm; border-bottom: 1px solid var(--linha); vertical-align: top; }
+  th { background: var(--creme-2); color: var(--tinta); font-family: Poppins, sans-serif; font-size: 9pt; }
+
+  figure { margin: 0 0 4mm; }
+  figure img {
+    width: 100%; display: block; border: 1px solid var(--linha); border-radius: 2mm;
+    /* trava de segurança: nenhuma figura empurra a folha para a página seguinte */
+    max-height: 96mm; object-fit: cover; object-position: top;
+  }
+  .grade figure img, .grade-3 figure img { max-height: 62mm; }
+  figcaption { font-size: 8.4pt; color: var(--cinza); margin-top: 1.5mm; }
+  .print-celular { max-width: 62mm; margin: 0 auto; }
+  .print-celular img { border-radius: 3mm; }
+
+  .passos { counter-reset: passo; list-style: none; padding: 0; }
+  .passos li {
+    counter-increment: passo; position: relative; padding-left: 8mm; margin-bottom: 2.5mm;
+  }
+  .passos li::before {
+    content: counter(passo); position: absolute; left: 0; top: .2mm;
+    width: 5.5mm; height: 5.5mm; border-radius: 50%; background: var(--tinta); color: #fff;
+    font-size: 8pt; display: flex; align-items: center; justify-content: center;
+  }
+  .etiqueta {
+    display: inline-block; background: var(--amarelo); color: #3A2100; border-radius: 999px;
+    padding: .6mm 2.5mm; font-size: 8pt; font-weight: 700;
+  }
+  .etiqueta.cinza { background: var(--creme-2); color: var(--tinta-2); }
+
+  @media print { body { background: #fff; } .folha { margin: 0; box-shadow: none; } }
+  @media screen { .folha { box-shadow: 0 2mm 6mm rgba(0,0,0,.18); } }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ CAPA -->
+<section class="folha capa">
+  <img class="marca-agro" src="img/logo-agrocampo.png" alt="Veterinária AgroCampo">
+  <div class="faixa"></div>
+  <h1>Sistema de vendas<br>AgroCampo</h1>
+  <p class="sub">Loja virtual com entrega própria, assinaturas, atendimento por
+     WhatsApp e assistente com inteligência artificial — e um painel onde a loja
+     controla tudo sozinha, sem depender de programador.</p>
+
+  <div class="dados">
+    <div><span>Endereço</span> https://agrocampo.online</div>
+    <div><span>Painel da loja</span> https://agrocampo.online/painel/</div>
+    <div><span>Documento</span> Apresentação e guia do administrativo</div>
+    <div><span>Data</span> 21 de setembro de 2026</div>
+  </div>
+
+  <div class="assinatura">
+    <img src="img/dev-logo.png" alt="KS TEC — Soluções de Tecnologia">
+    <div class="txt">Desenvolvimento e suporte<br>kstec.online</div>
+  </div>
+</section>
+
+<!-- ================================================= O QUE É O SISTEMA -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">1 · O que o sistema faz</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>Uma loja que vende, entrega e cobra sozinha</h2>
+  <p>O cliente compra pelo celular ou pelo computador, paga por Pix ou cartão e o
+     pedido chega pronto na tela da loja — já separado por cidade e por dia de
+     viagem. A equipe não precisa digitar pedido, calcular frete nem lembrar de
+     cobrar assinatura: o sistema faz isso e avisa quando algo precisa de gente.</p>
+
+  <div class="grade-3" style="margin: 5mm 0 6mm">
+    <div class="cartao"><h4><span class="num">1</span> Vende</h4>
+      <p>Catálogo com linhas Ouro, Prata e Bronze, tamanhos por peso, promoções
+         com prazo, busca que sugere enquanto digita e compra em três passos.</p></div>
+    <div class="cartao"><h4><span class="num">2</span> Entrega</h4>
+      <p>Frete por cidade e por localidade (ilha, povoado), dia de viagem fixo,
+         data calculada na hora e a lista de entregas impressa para o carro.</p></div>
+    <div class="cartao"><h4><span class="num">3</span> Fideliza</h4>
+      <p>Assinatura que volta sozinha a cada 30, 60 ou 90 dias — cobrando o cartão
+         ou lembrando o cliente de pagar — e avisos por WhatsApp.</p></div>
+  </div>
+
+  <h3>Os números da operação, sem esforço</h3>
+  <table>
+    <tr><th style="width:38%">O que a loja ganha</th><th>Como aparece no dia a dia</th></tr>
+    <tr><td>Pedido sem retrabalho</td><td>O cliente monta o pedido; a loja só separa e entrega.</td></tr>
+    <tr><td>Frete correto</td><td>Cada cidade tem o seu valor; ilhas somam a travessia automaticamente.</td></tr>
+    <tr><td>Rota organizada</td><td>Itinerário agrupado por cidade, localidade e rua, com telefone de quem recebe.</td></tr>
+    <tr><td>Estoque confiável</td><td>Baixa na separação, alerta de estoque baixo e histórico de movimentos.</td></tr>
+    <tr><td>Cliente avisado</td><td>Notificação no site, e-mail e (quando ligado) WhatsApp em cada etapa.</td></tr>
+    <tr><td>Venda fora do horário</td><td>A assistente Silvinha atende, indica produto e fecha o pedido sozinha.</td></tr>
+  </table>
+
+  <div class="chamada">
+    <p><strong>Tudo é editável pela loja.</strong> Textos, fotos, banners, preços,
+       cidades, fretes, prazos, promoções e até a ordem das seções da página
+       inicial mudam pelo painel, na hora, sem precisar de programador.</p>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 2</span></div>
+</section>
+
+<!-- ============================================== TELA INICIAL (2 FORMATOS) -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">2 · A loja no computador e no celular</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>A mesma loja, nos dois formatos</h2>
+  <p>O site se ajusta ao aparelho: no computador as vitrines abrem em quatro
+     colunas; no celular tudo vira uma coluna, o menu vira gaveta e a busca fica
+     à mão. Foi testado de 320 px a 1440 px de largura, sem rolagem lateral.</p>
+
+  <div class="grade" style="grid-template-columns: 1.35fr 1fr; align-items: start">
+    <figure>
+      <img src="img/loja-home-desktop.png" alt="Página inicial no computador">
+      <figcaption>Computador — banner, faixa de garantias e vitrine “Maiores sucessos”.</figcaption>
+    </figure>
+    <figure class="print-celular">
+      <img src="img/loja-home-celular.png" alt="Página inicial no celular">
+      <figcaption>Celular — mesma página, uma coluna.</figcaption>
+    </figure>
+  </div>
+
+  <div class="grade" style="margin-top: 2mm">
+    <div>
+      <h3>O que a página inicial mostra</h3>
+      <ul>
+        <li><strong>Banner</strong> com fotos e vídeos que a loja sobe.</li>
+        <li><strong>Maiores sucessos</strong> — escolhidos pela loja, um a um ou por marca.</li>
+        <li><strong>Linhas Ouro, Prata e Bronze</strong>, cada uma com a sua vitrine.</li>
+        <li><strong>Promoções</strong> com data de início e fim.</li>
+        <li><strong>Navegue pelo seu animal</strong>, categorias, marcas e blog.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>A ordem é sua</h3>
+      <p>Em <strong>Configurações › Vitrines</strong> a loja arrasta as seções para
+         cima ou para baixo com setas. Seção sem conteúdo simplesmente não aparece
+         — nada de espaço vazio na página.</p>
+      <p><span class="etiqueta">Dica</span> comece pelos “Maiores sucessos”: é o
+         bloco que mais vende.</p>
+    </div>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 3</span></div>
+</section>
+
+<!-- ====================================================== COMPRA DO CLIENTE -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">3 · Como o cliente compra</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>Da vitrine ao pagamento em três passos</h2>
+
+  <div class="grade" style="grid-template-columns: 1.35fr 1fr; align-items: start">
+    <figure>
+      <img src="img/loja-produto-desktop.png" alt="Página do produto no computador">
+      <figcaption>Produto — tamanhos, assinatura opcional e cálculo de frete na mesma tela.</figcaption>
+    </figure>
+    <figure class="print-celular">
+      <img src="img/loja-checkout-entrega-celular.png" alt="Checkout no celular">
+      <figcaption>Entrega no celular — endereço, avisos e previsão.</figcaption>
+    </figure>
+  </div>
+
+  <ol class="passos" style="margin-top: 2mm">
+    <li><strong>Escolhe o produto.</strong> Vê preço, tamanhos (2 kg, 5 kg, 15 kg…),
+        estoque e fotos. Pode <em>adicionar ao carrinho</em> ou <em>comprar agora</em>,
+        que vai direto ao pagamento.</li>
+    <li><strong>Confere a entrega.</strong> Digita a cidade e vê na hora o frete, a
+        data prevista e os avisos (“entregamos às sextas”, “ilha tem acréscimo de
+        travessia”).</li>
+    <li><strong>Paga.</strong> Pix com desconto opcional ou cartão parcelado. Assim que
+        o pagamento é confirmado, o pedido entra <strong>direto em separação</strong> —
+        sem fila de aprovação.</li>
+  </ol>
+
+  <div class="chamada">
+    <p><strong>Faltou um item no estoque?</strong> O pedido não trava. A loja separa o que
+       tem, o sistema marca o pedido como <em>“falar com o cliente”</em> e um toque no
+       botão abre o WhatsApp com a mensagem pronta para combinar troca ou devolução.</p>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 4</span></div>
+</section>
+
+<!-- =============================================================== SILVINHA -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">4 · Silvinha, a atendente virtual</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>Uma vendedora que não dorme</h2>
+  <p>A Silvinha conversa com o cliente na página inicial e nas páginas de produto.
+     Ela só fala do que existe na loja: catálogo publicado, preço, estoque, cidades
+     atendidas e dias de entrega. Não inventa prazo, não dá diagnóstico veterinário
+     e manda para o WhatsApp o que não sabe responder.</p>
+
+  <div class="grade" style="grid-template-columns: 1fr 1fr; align-items: start">
+    <figure class="print-celular" style="max-width: 68mm">
+      <img src="img/loja-silvinha-produtos-celular.png" alt="Silvinha sugerindo produtos">
+      <figcaption>Ela responde e mostra os produtos com foto e preço.</figcaption>
+    </figure>
+    <div>
+      <h3>Ela também fecha a venda</h3>
+      <p>Quando o cliente diz que quer levar, aparece um cartão com foto, preço,
+         tamanho e quantidade e o botão <strong>Comprar agora</strong>. Se a pessoa ainda
+         não tem conta, o próprio chat cria o cadastro (nome, e-mail, WhatsApp e
+         senha), entra automaticamente e leva ao pagamento — tudo sem sair da conversa.</p>
+      <h3 style="margin-top:4mm">O que a loja controla</h3>
+      <ul>
+        <li>Ligar e desligar a assistente.</li>
+        <li>Nome e foto da personagem.</li>
+        <li>Primeira mensagem da conversa.</li>
+        <li>Orientações extras (“não prometa prazo fora da lista”).</li>
+      </ul>
+      <p><span class="etiqueta cinza">Onde</span> Painel › Configurações › Silvinha.</p>
+    </div>
+  </div>
+
+  <div class="chamada">
+    <p><strong>Quem confirma é sempre o cliente.</strong> A assistente apenas sugere; nada
+       entra no carrinho sem alguém tocar no botão. E as conversas ficam registradas
+       no painel — é a lista das dúvidas reais da sua clientela, de graça.</p>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 5</span></div>
+</section>
+
+<!-- ============================================== ADMINISTRATIVO: VISÃO GERAL -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">5 · O painel da loja</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>Onde a loja trabalha</h2>
+  <p>Entre em <strong>agrocampo.online/painel/</strong> com o e-mail e a senha da loja
+     (no site: menu da conta → <em>Painel do lojista</em>). O menu da esquerda tem tudo
+     e o sino avisa o que precisa de atenção.</p>
+
+  <figure style="margin-bottom:3mm">
+    <img src="img/painel-pedidos-desktop.png" alt="Painel de pedidos" style="max-height:52mm">
+    <figcaption>Tela inicial do painel — pedidos do dia, com busca e filtro por situação.</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:26%">Menu</th><th>Para que serve</th></tr>
+    <tr><td><strong>Pedidos</strong> · <strong>Métricas</strong></td><td>Ver, buscar, marcar como enviado e falar com o cliente (não há aprovação a fazer); e os números do período.</td></tr>
+    <tr><td><strong>Produtos</strong> · <strong>Estoque</strong></td><td>Cadastrar e editar (preço e estoque também direto na lista); ver o que está acabando e repor em um clique.</td></tr>
+    <tr><td><strong>Itinerário</strong> · <strong>Entrega</strong></td><td>A lista de entregas do dia, pronta para imprimir; cidades atendidas, ilhas e avisos.</td></tr>
+    <tr><td><strong>Conteúdo</strong></td><td>Banners, promoções, categorias, marcas, espécies, páginas e cupons.</td></tr>
+    <tr><td><strong>Assinaturas</strong> · <strong>Auditoria</strong></td><td>Quem assina o quê e as próximas entregas; e a trilha dos pagamentos, para conferir com o banco.</td></tr>
+    <tr><td><strong>Configurações</strong></td><td>Aparência, pagamentos, regras, entrega, vitrines, contato, WhatsApp e Silvinha.</td></tr>
+  </table>
+
+  <div class="grade" style="align-items:center; grid-template-columns: 44mm 1fr; gap:4mm">
+    <figure class="print-celular" style="max-width:44mm; margin:0">
+      <img src="img/painel-pedidos-celular.png" alt="Painel no celular" style="max-height:58mm">
+    </figure>
+    <div>
+      <h3>Funciona no balcão</h3>
+      <p>No celular as tabelas viram cartões e os botões ficam do tamanho do dedo:
+         dá para conferir um pedido, repor estoque ou chamar o cliente no WhatsApp
+         de pé, no atendimento.</p>
+      <p style="margin-bottom:0"><span class="etiqueta">Importante</span> o painel é a
+         única tela de administração que a equipe precisa.</p>
+    </div>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 6</span></div>
+</section>
+
+<!-- ======================================================= PEDIDO E ENTREGA -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">6 · Rotina: do pedido à entrega</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>O caminho de um pedido</h2>
+  <ol class="passos">
+    <li><strong>Chega o pedido.</strong> O sino avisa e ele aparece em <em>Pedidos</em> já pago
+        e <em>Em separação</em> — <strong>não existe etapa de aprovação</strong>: quem pagou, comprou.</li>
+    <li><strong>Separe.</strong> Abra o pedido e confira os itens. Se algum faltar, o
+        pedido vem marcado em amarelo: clique em <em>Chamar no WhatsApp</em>.</li>
+    <li><strong>Monte a rota.</strong> Vá em <em>Itinerário</em>, escolha a cidade e
+        imprima a folha do entregador.</li>
+    <li><strong>Marque como enviado.</strong> No pedido, botão <em>Enviar</em> (com código de
+        rastreio, se houver). O cliente é avisado na hora.</li>
+  </ol>
+
+  <figure style="margin-bottom:3mm">
+    <img src="img/painel-pedido-detalhe-desktop.png" alt="Detalhe do pedido no painel" style="max-height:58mm">
+    <figcaption>Dentro do pedido: itens, pagamento, endereço, linha do tempo e os botões de ação.</figcaption>
+  </figure>
+
+  <figure style="margin-bottom:0">
+    <img src="img/painel-itinerario-desktop.png" alt="Itinerário de entrega" style="max-height:58mm">
+    <figcaption>Itinerário — agrupado por cidade e localidade, com quem recebe, telefone,
+      endereço e itens. O botão <strong>Imprimir</strong> gera a folha em A4 para o carro.</figcaption>
+  </figure>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 7</span></div>
+</section>
+
+<!-- =============================================================== PRODUTOS -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">7 · Cadastrar produtos</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>Produtos, preços e estoque</h2>
+  <p>Em <strong>Produtos</strong> a lista permite mudar <em>preço</em>, <em>estoque</em>,
+     <em>no ar</em> e <em>sucesso</em> na própria linha — útil para o acerto rápido do dia.
+     O lápis abre a ficha completa.</p>
+
+  <figure>
+    <img src="img/painel-produtos-desktop.png" alt="Lista de produtos">
+    <figcaption>Edição rápida: altere e clique em <strong>Salvar</strong> na mesma linha.</figcaption>
+  </figure>
+
+  <div class="grade" style="grid-template-columns: 1.15fr 1fr; align-items:start">
+    <figure>
+      <img src="img/painel-produto-editar-desktop.png" alt="Ficha do produto">
+      <figcaption>Ficha completa, em passos.</figcaption>
+    </figure>
+    <div>
+      <h3>O que preencher</h3>
+      <ul>
+        <li><strong>Nome, categoria e marca</strong> — o código (SKU) é opcional.</li>
+        <li><strong>Linha</strong>: Ouro, Prata ou Bronze (define a vitrine na página inicial).</li>
+        <li><strong>Preço</strong> e, se quiser, <strong>preço promocional com prazo</strong>.</li>
+        <li><strong>Tamanhos</strong>: 2 kg, 500 g… cada um com preço, estoque e foto.</li>
+        <li><strong>Assinatura</strong>: permitir que o cliente receba de novo sozinho.</li>
+        <li><strong>Fotos</strong>, <strong>benefícios</strong>, <strong>Maior sucesso</strong> e <strong>Lançamento</strong>.</li>
+      </ul>
+      <p><span class="etiqueta">Atalho</span> para destacar uma marca inteira, marque
+         <em>“todos os produtos desta marca em Maiores sucessos”</em> no cadastro da marca.</p>
+    </div>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 8</span></div>
+</section>
+
+<!-- ================================================================ ENTREGA -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">8 · Cidades, frete e prazo</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>A loja decide onde e quando entrega</h2>
+  <p>Nada de tabela dos Correios: você cadastra as cidades que atende, o valor do
+     frete e <strong>o dia em que o carro viaja</strong>. O site calcula a data sozinho e
+     mostra ao cliente antes de ele pagar.</p>
+
+  <figure>
+    <img src="img/painel-conteudo-cidades-desktop.png" alt="Cidades atendidas">
+    <figcaption>Entrega › Cidades atendidas — uma linha por cidade.</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:34%">Campo</th><th>O que significa</th></tr>
+    <tr><td>Frete</td><td>Valor cobrado. Zero = entrega grátis nessa cidade.</td></tr>
+    <tr><td>Frete grátis acima de</td><td>Vazio usa a regra geral da loja; 0 desliga o frete grátis ali.</td></tr>
+    <tr><td><strong>Dias de viagem</strong></td><td>Os dias em que o carro vai. Ex.: só sexta-feira.</td></tr>
+    <tr><td><strong>Antecedência</strong></td><td>0 = pode sair no mesmo dia; 1 = a partir do dia seguinte.</td></tr>
+    <tr><td>Observação / Cidade sede</td><td>Frase que o cliente lê no fechamento; e qual é a cidade da loja.</td></tr>
+  </table>
+
+  <div class="chamada">
+    <p><strong>Como a data é calculada.</strong> Pedido pago depois da <em>hora de corte</em>
+       (Configurações › Entrega, normalmente 14h) conta como do dia seguinte; soma-se a
+       antecedência da cidade; a data cai no próximo <em>dia de viagem</em>. Ilha ou povoado
+       soma o acréscimo e os dias extras.</p>
+    <p style="margin-top:2mm"><strong>Exemplo real:</strong> Valença/BA — frete grátis, viagem
+       só às sextas. Pedido na segunda → entrega na sexta da mesma semana.</p>
+  </div>
+
+  <p><strong>Ilhas e localidades:</strong> cadastre lugares que custam mais (travessia de barco,
+     povoado distante) com um acréscimo em cima do frete da cidade. <strong>Avisos de entrega:</strong>
+     recados que aparecem no carrinho, no endereço ou no pagamento.</p>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 9</span></div>
+</section>
+
+<!-- =============================================================== CONTEÚDO -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">9 · Banners e promoções</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>A vitrine muda quando você quiser</h2>
+
+  <figure style="margin-bottom:3mm">
+    <img src="img/painel-conteudo-banners-desktop.png" alt="Banners da home" style="max-height:52mm">
+    <figcaption>Conteúdo › Banners — cada linha é um cartaz ou vídeo da página inicial.</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:38%">Posição</th><th>Onde aparece</th></tr>
+    <tr><td><strong>Carrossel principal</strong></td><td>Cartaz largo (formato 16×5, ex.: 1600×500 px) no topo, com link.</td></tr>
+    <tr><td><strong>Vídeo ou foto de apresentação</strong></td><td>Entra no mesmo carrossel; bom para vídeo da loja.</td></tr>
+    <tr><td><strong>Oferta em destaque</strong></td><td>Cartazes no meio da página: 1 ocupa a largura toda, 2 ficam lado a lado.</td></tr>
+    <tr><td><strong>Faixa de produtos</strong></td><td>Fita de fotos de produtos, cada uma levando à sua página.</td></tr>
+  </table>
+
+  <p>Para tirar um banner do ar <strong>não apague</strong>: desmarque <em>publicado</em> — ele
+     volta quando você quiser, sem subir a arte de novo.</p>
+
+  <figure style="margin-bottom:3mm">
+    <img src="img/painel-conteudo-promocoes-desktop.png" alt="Promoções em destaque" style="max-height:48mm">
+    <figcaption>Promoções em destaque — com data de início e fim.</figcaption>
+  </figure>
+
+  <div class="chamada">
+    <p><strong>Promoção que se apaga sozinha.</strong> Preencha título, texto, imagem (ou
+       escolha um produto), a data de início e a de fim, e diga <em>depois de qual seção</em>
+       ela aparece. Terminado o prazo, o bloco some da página sem ninguém precisar lembrar.</p>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 10</span></div>
+</section>
+
+<!-- =========================================================== CONFIGURAÇÕES -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">10 · Configurações</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>O painel de controle da loja</h2>
+  <p>Cada aba guarda um assunto. Mexeu, clique em <strong>Salvar</strong> — a loja muda na hora.</p>
+
+  <div class="grade" style="align-items:start">
+    <figure><img src="img/painel-config-aparencia-desktop.png" alt="Aparência">
+      <figcaption><strong>Aparência</strong> — logo, capa, estilo da página inicial.</figcaption></figure>
+    <figure><img src="img/painel-config-entrega-desktop.png" alt="Entrega">
+      <figcaption><strong>Entrega</strong> — horário, hora de corte e balão do WhatsApp.</figcaption></figure>
+  </div>
+
+  <div class="grade" style="align-items:start">
+    <figure><img src="img/painel-config-vitrines-desktop.png" alt="Vitrines">
+      <figcaption><strong>Vitrines</strong> — linhas e ordem das seções.</figcaption></figure>
+    <figure><img src="img/painel-config-silvinha-desktop.png" alt="Silvinha">
+      <figcaption><strong>Silvinha</strong> — nome, foto, mensagens e chave da IA.</figcaption></figure>
+  </div>
+
+  <table style="margin-top:2mm">
+    <tr><th style="width:30%">Aba</th><th>Use quando precisar…</th></tr>
+    <tr><td>Pagamentos</td><td>…cadastrar as credenciais do banco (Stone) e as parcelas sem juros.</td></tr>
+    <tr><td>Regras da loja</td><td>…mudar frete padrão, frete grátis, desconto no Pix ou esconder a assinatura.</td></tr>
+    <tr><td>Contato</td><td>…atualizar telefone, WhatsApp, endereço, horário e redes sociais.</td></tr>
+    <tr><td>WhatsApp</td><td>…ligar os avisos automáticos (página seguinte).</td></tr>
+  </table>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 11</span></div>
+</section>
+
+<!-- ========================================================= WHATSAPP + ASSIN -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">11 · WhatsApp e assinaturas</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>Avisos automáticos pelo WhatsApp</h2>
+  <p>O sistema pode mandar sozinho: <em>pedido confirmado</em>, <em>item em falta</em>,
+     <em>saiu para entrega</em> e os avisos de assinatura — só para quem autorizou contato
+     no cadastro.</p>
+
+  <div class="grade" style="grid-template-columns: 1.2fr 1fr; align-items:start">
+    <figure><img src="img/painel-config-whatsapp-desktop.png" alt="Aba WhatsApp">
+      <figcaption>Configurações › WhatsApp: leia o QR Code, teste e ligue o interruptor.</figcaption></figure>
+    <div>
+      <h3>Como ligar</h3>
+      <ol class="passos">
+        <li>Abra a aba <strong>WhatsApp</strong> no painel.</li>
+        <li>No celular da loja: WhatsApp → Aparelhos conectados → <strong>Conectar aparelho</strong>.</li>
+        <li>Leia o QR Code da tela e espere aparecer <em>Conectado</em>.</li>
+        <li>Faça um <strong>envio de teste</strong> para o seu número.</li>
+        <li>Marque <em>Enviar os avisos automaticamente</em> e salve.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="chamada risco">
+    <p><strong>Leia antes de ligar.</strong> O envio automático usa o WhatsApp Web controlado
+       pelo servidor — não é o serviço oficial da Meta. Isso contraria as regras do
+       WhatsApp e <strong>o número usado pode ser bloqueado</strong>. Use um chip só da loja,
+       nunca o número pessoal. Com o recurso desligado, o botão “Chamar no WhatsApp”
+       continua funcionando normalmente.</p>
+  </div>
+
+  <h2 style="margin-top:6mm">Assinaturas</h2>
+  <p>O cliente marca a assinatura na página do produto (30, 60 ou 90 dias). Todo dia
+     de manhã o sistema cuida delas sozinho:</p>
+  <table>
+    <tr><th style="width:34%">Situação</th><th>O que o sistema faz</th></tr>
+    <tr><td>Dois dias antes</td><td>Avisa o cliente que a assinatura vai renovar.</td></tr>
+    <tr><td>Na data, com cartão salvo</td><td>Cobra o cartão e gera o pedido já em separação.</td></tr>
+    <tr><td>Na data, sem cartão</td><td>Cria o pedido aguardando pagamento e manda o link para pagar.</td></tr>
+    <tr><td>Cartão recusado</td><td>Tenta de novo em 3 dias; após 3 falhas, cancela e avisa.</td></tr>
+  </table>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 12</span></div>
+</section>
+
+<!-- ============================================================ DIA A DIA -->
+<section class="folha">
+  <header class="topo">
+    <img class="agro" src="img/logo-agrocampo.png" alt="AgroCampo">
+    <span class="secao">12 · Rotina e suporte</span>
+    <img class="ks" src="img/dev-logo.png" alt="KS TEC">
+  </header>
+
+  <h2>Rotina sugerida</h2>
+  <div class="grade-3" style="margin-bottom:5mm">
+    <div class="cartao"><h4>Todo dia, de manhã</h4>
+      <p>Abrir <em>Pedidos</em>, separar o que entrou, olhar o sino e repor o que o
+         <em>Estoque</em> apontar em vermelho.</p></div>
+    <div class="cartao"><h4>No dia da viagem</h4>
+      <p>Abrir <em>Itinerário</em>, escolher a cidade, imprimir e marcar os pedidos como
+         enviados ao voltar.</p></div>
+    <div class="cartao"><h4>Toda semana</h4>
+      <p>Trocar o banner, revisar promoções com prazo vencendo e conferir as
+         <em>Métricas</em> da semana.</p></div>
+  </div>
+
+  <div class="grade" style="align-items:start">
+    <figure><img src="img/painel-estoque-desktop.png" alt="Estoque">
+      <figcaption>Estoque — o que está acabando, com reposição em um clique.</figcaption></figure>
+    <figure><img src="img/painel-metricas-desktop.png" alt="Métricas">
+      <figcaption>Métricas — vendas, ticket médio e mais vendidos.</figcaption></figure>
+  </div>
+
+  <h2 style="margin-top:4mm">Dúvidas rápidas</h2>
+  <table>
+    <tr><th style="width:44%">Situação</th><th>O que fazer</th></tr>
+    <tr><td>O banner não aparece na página inicial</td><td>Confira se está <em>publicado</em> e se o carrossel está ligado em Aparência.</td></tr>
+    <tr><td>Uma seção sumiu</td><td>Ela só aparece com conteúdo (produto na linha, promoção no prazo, post no blog).</td></tr>
+    <tr><td>O cliente não vê frete nem prazo</td><td>Falta cadastrar a cidade em Entrega › Cidades atendidas.</td></tr>
+    <tr><td>Quero tirar um produto do ar</td><td>Desmarque <em>no ar</em> na lista de produtos — o histórico de vendas fica preservado.</td></tr>
+    <tr><td>Esqueci a senha</td><td>Peça a redefinição na tela de entrar ou fale com o suporte.</td></tr>
+  </table>
+
+  <div class="chamada" style="margin-top:4mm">
+    <p><strong>Precisa de algo que o painel não faz?</strong> Fale com o suporte
+       <strong>KS TEC</strong>. Ajustes no sistema, novos recursos e manutenção do servidor
+       são conosco — a loja cuida do que vende.</p>
+  </div>
+
+  <div class="rodape"><span>AgroCampo · Apresentação do sistema</span><span>Desenvolvido por <b>KS TEC</b> · página 13</span></div>
+</section>
+
+<!-- ============================================================= CONTRACAPA -->
+<section class="folha" style="background: var(--creme); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center">
+  <img src="img/logo-agrocampo.png" alt="AgroCampo" style="height: 22mm; margin-bottom: 8mm">
+  <h2 style="font-size:20pt; max-width:130mm">Sua loja aberta 24 horas, com a rua toda organizada.</h2>
+  <p style="max-width: 120mm; margin-top: 4mm">
+    Este documento resume o sistema entregue. O manual completo, com todas as telas
+    passo a passo, está em <code>docs/manual/MANUAL.md</code>.</p>
+
+  <div style="margin-top: 14mm; padding-top: 8mm; border-top: 1px solid var(--linha); width: 110mm">
+    <img src="img/dev-logo.png" alt="KS TEC" style="height: 13mm">
+    <p style="margin-top: 4mm; font-size: 9.6pt">
+      Desenvolvimento, hospedagem e suporte<br>
+      <strong>kstec.online</strong>
+    </p>
+  </div>
+</section>
+
+</body>
+</html>

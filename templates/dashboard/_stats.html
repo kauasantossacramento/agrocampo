@@ -6,9 +6,11 @@
     <p class="stat__foot">{{ metricas.pedidos_hoje }} pedido{{ metricas.pedidos_hoje|pluralize }} pago{{ metricas.pedidos_hoje|pluralize }}</p>
   </div>
   <div class="stat">
-    <p class="stat__label">Aguardando aprovação</p>
-    <p class="stat__value stat__value--amber">{{ metricas.pendentes }}</p>
-    <p class="stat__foot">precisam da sua conferência</p>
+    <p class="stat__label">Em separação</p>
+    <p class="stat__value stat__value--amber">{{ metricas.em_separacao }}</p>
+    <p class="stat__foot">
+      {% if metricas.contato_pendente %}{{ metricas.contato_pendente }} para falar com o cliente{% else %}nenhum item em falta{% endif %}
+    </p>
   </div>
   <div class="stat">
     <p class="stat__label">Ticket médio</p>

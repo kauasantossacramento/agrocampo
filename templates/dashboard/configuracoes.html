@@ -167,7 +167,7 @@
     <span>
       {% if provedor.driver == 'simulado' %}
         <strong>Modo simulado.</strong> A loja processa pagamentos de forma fictícia —
-        pedido, aprovação e estorno funcionam, mas nenhum dinheiro é movimentado.
+        pedido, separação e estorno funcionam, mas nenhum dinheiro é movimentado.
         Preencha a API Key e o Merchant ID e troque o driver para <em>Stone</em>.
       {% elif provedor.credenciais_completas %}
         <strong>Conectado à Stone</strong> · ambiente {{ provedor.get_ambiente_display }}.

@@ -57,7 +57,11 @@ def _metricas():
     return {
         "vendas_hoje": pagos_hoje.aggregate(t=Sum("total"))["t"] or 0,
         "pedidos_hoje": pagos_hoje.count(),
-        "pendentes": Pedido.objects.aguardando_aprovacao().count(),
+        # o que realmente pede gente hoje: pedido com item em falta
+        "contato_pendente": Pedido.objects.filter(
+            contato_pendente=True, status__in=Pedido.STATUS_ABERTOS
+        ).count(),
+        "em_separacao": Pedido.objects.filter(status=Pedido.Status.EM_SEPARACAO).count(),
         "ticket_medio": faturados.aggregate(t=Avg("total"))["t"] or 0,
         "assinaturas_ativas": Assinatura.objects.filter(
             status=Assinatura.Status.ATIVA
@@ -79,7 +83,10 @@ def painel(request):
     selecionado = (
         Pedido.objects.filter(numero=numero).first()
         if numero
-        else Pedido.objects.aguardando_aprovacao().first() or (pedidos[0] if pedidos else None)
+        else (
+            Pedido.objects.filter(contato_pendente=True, status__in=Pedido.STATUS_ABERTOS).first()
+            or (pedidos[0] if pedidos else None)
+        )
     )
     return render(
         request,

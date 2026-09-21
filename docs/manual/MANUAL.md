@@ -220,8 +220,9 @@ cliente, estoque baixo).
 
 Lista com busca, filtro por status e os números do dia. Cada pedido abre com itens,
 pagamento, linha do tempo, endereço e as ações: **marcar como enviado** (com rastreio
-opcional), **Chamar no WhatsApp** (abre a conversa com o texto do pedido pronto) e,
-para pedidos antigos, aprovar/recusar.
+opcional) e **Chamar no WhatsApp** (abre a conversa com o texto do pedido pronto).
+**Não existe etapa de aprovação** — pedido pago entra direto em separação; os poucos
+pedidos antigos que ficaram parados foram liberados para o fluxo atual.
 
 ![Pedidos](prints/painel-pedidos-desktop.png)
 ![Pedidos no celular](prints/painel-pedidos-celular.png)
@@ -464,6 +465,11 @@ o suporte atualiza o serviço.
 ---
 
 ## 17. Índice dos prints
+
+> Há também uma **apresentação em A4/PDF** para imprimir ou enviar ao lojista:
+> [`apresentacao/AgroCampo-apresentacao.pdf`](apresentacao/AgroCampo-apresentacao.pdf)
+> (14 páginas, com as marcas AgroCampo e KS TEC).
+
 
 | Arquivo | O que mostra |
 |---|---|

@@ -14,10 +14,8 @@ from apps.cart.models import Carrinho
 from apps.catalog.models import Produto
 from apps.orders.models import Pedido
 from apps.orders.services import (
-    aprovar_pedido,
     criar_pedido_do_carrinho,
     marcar_enviado,
-    recusar_pedido,
 )
 from apps.payments.services import cobrar_cartao, cobrar_pix
 
@@ -47,38 +45,44 @@ class Command(BaseCommand):
 
         random.seed(42)  # cenário reproduzível
 
-        # 1) aguardando aprovação, pago via Pix
+        # Não existe mais etapa de aprovação: pedido pago entra em separação.
+        # 1) pago no Pix, já em separação
         pedido = self._pedido(cliente, random.sample(produtos, 2))
         pagamento = cobrar_pix(pedido)
         pagamento.marcar_pago(pagamento.referencia_externa, "Pix confirmado (demo).")
         from apps.payments.services import _confirmar_pedido
 
         _confirmar_pedido(pedido, pagamento)
-        self.stdout.write(f"  {pedido.numero} · aguardando aprovação (Pix)")
+        self.stdout.write(f"  {pedido.numero} · em separação (Pix)")
 
-        # 2) aguardando aprovação, pago no cartão
+        # 2) pago no cartão parcelado, em separação
         pedido = self._pedido(cliente, random.sample(produtos, 1))
         cobrar_cartao(pedido, CARTAO, parcelas=3)
-        self.stdout.write(f"  {pedido.numero} · aguardando aprovação (cartão 3x)")
+        self.stdout.write(f"  {pedido.numero} · em separação (cartão 3x)")
 
-        # 3) aprovado e em separação
+        # 3) em separação com item em falta — o caso de "falar com o cliente"
         pedido = self._pedido(cliente, random.sample(produtos, 2))
         cobrar_cartao(pedido, CARTAO)
-        aprovar_pedido(pedido, lojista)
-        self.stdout.write(f"  {pedido.numero} · em separação")
+        pedido.refresh_from_db()
+        pedido.contato_pendente = True
+        pedido.itens_em_falta = "; ".join(
+            f"{i.descricao_completa} (pedido {i.quantidade}, disponível 0)"
+            for i in pedido.itens.all()[:1]
+        )
+        pedido.save(update_fields=["contato_pendente", "itens_em_falta"])
+        self.stdout.write(f"  {pedido.numero} · em separação, falar com o cliente")
 
         # 4) enviado
         pedido = self._pedido(cliente, random.sample(produtos, 1))
         cobrar_cartao(pedido, CARTAO)
-        aprovar_pedido(pedido, lojista)
+        pedido.refresh_from_db()
         marcar_enviado(pedido, lojista, "BR123456789AG")
         self.stdout.write(f"  {pedido.numero} · enviado")
 
-        # 5) recusado por falta de estoque (habilita sugestões + estorno)
+        # 5) aguardando pagamento (o cliente ainda não pagou)
         pedido = self._pedido(cliente, random.sample(produtos, 1))
-        cobrar_cartao(pedido, CARTAO)
-        recusar_pedido(pedido, lojista, "Produto sem estoque no momento da conferência")
-        self.stdout.write(f"  {pedido.numero} · recusado (com opção de estorno)")
+        pedido.mudar_status(pedido.Status.AGUARDANDO_PAGAMENTO)
+        self.stdout.write(f"  {pedido.numero} · aguardando pagamento")
 
         self.stdout.write(self.style.SUCCESS("\nPedidos de demonstração criados."))
         self.stdout.write("Painel: http://127.0.0.1:8000/painel/")
