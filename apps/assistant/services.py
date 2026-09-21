@@ -19,7 +19,7 @@ from . import gemini
 from .models import ConversaAssistente
 
 MAX_HISTORICO = 8         # mensagens anteriores que vão para o modelo
-ACAO_COMPRAR = re.compile(r"\[\[\s*COMPRAR\s+codigo=([\w-]+)\s+qtd=(\d+)\s*\]\]", re.I)
+ACAO_COMPRAR = re.compile(r"\[\[\s*COMPRAR\s+codigo=([\w-]+)\s+qtd=(\d+)(?:\s+assinar=(\d+))?\s*\]\]", re.I)
 MAX_PRODUTOS = 8          # produtos por resposta no contexto
 LIMITE_POR_HORA = 40      # perguntas por sessão/hora — segura custo e abuso
 PALAVRAS_IGNORADAS = {
@@ -98,6 +98,8 @@ def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
         "assim que estiver claro, termine a resposta com uma linha exatamente neste "
         "formato, usando o codigo do produto: [[COMPRAR codigo=<codigo> qtd=<numero>]]. "
         "Só use essa linha para produtos em estoque listados aqui. Não invente códigos. "
+        "Se o cliente quiser ASSINAR (receber de novo a cada 30, 60 ou 90 dias) um produto "
+        "marcado como 'assinatura', acrescente assinar=<dias> na mesma linha. "
         "Diga em uma frase que o botão de compra vai aparecer na conversa.",
     ]
 
@@ -213,9 +215,13 @@ def extrair_acao(texto: str):
     if not produto or not produto.em_estoque:
         return limpo, None
     qtd = max(1, min(int(m.group(2)), 50))
+    assinar = int(m.group(3)) if m.group(3) else 0
+    if assinar not in (30, 60, 90) or not produto.permite_assinatura or not SiteConfig.load().assinatura_visivel:
+        assinar = 0
     foto = produto.foto_principal
     return limpo, {
         "tipo": "comprar",
+        "assinar": assinar,
         "produto": {
             "slug": produto.slug, "nome": produto.nome,
             "preco": f"R$ {produto.preco_atual:.2f}".replace(".", ","),

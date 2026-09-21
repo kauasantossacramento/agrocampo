@@ -131,12 +131,15 @@ def acao(request):
         disponivel = variacao.estoque if variacao else produto.estoque
         if disponivel < quantidade:
             return JsonResponse({"ok": False, "erro": f"Só temos {max(disponivel, 0)} em estoque."})
+        assinar = int(dados.get("assinar") or 0)
+        recorrente = assinar in (30, 60, 90) and produto.permite_assinatura and config.assinatura_visivel
         carrinho = obter_carrinho(request)
-        carrinho.adicionar(produto, quantidade, False, None, variacao=variacao)
+        carrinho.adicionar(produto, quantidade, recorrente, assinar if recorrente else None, variacao=variacao)
+        como = f"assinatura a cada {assinar} dias" if recorrente else "no carrinho"
         return JsonResponse({
             "ok": True, "checkout": reverse("cart:checkout"),
             "quantidade_carrinho": carrinho.quantidade_itens,
-            "mensagem": f"{quantidade}x {produto.nome} no carrinho. Vamos para a entrega e o pagamento.",
+            "mensagem": f"{quantidade}x {produto.nome} ({como}). Vamos para a entrega e o pagamento.",
         })
 
     return JsonResponse({"erro": "Ação desconhecida."}, status=400)

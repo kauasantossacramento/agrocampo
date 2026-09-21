@@ -58,6 +58,7 @@
       + (p.foto ? '<img src="' + esc(p.foto) + '" alt="">' : '')
       + '<div><strong>' + esc(p.nome) + '</strong><span class="silvinha__compra-preco">' + esc(p.preco) + '</span></div></div>'
       + variacoes
+      + (acao.assinar ? '<label class="silvinha__campo"><span>Assinatura</span><select data-compra-assinar><option value="' + acao.assinar + '">a cada ' + acao.assinar + ' dias</option><option value="0">compra única</option></select></label>' : '')
       + '<label class="silvinha__campo"><span>Quantidade</span>'
       + '<span class="silvinha__qtd"><button type="button" data-qtd="-1">−</button><input type="number" min="1" max="50" value="' + acao.quantidade + '" data-compra-qtd><button type="button" data-qtd="1">+</button></span></label>'
       + '<button type="button" class="btn btn--primary silvinha__compra-btn" data-compra-confirmar>Comprar agora</button>'
@@ -75,11 +76,12 @@
     const status = el.querySelector('[data-compra-status]');
     const botao = el.querySelector('[data-compra-confirmar]');
     const variacao = el.querySelector('[data-compra-variacao]');
+    const assinar = el.querySelector('[data-compra-assinar]');
     const quantidade = parseInt(el.querySelector('[data-compra-qtd]').value, 10) || 1;
     if (!logado) { formularioAcesso(el, () => comprar(el, slug)); return; }
     botao.disabled = true; status.textContent = 'Adicionando…';
     try {
-      const d = await postar({ tipo: 'comprar', produto: slug, quantidade, variacao: variacao ? variacao.value : '' });
+      const d = await postar({ tipo: 'comprar', produto: slug, quantidade, variacao: variacao ? variacao.value : '', assinar: assinar ? assinar.value : 0 });
       if (d.precisa_login) { logado = false; botao.disabled = false; formularioAcesso(el, () => comprar(el, slug)); return; }
       if (!d.ok) { status.textContent = d.erro || 'Não consegui adicionar.'; botao.disabled = false; return; }
       const contador = document.querySelector('[data-cart-count]');

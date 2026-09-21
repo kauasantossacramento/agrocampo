@@ -1,7 +1,9 @@
 # Chaves SSH de deploy
 
 Esta pasta guarda as chaves privadas usadas para publicar no servidor.
-**Nada aqui entra no Git** — o repositório é público.
+**Nenhuma chave privada entra no Git** — o repositório é público. A chave
+**pública** (`.pub`) pode ser versionada: ela só serve para autorizar, não
+para entrar.
 
 Duas camadas protegem isso:
 
