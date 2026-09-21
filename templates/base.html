@@ -20,7 +20,7 @@
   <link rel="icon" href="{% static 'img/logo-agrocampo-compacto.png' %}">
   {% block head %}{% endblock %}
 </head>
-<body>
+<body class="tema-{{ site.layout_home }}">
   {% include 'partials/icons.html' %}
 
   {% block header %}{% include 'partials/header.html' %}{% endblock %}

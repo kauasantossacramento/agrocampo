@@ -44,11 +44,21 @@ def home(request):
         if itens:
             vitrines.append({**config_vitrine, "produtos": itens})
 
+    template = (
+        "core/home_vitrine.html"
+        if config.layout_home == SiteConfig.LayoutHome.VITRINE
+        else "core/home.html"
+    )
     return render(
         request,
-        "core/home.html",
+        template,
         {
             "mostrar_assistente": True,
+            # quatro banners menores, "ofertas em destaque" do estilo vitrine
+            "banners_secundarios": [
+                b for b in Banner.objects.publicados()
+                .filter(posicao=Banner.Posicao.SECUNDARIO)[:8] if b.imagem
+            ][:4],
             "vitrines_linha": vitrines,
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
             # com apresentação cadastrada ela assume o topo; sem ela, o hero

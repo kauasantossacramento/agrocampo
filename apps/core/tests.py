@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.catalog.models import Categoria, Produto
+from apps.core.models import Banner, SiteConfig
 from apps.orders.models import ItemPedido, Pedido
 
 User = get_user_model()
@@ -767,6 +768,10 @@ class BannerDeApresentacaoTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # este conjunto valida o desenho clássico da home
+        config = SiteConfig.load()
+        config.layout_home = SiteConfig.LayoutHome.CLASSICO
+        config.save()
         from apps.core.models import Banner
 
         cls.Banner = Banner
@@ -987,7 +992,10 @@ class OrdemDasVitrinesTests(TestCase):
         html = self.client.get(reverse("core:home")).content.decode()
 
         ouro = html.index("Linha Ouro")
-        geral = html.index("O que sai todo dia da nossa loja")
+        # o texto do bloco geral muda conforme o estilo da home
+        geral = html.index(
+            "O que sai todo dia da nossa loja" if "O que sai todo dia" in html else "Maiores sucessos"
+        )
 
         self.assertLess(ouro, geral)
 
@@ -1176,3 +1184,86 @@ class LimiteDeArquivoTests(TestCase):
         achado = re.search(r"client_max_body_size\s+(\d+)M", conf)
         self.assertIsNotNone(achado, "client_max_body_size ausente")
         self.assertGreater(int(achado.group(1)), LIMITE_VIDEO_MB)
+
+
+
+class EstiloDaHomeTests(TestCase):
+    """Dois desenhos convivem; o lojista alterna pelo painel e nada se perde."""
+
+    def setUp(self):
+        from django.core.management import call_command
+
+        call_command("seed", verbosity=0)
+        from apps.accounts.models import User
+
+        self.lojista = User.objects.create_user(
+            email="loja@exemplo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def _config(self, **campos):
+        config = SiteConfig.load()
+        for k, v in campos.items():
+            setattr(config, k, v)
+        config.save()
+        return config
+
+    def test_vitrine_e_o_padrao_e_traz_a_estrutura_nova(self):
+        self.assertEqual(SiteConfig.load().layout_home, SiteConfig.LayoutHome.VITRINE)
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "core/home_vitrine.html")
+        self.assertContains(r, 'class="tema-vitrine"')
+        self.assertContains(r, "topbar__atalho")               # topbar fixa
+        self.assertContains(r, 'class="vitrine-capa wrap"')     # carrossel
+        self.assertContains(r, 'class="secao-titulo"')          # seções divididas
+        self.assertContains(r, "Navegue pelo seu animal")
+        self.assertContains(r, "Por que comprar na")
+        self.assertContains(r, "Nossas marcas")
+        self.assertContains(r, 'nav__link--promo')
+
+    def test_classico_volta_ao_desenho_anterior(self):
+        self._config(layout_home=SiteConfig.LayoutHome.CLASSICO)
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "core/home.html")
+        self.assertContains(r, 'class="tema-classico"')
+        self.assertNotContains(r, "topbar__atalho")             # topbar só com mensagem
+        self.assertNotContains(r, 'class="vitrine-capa wrap"')
+        self.assertContains(r, "Compre por categoria")
+
+    def test_lojista_alterna_pelo_painel(self):
+        self.client.force_login(self.lojista)
+        config = SiteConfig.load()
+        dados = {
+            "nome_loja": config.nome_loja, "chamada": config.chamada,
+            "descricao": config.descricao, "logo_altura": config.logo_altura,
+            "layout_home": "classico", "topbar_icone": "", "topbar_mensagem": "",
+            "topbar_link_texto": "", "topbar_link_url": "",
+        }
+        r = self.client.post("/painel/configuracoes/aparencia/salvar/", dados)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(SiteConfig.load().layout_home, "classico")
+        self.assertTemplateUsed(self.client.get("/"), "core/home.html")
+
+    def test_logo_maior_por_padrao(self):
+        self.assertEqual(SiteConfig.load().logo_altura, 64)
+        self.assertContains(self.client.get("/"), "--logo-h:64px")
+
+    def test_banner_com_imagem_vira_slide_de_imagem_com_link(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        png = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+               b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+               b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
+        Banner.objects.filter(posicao=Banner.Posicao.HERO).delete()
+        Banner.objects.create(
+            titulo="Ninhos novos", posicao=Banner.Posicao.HERO, link="/catalogo/?q=ninho",
+            imagem=SimpleUploadedFile("cartaz.png", png, content_type="image/png"),
+        )
+        Banner.objects.create(titulo="Só texto", posicao=Banner.Posicao.HERO)
+        r = self.client.get("/")
+        self.assertContains(r, 'class="vitrine-capa__slide" data-hero-slide')
+        self.assertContains(r, 'href="/catalogo/?q=ninho"')
+        self.assertContains(r, "vitrine-capa__slide--texto")   # o sem imagem cai no texto
+        self.assertContains(r, "data-hero-next")                # setas com 2+ slides

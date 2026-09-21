@@ -64,6 +64,18 @@
       </div>
 
       <hr class="divider">
+      <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Estilo da home</h3>
+      <div class="field">
+        <label for="{{ form_aparencia.layout_home.id_for_label }}">Desenho da loja</label>
+        {{ form_aparencia.layout_home }}
+        <span class="help">
+          <strong>Vitrine</strong>: barra superior fixa, menu escuro, carrossel de banners
+          com imagem e seções divididas com título e "ver todos". <strong>Clássico</strong>
+          é o desenho anterior — dá para voltar a qualquer momento, sem perder nada.
+        </span>
+      </div>
+
+      <hr class="divider">
       <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Imagens</h3>
       <div class="grid grid--2" style="gap:var(--s-4)">
         {% include 'dashboard/_campo_imagem.html' with campo=form_aparencia.logo rotulo="Logo" ajuda="PNG com fundo transparente. Aparece no cabeçalho da loja." %}

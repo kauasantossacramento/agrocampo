@@ -200,6 +200,10 @@
     pontos.forEach((p, i) =>
       p.addEventListener('click', () => { parar(); mostrar(i); iniciar(); })
     );
+    // setas (estilo vitrine); no clássico não existem e nada acontece
+    const anterior = () => mostrar((atual - 1 + slides.length) % slides.length);
+    $$('[data-hero-prev]', hero).forEach(b => b.addEventListener('click', () => { parar(); anterior(); iniciar(); }));
+    $$('[data-hero-next]', hero).forEach(b => b.addEventListener('click', () => { parar(); proximo(); iniciar(); }));
     hero.addEventListener('mouseenter', parar);
     hero.addEventListener('mouseleave', iniciar);
 

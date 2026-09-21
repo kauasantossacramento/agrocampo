@@ -131,9 +131,25 @@ class SiteConfig(TimeStampedModel):
     )
     logo_altura = models.PositiveIntegerField(
         "altura da logo (px)",
-        default=46,
-        validators=[MinValueValidator(24), MaxValueValidator(96)],
-        help_text="No celular ela encolhe sozinha. Entre 24 e 96.",
+        default=64,
+        validators=[MinValueValidator(24), MaxValueValidator(120)],
+        help_text="No celular ela encolhe sozinha. Entre 24 e 120.",
+    )
+
+    # ------------------------------------------------------ estilo da home
+    # Dois desenhos convivem para o lojista poder voltar sem deploy:
+    # "classico" é o original (hero com texto grande sobre vermelho);
+    # "vitrine" segue a estrutura de lojas como a Terra dos Pássaros —
+    # barra superior fixa, menu escuro, carrossel de imagens, seções com
+    # título + linha + "ver todos".
+    class LayoutHome(models.TextChoices):
+        VITRINE = "vitrine", "Vitrine (carrossel de imagens, menu escuro)"
+        CLASSICO = "classico", "Clássico (hero com texto sobre vermelho)"
+
+    layout_home = models.CharField(
+        "estilo da home",
+        max_length=12, choices=LayoutHome.choices, default=LayoutHome.VITRINE,
+        help_text="Trocar aqui muda o cabeçalho e a ordem dos blocos da home na hora.",
     )
 
     # ------------------------------------------------------- entrega

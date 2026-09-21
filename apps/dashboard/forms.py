@@ -125,6 +125,8 @@ class AparenciaForm(_EstilizadoMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # o estilo da home é opcional no envio: faltando, fica o que está
+        self.fields["layout_home"].required = False
         if not self.is_bound:
             return
         # Marcar "Remover" e escolher outra imagem no mesmo envio: o Django
@@ -138,7 +140,7 @@ class AparenciaForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = SiteConfig
         fields = (
-            "nome_loja", "chamada", "descricao",
+            "nome_loja", "chamada", "descricao", "layout_home",
             "logo", "logo_claro", "logo_altura", "favicon", "imagem_capa",
             "topbar_icone", "topbar_mensagem", "topbar_link_texto", "topbar_link_url",
         )
@@ -152,6 +154,9 @@ class AparenciaForm(_EstilizadoMixin, forms.ModelForm):
             "imagem_capa": forms.ClearableFileInput(attrs={"accept": "image/*", "hidden": True}),
             "topbar_icone": forms.TextInput(attrs={"placeholder": "🚚", "maxlength": 8}),
         }
+
+    def clean_layout_home(self):
+        return self.cleaned_data.get("layout_home") or self.instance.layout_home
 
     def save(self, commit=True):
         config = super().save(commit=False)

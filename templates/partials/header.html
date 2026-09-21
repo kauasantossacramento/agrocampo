@@ -1,10 +1,26 @@
 {% load static %}
-{% if site.topbar_mensagem %}
+{% comment %}
+  Barra superior. No estilo "vitrine" ela existe sempre, com os dois atalhos
+  que toda loja tem lá em cima — rastrear pedido e WhatsApp — e a mensagem
+  promocional é opcional. No "clássico" ela só aparece com mensagem.
+{% endcomment %}
+{% if site.layout_home == 'vitrine' or site.topbar_mensagem %}
 <div class="topbar">
   <div class="wrap">
-    <span class="topbar__highlight">{{ site.topbar_icone }} {{ site.topbar_mensagem }}</span>
+    <span class="topbar__highlight">
+      {% if site.topbar_mensagem %}{{ site.topbar_icone }} {{ site.topbar_mensagem }}{% else %}{{ site.nome_loja }}{% endif %}
+    </span>
     <div class="topbar__pills">
-      {% if site.topbar_link_texto %}
+      {% if site.layout_home == 'vitrine' %}
+        <a href="{% url 'orders:lista' %}" class="topbar__atalho">
+          <svg width="13" height="13"><use href="#i-pacote"></use></svg>Rastrear meu pedido
+        </a>
+        {% if site.whatsapp_url %}
+          <a href="{{ site.whatsapp_url_com_mensagem }}" target="_blank" rel="noopener" class="topbar__atalho">
+            <svg width="13" height="13"><use href="#i-whatsapp"></use></svg>WhatsApp
+          </a>
+        {% endif %}
+      {% elif site.topbar_link_texto %}
         <a href="{{ site.topbar_link_url|default:'/pedidos/' }}">{{ site.topbar_link_texto }}</a>
       {% endif %}
       {% if site.horario_atendimento %}<span>{{ site.horario_atendimento }}</span>{% endif %}
@@ -91,6 +107,11 @@
           </a>
         {% endif %}
 
+        {% if site.layout_home == 'vitrine' %}
+          <a href="{% url 'accounts:desejos' %}" class="icon-btn header__desejos" aria-label="Lista de desejos">
+            <svg width="20" height="20"><use href="#i-coracao"></use></svg>
+          </a>
+        {% endif %}
         <a href="{% url 'cart:detalhe' %}" class="icon-btn" aria-label="Carrinho de compras">
           <svg width="21" height="21"><use href="#i-carrinho"></use></svg>
           <span class="icon-btn__count icon-btn__count--dark" data-cart-count {% if not carrinho_qtd %}hidden{% endif %}>{{ carrinho_qtd }}</span>
@@ -135,6 +156,8 @@
             {% endif %}
           </li>
         {% endfor %}
+        <li class="nav__item"><a href="{% url 'catalog:catalogo' %}?promocao=1" class="nav__link nav__link--promo">Promoções</a></li>
+        <li class="nav__item"><a href="{% url 'catalog:catalogo' %}?ordem=novidades" class="nav__link nav__link--novo">Lançamentos</a></li>
         <li class="nav__item"><a href="{% url 'catalog:especies' %}" class="nav__link">Por espécie</a></li>
         <li class="nav__item"><a href="{% url 'catalog:marcas' %}" class="nav__link">Marcas</a></li>
         {% if site.blog_ativo %}<li class="nav__item"><a href="{% url 'blog:lista' %}" class="nav__link">Blog</a></li>{% endif %}

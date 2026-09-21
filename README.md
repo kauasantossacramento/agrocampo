@@ -189,6 +189,27 @@ aparecem na aba).
 
 ---
 
+## Estilo da home (Vitrine × Clássico)
+
+Dois desenhos convivem e o lojista alterna em **Painel › Configurações ›
+Aparência › Estilo da home**, sem deploy:
+
+| | Vitrine (padrão) | Clássico |
+|---|---|---|
+| Barra superior | sempre, com *Rastrear meu pedido* e *WhatsApp* | só com mensagem cadastrada |
+| Cabeçalho | logo maior (64 px, até 120), busca esticada, lista de desejos | logo 46 px |
+| Menu | barra escura, itens em caixa alta, *Promoções* e *Lançamentos* destacados | barra clara |
+| Capa | carrossel de banners **com imagem** (setas + pontos), largura contida | hero com texto sobre vermelho |
+| Seções | ícone + título + linha + "ver todos"; Linhas → Sucessos → Espécies → … → Por que comprar → Blog → Newsletter → Marcas | ordem anterior |
+| Template | `core/home_vitrine.html` | `core/home.html` |
+
+O CSS do vitrine fica escopado em `.tema-vitrine` (classe no `<body>`); o
+clássico não muda. Banners da posição *Banner secundário* com imagem viram
+o bloco "Ofertas em destaque" (4 cartazes). A tag Git `layout-classico`
+marca o código anterior à mudança.
+
+---
+
 ## Design system
 
 Tokens em `static/css/design-system.css`. Nada de cor ou espaço hard-coded nos
@@ -238,7 +259,7 @@ Auditado com emulação real de device via CDP: **19 páginas × 9 larguras
 ## Testes
 
 ```bash
-python manage.py test          # 187 testes
+python manage.py test          # 192 testes
 ```
 
 Cobrem: preço de assinatura, máquina de estados do pedido, baixa e devolução de

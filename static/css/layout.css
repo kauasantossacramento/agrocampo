@@ -1075,3 +1075,137 @@
   background: #FFF4CC; border-left: 4px solid var(--yellow); border-radius: var(--r-md);
   padding: var(--s-3) var(--s-4); font-size: var(--fs-sm); line-height: 1.5; margin-bottom: var(--s-4);
 }
+
+/* ═══════════════════════════════════════════════ tema "vitrine" (home) */
+/* Tudo escopado em .tema-vitrine: o estilo clássico não muda um pixel.
+   Alterna-se em Painel › Configurações › Aparência › Estilo da home. */
+
+/* --- barra superior sempre presente, com atalhos */
+.tema-vitrine .topbar { background: var(--ink); }
+.tema-vitrine .topbar__atalho { display: inline-flex; align-items: center; gap: 6px; color: #fff; opacity: .85; }
+.tema-vitrine .topbar__atalho:hover { opacity: 1; color: var(--yellow); }
+
+/* --- cabeçalho: logo maior, busca esticada */
+.tema-vitrine .header__main { gap: var(--s-5); height: calc(var(--header-h) + 14px); }
+.tema-vitrine .header__search { max-width: none; }
+.tema-vitrine .header__search input { height: 48px; border: 1.5px solid var(--line); background: #fff; }
+.tema-vitrine .header__search input:focus { border-color: var(--red); }
+.tema-vitrine .header__search button { top: 6px; height: 36px; }
+
+/* --- menu em barra escura, itens brancos em caixa alta */
+.tema-vitrine .nav { background: var(--ink); border-top: 0; }
+.tema-vitrine .nav__list { justify-content: space-between; }
+.tema-vitrine .nav__link {
+  color: #fff; text-transform: uppercase; letter-spacing: .02em;
+  font-size: 11.5px; font-weight: 700; padding: var(--s-3) var(--s-2);
+}
+@media (max-width: 1400px) { .tema-vitrine .nav__link { font-size: 10.5px; padding-inline: 5px; letter-spacing: 0; } }
+.tema-vitrine .nav__link:hover { color: var(--yellow); }
+.tema-vitrine .nav__link::after { background: var(--yellow); }
+.tema-vitrine .nav__link--accent { color: #FF8A80; }
+.tema-vitrine .nav__link--promo { color: var(--yellow); }
+.tema-vitrine .nav__link--novo { color: #7EE39A; }
+.tema-vitrine .nav__link svg { opacity: .8; }
+.tema-vitrine .mega { border-top: 3px solid var(--yellow); border-radius: 0 0 var(--r-md) var(--r-md); }
+.tema-vitrine .site-header.is-stuck .nav { box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+
+/* --- carrossel de banners (imagem inteira, largura contida, cantos redondos) */
+.vitrine-capa { padding-top: var(--s-5); }
+.vitrine-capa__quadro {
+  position: relative; overflow: hidden; border-radius: var(--r-lg);
+  background: var(--cream-warm); box-shadow: var(--sh-2);
+}
+.vitrine-capa__slide { display: block; width: 100%; }
+.vitrine-capa__slide img { display: block; width: 100%; aspect-ratio: 16 / 5; object-fit: cover; }
+.vitrine-capa__legenda { position: absolute; left: var(--s-6); top: var(--s-6); }
+/* banner sem imagem: reaproveita o desenho do hero clássico dentro do quadro */
+.vitrine-capa__slide--texto {
+  display: grid; grid-template-columns: 1.05fr .95fr; align-items: center; gap: var(--s-8);
+  min-height: 360px; padding-inline: var(--s-8); color: #fff;
+  background: linear-gradient(135deg, var(--hero-bg, var(--red)) 0%, var(--hero-bg, #C0241A) 58%, rgba(0,0,0,.18) 100%);
+}
+.vitrine-capa__slide--texto .hero__content { padding-block: var(--s-8); }
+.vitrine-capa__slide--texto h1 { color: #fff; font-size: var(--fs-3xl); max-width: 520px; margin-bottom: var(--s-3); }
+.vitrine-capa__slide--texto p { color: #FFE3D6; font-size: var(--fs-md); max-width: 470px; margin-bottom: var(--s-5); }
+.vitrine-capa__slide--texto .hero__art { min-height: 320px; }
+.vitrine-capa__seta {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 6;
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.85); color: var(--ink); box-shadow: var(--sh-2);
+  transition: background-color .18s ease, transform .18s var(--ease-out);
+}
+.vitrine-capa__seta:hover { background: #fff; transform: translateY(-50%) scale(1.06); }
+.vitrine-capa__seta--esq { left: var(--s-4); }
+.vitrine-capa__seta--dir { right: var(--s-4); }
+.vitrine-capa .hero__dots { bottom: var(--s-4); }
+.vitrine-capa .hero__dot { background: rgba(255,255,255,.7); box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+.vitrine-capa .hero__dot.is-active { background: var(--red); }
+
+/* --- faixa de garantias em cartão flutuante, como o topo das vitrines */
+.trust--cartao {
+  border: 0; border-radius: var(--r-lg); box-shadow: var(--sh-2);
+  margin-top: var(--s-5); padding-inline: var(--s-6);
+}
+.trust--cartao .trust__grid { padding-block: var(--s-4); }
+.trust--cartao .trust__item + .trust__item { border-left: 1px solid var(--line); padding-left: var(--s-5); }
+
+/* --- título de seção: ícone + título + linha + "ver todos" */
+.secao-titulo {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-4);
+  padding-bottom: var(--s-3); margin-bottom: var(--s-5);
+  border-bottom: 2px solid var(--line);
+}
+.secao-titulo h2 { display: flex; align-items: center; gap: var(--s-3); font-size: var(--fs-xl); margin: 0; }
+.secao-titulo__icone {
+  width: 34px; height: 34px; border-radius: var(--r-md); flex: none;
+  display: grid; place-items: center; background: var(--yellow); color: #3A2100;
+}
+.secao-titulo__icone--quente { background: var(--red); color: #fff; }
+.secao-titulo__link { font-size: var(--fs-sm); font-weight: 700; color: var(--red); white-space: nowrap; }
+.secao-titulo__link:hover { text-decoration: underline; }
+.secao-titulo .vitrine-linha__titulo { display: flex; align-items: center; gap: var(--s-3); }
+
+/* --- quatro banners "ofertas em destaque" */
+.ofertas-grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-4); }
+.ofertas-grade__item {
+  position: relative; display: block; overflow: hidden; border-radius: var(--r-lg);
+  box-shadow: var(--sh-1); transition: transform .24s var(--ease-out), box-shadow .24s ease;
+}
+.ofertas-grade__item:hover { transform: translateY(-4px); box-shadow: var(--sh-3); }
+.ofertas-grade__item img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.ofertas-grade__legenda {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: var(--s-3) var(--s-4);
+  background: linear-gradient(to top, rgba(0,0,0,.65), transparent); color: #fff;
+  font-weight: 700; font-size: var(--fs-sm);
+}
+
+/* --- por que comprar */
+.porque-grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-4); }
+.porque-item {
+  display: flex; flex-direction: column; gap: var(--s-2); align-items: center; text-align: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-6) var(--s-4);
+}
+.porque-item strong { font-family: var(--font-display); font-size: var(--fs-md); }
+.porque-item__icone, .porque-item__numero {
+  width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--red-wash); color: var(--red);
+}
+.porque-item__numero { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xl); }
+
+@media (max-width: 980px) {
+  .tema-vitrine .header__main { height: var(--header-h); }
+  .ofertas-grade, .porque-grade { grid-template-columns: repeat(2, 1fr); }
+  .vitrine-capa__slide--texto { grid-template-columns: 1fr; min-height: 0; padding: var(--s-6); }
+  .vitrine-capa__slide--texto .hero__art { display: none; }
+  .trust--cartao .trust__item + .trust__item { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 620px) {
+  .vitrine-capa { padding-top: var(--s-3); }
+  .vitrine-capa__slide img { aspect-ratio: 16 / 9; }
+  .vitrine-capa__seta { display: none; }
+  .secao-titulo h2 { font-size: var(--fs-lg); }
+  .secao-titulo__icone { width: 28px; height: 28px; }
+}
+@media (max-width: 420px) {
+  .ofertas-grade, .porque-grade { grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+}
