@@ -34,6 +34,7 @@ def calcular(request):
     from types import SimpleNamespace
 
     from django.http import JsonResponse
+    from django.utils.formats import date_format
 
     from .models import Localidade, calcular_frete
 
@@ -54,9 +55,8 @@ def calcular(request):
         "atendida": resultado["atendida"],
         "valor": f"{resultado['valor']:.2f}".replace(".", ","),
         "gratis": resultado["valor"] == 0 and resultado["atendida"],
-        "prazo": resultado["prazo"].strftime("%d/%m") if resultado["prazo"] else "",
-        "prazo_extenso": (
-            resultado["prazo"].strftime("%A, %d/%m") if resultado["prazo"] else ""
-        ),
+        "prazo": date_format(resultado["prazo"], "d/m") if resultado["prazo"] else "",
+        # em português, como o resto do site (strftime seguiria o locale do servidor)
+        "prazo_extenso": date_format(resultado["prazo"], "l, d/m") if resultado["prazo"] else "",
         "avisos": resultado["avisos"],
     })

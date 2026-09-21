@@ -477,3 +477,12 @@ Código `6fc3104 → 9162e9b`. Migrações aditivas: `core.0015`, `core.0016`
 já cadastrado passou a ser o primeiro slide do carrossel. Verificado: `/`,
 `/busca/sugestoes/`, `/carrinho/`, `/catalogo/` → 200; `agrocampo.yml` e
 `nuvem.center` inalterados.
+
+### 10.6 Ajustes de 21/09 (manhã, após a sexta entrega)
+
+- `1b514c1`: pontos e setas do carrossel sobre a mídia no celular (sem faixa
+  vermelha abaixo do vídeo). Só o `web` recriado.
+- Dados, a pedido do lojista: os dois banners de texto do carrossel foram
+  **despublicados** (fica só o vídeo por enquanto; religar em Conteúdo › Banners);
+  **Valença/BA** cadastrada como cidade sede, **frete grátis**, viagem **às sextas**,
+  antecedência 0. Conferido: `/entrega/calcular/` → grátis, próxima sexta.
