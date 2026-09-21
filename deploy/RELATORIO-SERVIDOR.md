@@ -462,3 +462,9 @@ Código `9189dae → e29310a`. Migrações (aditivas): `catalog.0008`, `core.001
 por padrão — o carrossel de slides abre a home sozinho. Verificado: `/` 200 com 11
 seções, `/entrega/calcular/` 200, manifest com os ícones novos, `agrocampo.yml`
 inalterado, `nuvem.center` 200, `db/nginx/cron/whatsapp` não recriados.
+
+Dados de conteúdo alterados à mão logo depois (a pedido do lojista, para
+bater com o fim do desconto de assinatura e da etapa de aprovação):
+garantia 3 → "Assinatura sem compromisso / Receba de novo sem precisar
+pedir"; banner 2 → "Assine e nunca deixe faltar."; banner de apresentação
+sem o título "."; página Entregas e prazos → "Pedidos pagos até as 14h".

@@ -116,7 +116,7 @@ PRODUTOS = [
 DIFERENCIAIS = [
     ("Frete para toda zona rural", "Entregamos onde outros não chegam", "caminhao"),
     ("Pix aprovado na hora", "Aprovação imediata, sem espera", "raio"),
-    ("Assinatura", "Nunca falta o essencial", "refresh"),
+    ("Assinatura sem compromisso", "Receba de novo sem precisar pedir", "refresh"),
     ("Compra 100% garantida", "Ambiente seguro e criptografado", "escudo"),
 ]
 
@@ -125,7 +125,7 @@ PAGINAS = [
      "Descreva aqui quando a AgroCampo começou, quem toca o negócio e o que "
      "diferencia o atendimento de vocês."),
     ("Entregas e prazos", 2, "Entregamos em toda a região, inclusive na zona rural. "
-     "Pedidos aprovados até as 14h saem no mesmo dia. Para endereços rurais, "
+     "Pedidos pagos até as 14h saem no mesmo dia. Para endereços rurais, "
      "combinamos o ponto de entrega por WhatsApp antes de sair."),
     ("Trocas e devoluções", 3, "Você tem 7 dias corridos para desistir da compra, conforme "
      "o Código de Defesa do Consumidor. Produtos lacrados podem ser trocados em até 30 dias. "
@@ -411,7 +411,7 @@ class Command(BaseCommand):
             ("Tudo para o campo e para quem você ama cuidar.",
              "Ração, suplementos e equipamentos rurais com entrega rápida — e assinatura recorrente para nunca faltar o essencial.",
              "Frete facilitado para zona rural", "/catalogo/"),
-            ("Assine e economize 10% em toda entrega.",
+            ("Assine e nunca deixe faltar.",
              "Escolha a frequência, receba em casa e pause quando quiser. Sem multa, sem fidelidade.",
              "Assinatura AgroCampo", "/catalogo/?assinatura=1"),
             ("Assinatura, entrega e atendimento de gente que entende do campo.",
