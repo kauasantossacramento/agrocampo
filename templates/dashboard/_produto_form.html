@@ -38,8 +38,13 @@
         {% if form.categoria.errors %}<span class="error-text">{{ form.categoria.errors|join:" " }}</span>{% endif %}
       </div>
       <div class="field">
-        <label for="{{ form.marca.id_for_label }}">Marca</label>
-        {{ form.marca }}
+        <label for="{{ form.marca_nome.id_for_label }}">Marca</label>
+        {{ form.marca_nome }}
+        <datalist id="lista-marcas" data-marca-url="{% url 'dashboard:marca_criar' %}">
+          {% for m in marcas_existentes %}<option value="{{ m.nome }}"></option>{% endfor %}
+        </datalist>
+        <span class="help" data-marca-ajuda>{{ form.marca_nome.help_text }}</span>
+        {% if form.marca_nome.errors %}<span class="error-text">{{ form.marca_nome.errors|join:" " }}</span>{% endif %}
       </div>
       <div class="field">
         <label for="{{ form.linha.id_for_label }}">Linha</label>

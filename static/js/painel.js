@@ -114,6 +114,58 @@
     });
   }
 
+  /* Marca digitada: Enter cria a que não existe, ali mesmo.
+     O Enter num input de texto enviaria o formulário — aqui ele é
+     interceptado e vira "incluir marca". */
+  function prepararMarca(raiz) {
+    const campo = $('[data-marca-campo]', raiz);
+    const lista = $('#lista-marcas', raiz);
+    if (!campo || !lista) return;
+    const ajuda = $('[data-marca-ajuda]', raiz);
+    const padrao = ajuda ? ajuda.textContent : '';
+
+    function aviso(texto, cor) {
+      if (!ajuda) return;
+      ajuda.textContent = texto || padrao;
+      ajuda.style.color = cor || '';
+    }
+
+    async function incluir() {
+      const nome = campo.value.trim();
+      if (nome.length < 2) { aviso('Escreva o nome da marca.', 'var(--red)'); return; }
+      const jaTem = $$('option', lista).some(function (o) {
+        return o.value.toLowerCase() === nome.toLowerCase();
+      });
+      if (jaTem) { aviso('Marca “' + nome + '” selecionada.', 'var(--green-deep)'); return; }
+
+      aviso('Incluindo…');
+      try {
+        const corpo = new FormData();
+        corpo.append('nome', nome);
+        const r = await fetch(lista.dataset.marcaUrl, {
+          method: 'POST', body: corpo,
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf() },
+        });
+        const d = await r.json();
+        if (!d.ok) { aviso(d.erro || 'Não consegui incluir.', 'var(--red)'); return; }
+        const opcao = document.createElement('option');
+        opcao.value = d.nome;
+        lista.appendChild(opcao);
+        campo.value = d.nome;
+        aviso(d.criada ? 'Marca “' + d.nome + '” criada.' : 'Marca “' + d.nome + '” selecionada.', 'var(--green-deep)');
+      } catch (e) {
+        aviso('Sem conexão agora.', 'var(--red)');
+      }
+    }
+
+    campo.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();      // não envia o formulário
+      incluir();
+    });
+    campo.addEventListener('input', function () { aviso(''); });
+  }
+
   function prepararWizard() {
     const wizard = $('[data-wizard]');
     if (!wizard) return;
@@ -123,6 +175,8 @@
     const btVoltar = $('[data-wizard-voltar]', wizard);
     const btAvancar = $('[data-wizard-avancar]', wizard);
     const btSalvar = $('[data-wizard-salvar]', wizard);
+
+    prepararMarca(wizard);
 
     const novasFotos = [];   // File[] ainda não enviados
     const removidas = [];    // ids de ProdutoImagem marcados para apagar

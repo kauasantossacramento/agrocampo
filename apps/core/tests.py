@@ -1482,3 +1482,78 @@ class AdminSoParaDesenvolvedorTests(TestCase):
         html = self.client.get("/painel/configuracoes/").content.decode()
         self.assertNotIn("/admin/", html)
         self.assertNotIn("Django", html)
+
+
+class MarcaNoCadastroDeProdutoTests(TestCase):
+    """A marca é digitada no cadastro: a que não existe é criada na hora."""
+
+    def setUp(self):
+        from apps.accounts.models import User
+        from apps.catalog.models import Categoria, Marca
+
+        self.lojista = User.objects.create_user(
+            email="loja@exemplo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+        self.client.force_login(self.lojista)
+        self.categoria = Categoria.objects.create(nome="Ração")
+        self.golden = Marca.objects.create(nome="Golden")
+        self.Marca = Marca
+
+    def _dados(self, **extra):
+        base = {
+            "nome": "Ração Teste 10kg", "categoria": self.categoria.id, "linha": "",
+            "sku": "", "resumo": "", "descricao": "", "preco": "99.90",
+            "preco_promocional": "", "promocao_ate": "", "estoque": "5",
+            "estoque_minimo": "1", "unidade": "un", "peso_kg": "10",
+            "desconto_assinatura_proprio": "", "beneficios": "",
+        }
+        base.update(extra)
+        return base
+
+    def test_enter_cria_a_marca_que_nao_existe(self):
+        r = self.client.post("/painel/marcas/criar/", {"nome": "  nutrópica  "})
+        d = r.json()
+        self.assertTrue(d["ok"]); self.assertTrue(d["criada"]); self.assertEqual(d["nome"], "nutrópica")
+        self.assertTrue(self.Marca.objects.filter(nome="nutrópica").exists())
+
+    def test_marca_existente_nao_duplica(self):
+        d = self.client.post("/painel/marcas/criar/", {"nome": "GOLDEN"}).json()
+        self.assertTrue(d["ok"]); self.assertFalse(d["criada"]); self.assertEqual(d["id"], self.golden.id)
+        self.assertEqual(self.Marca.objects.filter(nome__iexact="golden").count(), 1)
+
+    def test_nome_curto_e_recusado(self):
+        r = self.client.post("/painel/marcas/criar/", {"nome": "x"})
+        self.assertEqual(r.status_code, 400)
+        self.assertFalse(r.json()["ok"])
+
+    def test_endpoint_exige_operador(self):
+        self.client.logout()
+        r = self.client.post("/painel/marcas/criar/", {"nome": "Qualquer"})
+        self.assertNotEqual(r.status_code, 200)
+        self.assertFalse(self.Marca.objects.filter(nome="Qualquer").exists())
+
+    def test_salvar_produto_com_marca_nova_digitada(self):
+        r = self.client.post("/painel/produtos/novo/salvar/", self._dados(marca_nome="Premier Pet"))
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        from apps.catalog.models import Produto
+        produto = Produto.objects.get(nome="Ração Teste 10kg")
+        self.assertEqual(produto.marca.nome, "Premier Pet")
+        self.assertTrue(self.Marca.objects.filter(nome="Premier Pet").exists())
+
+    def test_salvar_produto_reaproveita_marca_existente(self):
+        self.client.post("/painel/produtos/novo/salvar/", self._dados(marca_nome="golden"))
+        from apps.catalog.models import Produto
+        self.assertEqual(Produto.objects.get(nome="Ração Teste 10kg").marca, self.golden)
+        self.assertEqual(self.Marca.objects.filter(nome__iexact="golden").count(), 1)
+
+    def test_sem_marca_continua_valendo(self):
+        self.client.post("/painel/produtos/novo/salvar/", self._dados(marca_nome=""))
+        from apps.catalog.models import Produto
+        self.assertIsNone(Produto.objects.get(nome="Ração Teste 10kg").marca)
+
+    def test_formulario_traz_o_campo_e_as_marcas_existentes(self):
+        html = self.client.get("/painel/produtos/novo/form/").content.decode()
+        self.assertIn('data-marca-campo', html)
+        self.assertIn('id="lista-marcas"', html)
+        self.assertIn('<option value="Golden">', html)

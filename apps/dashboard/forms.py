@@ -38,7 +38,7 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Produto
         fields = (
-            "nome", "categoria", "marca", "linha", "sku",
+            "nome", "categoria", "linha", "sku",
             "resumo", "descricao",
             "preco", "preco_promocional", "promocao_ate",
             "estoque", "estoque_minimo", "unidade", "peso_kg",
@@ -64,14 +64,46 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             }),
         }
 
+    # a marca é digitada, não escolhida numa lista: o lojista cadastra no balcão
+    # e quase sempre a marca do produto novo ainda não existe. O campo sugere as
+    # que já existem e cria a que faltar, sem sair da tela.
+    marca_nome = forms.CharField(
+        label="Marca", max_length=180, required=False,
+        widget=forms.TextInput(attrs={
+            "list": "lista-marcas", "autocomplete": "off",
+            "placeholder": "Digite e pressione Enter para criar",
+            "data-marca-campo": "",
+        }),
+        help_text="Escolha uma da lista ou escreva o nome de uma marca nova.",
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["sku"].required = False
         self.fields["categoria"].queryset = Categoria.objects.publicados().order_by("nome")
-        self.fields["marca"].queryset = Marca.objects.publicados().order_by("nome")
         self.fields["categoria"].empty_label = "Escolha a categoria"
-        self.fields["marca"].empty_label = "Sem marca"
         self.fields["promocao_ate"].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.fields.pop("marca", None)
+        if not self.is_bound and self.instance and self.instance.marca_id:
+            self.fields["marca_nome"].initial = self.instance.marca.nome
+
+    def clean_marca_nome(self):
+        """Devolve a marca existente (sem diferenciar maiúsculas) ou cria uma nova."""
+        nome = " ".join((self.cleaned_data.get("marca_nome") or "").split())
+        if not nome:
+            return None
+        marca = Marca.objects.filter(nome__iexact=nome).first()
+        if marca:
+            return marca
+        return Marca.objects.create(nome=nome)
+
+    def save(self, commit=True):
+        produto = super().save(commit=False)
+        produto.marca = self.cleaned_data.get("marca_nome")
+        if commit:
+            produto.save()
+            self.save_m2m()
+        return produto
 
     def clean_sku(self):
         sku = (self.cleaned_data.get("sku") or "").strip().upper()

@@ -249,6 +249,12 @@ lápis que abre o cadastro completo em modal: nome, categoria, marca, **linha
 **tamanhos** (kg/g com preço/estoque/foto), assinatura, fotos, benefícios,
 "Maior sucesso", lançamento, publicado. O SKU é opcional (gerado).
 
+**Marca:** o campo é digitado, não escolhido numa lista. Comece a escrever e o
+sistema sugere as marcas que já existem; se a marca for nova, escreva o nome e
+aperte **Enter** — ela é criada na hora, sem sair do cadastro (a confirmação
+aparece em verde abaixo do campo). Nomes iguais não duplicam, mesmo com
+maiúsculas diferentes.
+
 ![Produtos](prints/painel-produtos-desktop.png)
 ![Cadastro de produto](prints/painel-produto-editar-desktop.png)
 ![Produtos no celular](prints/painel-produtos-celular.png)

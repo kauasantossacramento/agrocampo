@@ -469,13 +469,15 @@ def produto_form(request, produto_id=None):
 
 
 def _contexto_wizard(form, produto):
-    from apps.catalog.models import VariacaoProduto
+    from apps.catalog.models import Marca, VariacaoProduto
 
     return {
         "form": form,
         "produto": produto,
         "variacoes": (produto.variacoes.order_by("ordem", "preco") if produto else []),
         "unidades_variacao": VariacaoProduto.Unidade.choices,
+        # alimenta o <datalist> do campo de marca
+        "marcas_existentes": Marca.objects.order_by("nome"),
     }
 
 
@@ -938,3 +940,24 @@ def whatsapp_teste(request):
     else:
         messages.error(request, f"Não enviou: {registro.erro}")
     return redirect(f"{reverse('dashboard:configuracoes')}?aba=whatsapp")
+
+
+@operador_requerido
+@require_POST
+def marca_criar(request):
+    """Cria (ou reaproveita) uma marca pelo nome, direto do cadastro de produto.
+
+    O lojista digita a marca e aperta Enter: quem não existe passa a existir na
+    hora, sem sair do formulário e sem abrir outra tela.
+    """
+    from apps.catalog.models import Marca
+
+    nome = " ".join((request.POST.get("nome") or "").split())[:180]
+    if len(nome) < 2:
+        return JsonResponse({"ok": False, "erro": "Escreva o nome da marca."}, status=400)
+
+    marca = Marca.objects.filter(nome__iexact=nome).first()
+    criada = marca is None
+    if criada:
+        marca = Marca.objects.create(nome=nome)
+    return JsonResponse({"ok": True, "id": marca.id, "nome": marca.nome, "criada": criada})
