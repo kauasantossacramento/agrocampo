@@ -35,7 +35,9 @@ class PaginasPublicasTests(TestCase):
     def test_busca_sem_resultado_mostra_estado_vazio(self):
         resposta = self.client.get(reverse("catalog:busca"), {"q": "xyzabc-inexistente"})
         self.assertEqual(resposta.status_code, 200)
-        self.assertContains(resposta, "Nenhum produto encontrado")
+        self.assertContains(resposta, "Nada por aqui ainda")
+        self.assertContains(resposta, "xyzabc-inexistente")       # repete o termo buscado
+        self.assertContains(resposta, "Ver todos os produtos")    # e oferece a saída
 
     def test_paginas_de_navegacao(self):
         rotas = [

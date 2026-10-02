@@ -81,7 +81,8 @@ def catalogo(request, categoria=None, marca=None, especie=None):
     if request.GET.get("promocao") == "1":
         produtos = produtos.filter(preco_promocional__isnull=False)
     if request.GET.get("disponivel") == "1":
-        produtos = produtos.filter(estoque__gt=0)
+        # sob encomenda também está disponível: o filtro escondia a loja inteira
+        produtos = produtos.filter(Q(estoque__gt=0) | Q(sem_controle_estoque=True))
 
     ordem = request.GET.get("ordem", "relevancia")
     produtos = produtos.order_by(*ORDENACOES.get(ordem, ORDENACOES["relevancia"]))
@@ -101,6 +102,8 @@ def catalogo(request, categoria=None, marca=None, especie=None):
             "pagina": pagina,
             "produtos": pagina.object_list,
             "total": paginator.count,
+            # usado no estado vazio: "o catálogo tem N produtos esperando por você"
+            "total_catalogo": Produto.objects.publicados().count(),
             "busca": busca,
             "ordem": ordem,
             "ordenacoes": ORDENACOES.keys(),

@@ -91,7 +91,7 @@
           <div class="stack" style="gap:var(--s-2)">
             <label class="switch-row"><input type="checkbox" name="assinatura" value="1" {% if request.GET.assinatura == '1' %}checked{% endif %}> Disponível para assinatura</label>
             <label class="switch-row"><input type="checkbox" name="promocao" value="1" {% if request.GET.promocao == '1' %}checked{% endif %}> Somente promoções</label>
-            <label class="switch-row"><input type="checkbox" name="disponivel" value="1" {% if request.GET.disponivel == '1' %}checked{% endif %}> Somente em estoque</label>
+            <label class="switch-row"><input type="checkbox" name="disponivel" value="1" {% if request.GET.disponivel == '1' %}checked{% endif %}> Somente disponíveis</label>
           </div>
         </div>
 
@@ -159,9 +159,14 @@
       {% else %}
         <div class="empty card">
           <div class="empty__icon">🔍</div>
-          <p class="empty__title">Nenhum produto encontrado</p>
-          <p class="small">Tente outro termo de busca, ajuste os filtros ou navegue por outra categoria.</p>
-          <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver todo o catálogo</a>
+          <p class="empty__title">Nada por aqui ainda</p>
+          <p class="small">
+            {% if categoria_atual %}Esta categoria ainda não tem produtos cadastrados.
+            {% elif busca %}Não encontramos nada para “{{ busca }}”.
+            {% else %}Nenhum produto com esses filtros.{% endif %}
+            {% if total_catalogo %}O catálogo tem {{ total_catalogo }} produto{{ total_catalogo|pluralize }} esperando por você.{% endif %}
+          </p>
+          <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver todos os produtos</a>
         </div>
       {% endif %}
     </div>

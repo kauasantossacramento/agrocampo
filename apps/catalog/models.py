@@ -17,10 +17,19 @@ class CategoriaQuerySet(PublicadoQuerySet):
         return self.filter(pai__isnull=True)
 
     def menu(self):
+        """Categorias do menu que têm produto — na mãe ou em alguma filha.
+
+        Categoria vazia no menu leva o cliente a uma página em branco e passa a
+        impressão de loja quebrada; ela volta sozinha quando ganhar produto.
+        """
         return (
             self.publicados()
             .raizes()
             .filter(exibir_no_menu=True)
+            .filter(
+                Q(produtos__publicado=True) | Q(filhas__produtos__publicado=True)
+            )
+            .distinct()
             .prefetch_related("filhas")
             .order_by("ordem", "nome")
         )
