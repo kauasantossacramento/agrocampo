@@ -152,7 +152,8 @@
             <div class="qty">
               <button type="button" data-qty="menos" aria-label="Diminuir">−</button>
               <input type="number" name="quantidade" value="1" min="1"
-                     max="{{ produto.estoque_total }}" aria-label="Quantidade" data-qty-input>
+                     {% if not produto.sem_controle_estoque %}max="{{ produto.estoque_total }}"{% endif %}
+                     aria-label="Quantidade" data-qty-input>
               <button type="button" data-qty="mais" aria-label="Aumentar">+</button>
             </div>
             <button type="submit" class="btn btn--primary btn--lg" style="flex:1" {% if not produto.em_estoque %}disabled{% endif %}>

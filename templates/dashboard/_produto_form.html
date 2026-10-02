@@ -95,6 +95,13 @@
 
     <hr class="divider">
 
+    <label class="switch-row" style="margin-bottom:var(--s-3)">
+      {{ form.sem_controle_estoque }} Sem controle de estoque — vende mesmo sem quantidade
+    </label>
+    <span class="help" style="display:block;margin-bottom:var(--s-4)">
+      {{ form.sem_controle_estoque.help_text }}
+    </span>
+
     <div class="grid grid--2" style="gap:var(--s-4)">
       <div class="field">
         <label for="{{ form.estoque.id_for_label }}">Estoque atual *</label>

@@ -129,7 +129,7 @@ def acao(request):
         if produto.tem_variacoes:
             variacao = produto.variacoes.filter(pk=dados.get("variacao") or 0, ativo=True).first() or produto.variacao_padrao
         disponivel = variacao.estoque if variacao else produto.estoque
-        if disponivel < quantidade:
+        if not produto.sem_controle_estoque and disponivel < quantidade:
             return JsonResponse({"ok": False, "erro": f"Só temos {max(disponivel, 0)} em estoque."})
         assinar = int(dados.get("assinar") or 0)
         recorrente = assinar in (30, 60, 90) and produto.permite_assinatura and config.assinatura_visivel

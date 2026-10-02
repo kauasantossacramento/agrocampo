@@ -249,6 +249,12 @@ lápis que abre o cadastro completo em modal: nome, categoria, marca, **linha
 **tamanhos** (kg/g com preço/estoque/foto), assinatura, fotos, benefícios,
 "Maior sucesso", lançamento, publicado. O SKU é opcional (gerado).
 
+**Sem controle de estoque:** no passo *Preço* há a opção **“Sem controle de estoque —
+vende mesmo sem quantidade”**. Ligada, o produto fica sempre disponível para compra
+(selo *SOB ENCOMENDA* no card, “Disponível sob encomenda” na página), não entra no
+alerta de estoque baixo e não vira “item em falta” na separação — a loja combina a
+entrega com o cliente. Desligada, vale a contagem normal de quantidade.
+
 **Marca:** o campo é digitado, não escolhido numa lista. Comece a escrever e o
 sistema sugere as marcas que já existem; se a marca for nova, escreva o nome e
 aperte **Enter** — ela é criada na hora, sem sair do cadastro (a confirmação

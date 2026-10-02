@@ -264,6 +264,14 @@ class Produto(TimeStampedModel, SluggedModel):
 
     unidade = models.CharField(max_length=5, choices=Unidade.choices, default=Unidade.UN)
     peso_kg = models.DecimalField(max_digits=7, decimal_places=3, default=0)
+    sem_controle_estoque = models.BooleanField(
+        "sem controle de estoque", default=False,
+        help_text=(
+            "Para quem vende sob encomenda ou não conta quantidade: o produto fica "
+            "sempre disponível para compra e a loja combina a entrega. O número de "
+            "estoque abaixo passa a ser só referência."
+        ),
+    )
     estoque = models.IntegerField(default=0)
     estoque_minimo = models.PositiveIntegerField(
         default=5, help_text="Abaixo disso o painel emite alerta."
@@ -416,14 +424,21 @@ class Produto(TimeStampedModel, SluggedModel):
 
     @property
     def em_estoque(self):
+        # sem controle: sempre comprável, mesmo com quantidade zerada
+        if self.sem_controle_estoque:
+            return True
         return self.estoque_total > 0
 
     @property
     def estoque_baixo(self):
+        if self.sem_controle_estoque:
+            return False
         return 0 < self.estoque_total <= self.estoque_minimo
 
     @property
     def rotulo_estoque(self):
+        if self.sem_controle_estoque:
+            return "Disponível sob encomenda"
         total = self.estoque_total
         if total <= 0:
             return "Esgotado"
@@ -676,6 +691,8 @@ class VariacaoProduto(TimeStampedModel):
 
     @property
     def em_estoque(self):
+        if self.produto.sem_controle_estoque:
+            return True
         return self.estoque > 0
 
     @property

@@ -18,7 +18,7 @@
       {% if produto.promocao_vigente %}<span class="badge badge--sale">−{{ produto.percentual_desconto }}%</span>{% endif %}
       {% if produto.permite_assinatura and site.assinatura_visivel %}<span class="badge badge--sub">ASSINATURA{% if produto.desconto_assinatura %} −{{ produto.desconto_assinatura }}%{% endif %}</span>{% endif %}
       {% if produto.lancamento %}<span class="badge badge--new">NOVO</span>{% endif %}
-      {% if not produto.em_estoque %}<span class="badge badge--gray">ESGOTADO</span>{% endif %}
+      {% if not produto.em_estoque %}<span class="badge badge--gray">ESGOTADO</span>{% elif produto.sem_controle_estoque %}<span class="badge badge--amber">SOB ENCOMENDA</span>{% endif %}
     </div>
   </div>
 

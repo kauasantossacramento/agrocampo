@@ -82,8 +82,12 @@
                    style="width:88px;padding:.4rem .5rem" aria-label="Preço de {{ p.nome }}">
           </td>
           <td data-rotulo="Estoque">
-            <input form="f{{ p.id }}" type="number" name="estoque" value="{{ p.estoque }}"
-                   style="width:74px;padding:.4rem .5rem" aria-label="Estoque de {{ p.nome }}">
+            {% if p.sem_controle_estoque %}
+              <span class="badge badge--amber" title="Vende sem controlar quantidade">sem estoque</span>
+            {% else %}
+              <input form="f{{ p.id }}" type="number" name="estoque" value="{{ p.estoque }}"
+                     style="width:74px;padding:.4rem .5rem" aria-label="Estoque de {{ p.nome }}">
+            {% endif %}
           </td>
           <td data-rotulo="No ar">
             <label class="switch-row" style="gap:6px">

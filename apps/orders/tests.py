@@ -821,3 +821,67 @@ class ItinerarioTests(BasePedido):
         self.assertContains(resposta, "Dona Maria")
         self.assertContains(resposta, "Ilha de Tinharé")
         self.assertContains(resposta, "(75) 99999-0000")
+
+
+class SemControleDeEstoqueTests(BasePedido):
+    """Produto sem quantidade continua à venda e não vira 'item em falta'."""
+
+    def _pago(self, **kwargs):
+        pedido = self._pedido(**kwargs)
+        pedido.mudar_status(Pedido.Status.PAGO)
+        return pedido
+
+    def setUp(self):
+        super().setUp()
+        self.produto.estoque = 0
+        self.produto.sem_controle_estoque = True
+        self.produto.save()
+
+    def test_fica_disponivel_mesmo_com_zero(self):
+        self.assertTrue(self.produto.em_estoque)
+        self.assertFalse(self.produto.estoque_baixo)
+        self.assertEqual(self.produto.rotulo_estoque, "Disponível sob encomenda")
+
+    def test_cliente_consegue_comprar(self):
+        r = self.client.post(f"/carrinho/adicionar/{self.produto.slug}/", {"quantidade": 3})
+        self.assertEqual(r.status_code, 302)
+        from apps.cart.models import ItemCarrinho
+        self.assertEqual(ItemCarrinho.objects.get().quantidade, 3)
+
+    def test_separacao_nao_marca_contato_nem_baixa_estoque(self):
+        pedido = self._pago(quantidade=5)
+        separar_pedido(pedido)
+        pedido.refresh_from_db()
+        self.produto.refresh_from_db()
+        self.assertEqual(pedido.status, Pedido.Status.EM_SEPARACAO)
+        self.assertFalse(pedido.contato_pendente)
+        self.assertEqual(pedido.itens_em_falta, "")
+        self.assertEqual(self.produto.estoque, 0)          # não fica negativo
+        self.assertTrue(pedido.itens.first().baixado_do_estoque)
+
+    def test_com_controle_o_comportamento_antigo_continua(self):
+        """Com controle, estoque que some entre a compra e a separação ainda
+        marca 'falar com o cliente' — a regra antiga segue valendo."""
+        self.produto.sem_controle_estoque = False
+        self.produto.estoque = 3
+        self.produto.save()
+        pedido = self._pago(quantidade=3)
+        self.produto.estoque = 1       # a loja vendeu no balcão nesse meio-tempo
+        self.produto.save()
+        separar_pedido(pedido)
+        pedido.refresh_from_db()
+        self.assertTrue(pedido.contato_pendente)
+
+    def test_card_e_pagina_mostram_que_da_para_comprar(self):
+        html = self.client.get(self.produto.get_absolute_url()).content.decode()
+        self.assertIn("Disponível sob encomenda", html)
+        self.assertIn("Adicionar ao carrinho", html)
+        self.assertNotIn("Produto esgotado", html)
+        html = self.client.get("/catalogo/").content.decode()
+        self.assertIn("SOB ENCOMENDA", html)
+        self.assertNotIn("ESGOTADO", html)
+
+    def test_painel_salva_a_opcao_no_cadastro(self):
+        self.client.force_login(self.lojista)
+        html = self.client.get(f"/painel/produtos/{self.produto.id}/form/").content.decode()
+        self.assertIn("Sem controle de estoque", html)

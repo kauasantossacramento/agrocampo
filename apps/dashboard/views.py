@@ -67,7 +67,7 @@ def _metricas():
             status=Assinatura.Status.ATIVA
         ).count(),
         "estoque_critico": Produto.objects.filter(
-            publicado=True, estoque__lte=F("estoque_minimo")
+            publicado=True, sem_controle_estoque=False, estoque__lte=F("estoque_minimo")
         ).count(),
     }
 

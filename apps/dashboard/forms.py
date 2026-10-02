@@ -41,7 +41,7 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             "nome", "categoria", "linha", "sku",
             "resumo", "descricao",
             "preco", "preco_promocional", "promocao_ate",
-            "estoque", "estoque_minimo", "unidade", "peso_kg",
+            "sem_controle_estoque", "estoque", "estoque_minimo", "unidade", "peso_kg",
             "permite_assinatura", "desconto_assinatura_proprio",
             "destaque", "lancamento", "publicado",
         )

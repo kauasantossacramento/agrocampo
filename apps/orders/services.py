@@ -97,6 +97,11 @@ def separar_pedido(pedido: Pedido, autor=None) -> Pedido:
     for item in pedido.itens.select_related("produto", "variacao"):
         if item.baixado_do_estoque:
             continue
+        if item.produto.sem_controle_estoque:
+            # não há quantidade para baixar; o item sai do depósito ou é encomendado
+            item.baixado_do_estoque = True
+            item.save(update_fields=["baixado_do_estoque"])
+            continue
         # baixa só o que existe: estoque negativo mente para o lojista
         disponivel = min(item.quantidade, max(item.estoque_disponivel, 0))
         if disponivel:

@@ -81,7 +81,7 @@ def adicionar(request, slug):
             )
 
     disponivel = variacao.estoque if variacao else produto.estoque
-    if disponivel < quantidade:
+    if not produto.sem_controle_estoque and disponivel < quantidade:
         nome = f"{produto.nome} {variacao.rotulo}" if variacao else produto.nome
         return _resposta(request, carrinho, f"{nome} está sem estoque.", ok=False)
 

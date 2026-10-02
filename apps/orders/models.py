@@ -332,6 +332,9 @@ class ItemPedido(models.Model):
 
     @property
     def tem_estoque(self):
+        # produto sem controle de estoque nunca "falta": a loja combina a entrega
+        if self.produto.sem_controle_estoque:
+            return True
         return self.estoque_disponivel >= self.quantidade
 
     def baixar_estoque(self, pedido_numero):

@@ -236,4 +236,9 @@ class ItemCarrinho(TimeStampedModel):
 
     @property
     def disponivel(self):
-        return self.produto.publicado and self.estoque_disponivel >= self.quantidade
+        if not self.produto.publicado:
+            return False
+        # produto sem controle de estoque está sempre disponível para compra
+        if self.produto.sem_controle_estoque:
+            return True
+        return self.estoque_disponivel >= self.quantidade
