@@ -5,12 +5,27 @@
 
 {% block painel_content %}
 <div class="row" style="gap:var(--s-2);margin-bottom:var(--s-5)">
-  <a href="{% url 'dashboard:estoque' %}" class="chip {% if request.GET.critico != '1' %}is-active{% endif %}">Todos os produtos</a>
+  <a href="{% url 'dashboard:estoque' %}" class="chip {% if not filtro %}is-active{% endif %}">
+    Todos os produtos <span class="badge">{{ total }}</span>
+  </a>
+  <a href="{% url 'dashboard:estoque' %}?critico=contados" class="chip {% if filtro == 'contados' %}is-active{% endif %}">Com contagem</a>
   <a href="{% url 'dashboard:estoque' %}?critico=1" class="chip {% if request.GET.critico == '1' %}is-active{% endif %}">
     Estoque crítico
     {% if metricas.estoque_critico %}<span class="badge badge--sale">{{ metricas.estoque_critico }}</span>{% endif %}
   </a>
 </div>
+
+{% if sem_controle %}
+  <div class="alert alert--info" style="margin-bottom:var(--s-5)">
+    <svg width="16" height="16"><use href="#i-info"></use></svg>
+    <span>
+      <strong>{{ sem_controle }} de {{ total }} produtos vendem sem contagem (∞).</strong>
+      Eles ficam sempre disponíveis na loja; se faltar na hora de separar, a equipe
+      chama o cliente no WhatsApp para trocar ou devolver. Para contar a quantidade
+      de um produto, desmarque “sem controle de estoque” no cadastro dele.
+    </span>
+  </div>
+{% endif %}
 
 <div class="table-wrap" data-reveal>
   <table class="data tabela-cartao">
@@ -26,18 +41,27 @@
           <td data-rotulo="SKU" class="xs muted">{{ p.sku }}</td>
           <td data-rotulo="Categoria" class="small">{{ p.categoria.nome }}</td>
           <td data-rotulo="Estoque">
-            <strong style="color:{% if p.estoque <= 0 %}var(--red){% elif p.estoque_baixo %}var(--amber){% else %}var(--green){% endif %}">
-              {{ p.estoque }}
-            </strong>
+            {% if p.sem_controle_estoque %}
+              <strong style="color:var(--green)" title="Sempre disponível: se faltar, a loja fala com o cliente pelo WhatsApp">∞</strong>
+              <span class="xs muted">sem contagem</span>
+            {% else %}
+              <strong style="color:{% if p.estoque <= 0 %}var(--red){% elif p.estoque_baixo %}var(--amber){% else %}var(--green){% endif %}">
+                {{ p.estoque }}
+              </strong>
+            {% endif %}
           </td>
-          <td data-rotulo="Mínimo" class="small muted">{{ p.estoque_minimo }}</td>
+          <td data-rotulo="Mínimo" class="small muted">{% if p.sem_controle_estoque %}—{% else %}{{ p.estoque_minimo }}{% endif %}</td>
           <td data-rotulo="Vendas" class="small">{{ p.vendas }}</td>
           <td data-rotulo="Repor">
-            <form method="post" action="{% url 'dashboard:repor_estoque' p.id %}" class="row" style="gap:var(--s-2)">
-              {% csrf_token %}
-              <input type="number" name="quantidade" min="1" value="10" style="width:76px;padding:.4rem .5rem" aria-label="Quantidade a repor">
-              <button type="submit" class="btn btn--ghost btn--sm nowrap">+ Repor</button>
-            </form>
+            {% if p.sem_controle_estoque %}
+              <span class="xs muted">não precisa repor</span>
+            {% else %}
+              <form method="post" action="{% url 'dashboard:repor_estoque' p.id %}" class="row" style="gap:var(--s-2)">
+                {% csrf_token %}
+                <input type="number" name="quantidade" min="1" value="10" style="width:76px;padding:.4rem .5rem" aria-label="Quantidade a repor">
+                <button type="submit" class="btn btn--ghost btn--sm nowrap">+ Repor</button>
+              </form>
+            {% endif %}
           </td>
         </tr>
       {% empty %}

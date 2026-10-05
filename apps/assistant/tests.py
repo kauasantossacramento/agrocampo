@@ -27,11 +27,11 @@ class SilvinhaTests(TestCase):
         categoria = Categoria.objects.create(nome="Ração")
         self.racao = Produto.objects.create(
             sku="R-1", nome="Ração Golden Cães Adultos 15kg", categoria=categoria,
-            preco=Decimal("289.90"), estoque=3, resumo="Para cães adultos de porte médio.",
+            preco=Decimal("289.90"), estoque=3, sem_controle_estoque=False, resumo="Para cães adultos de porte médio.",
         )
         Produto.objects.create(
             sku="S-1", nome="Sal Mineral Bovino 25kg", categoria=categoria,
-            preco=Decimal("120.00"), estoque=0,
+            preco=Decimal("120.00"), estoque=0, sem_controle_estoque=False,
         )
         Cidade.objects.create(nome="Valença", uf="BA", sede=True, frete=Decimal("8"))
         Cidade.objects.create(nome="Cairu", uf="BA", frete=Decimal("25"), dias_entrega="4")
@@ -139,7 +139,7 @@ class CompraPeloChatTests(TestCase):
         categoria = Categoria.objects.create(nome="Ração")
         self.racao = Produto.objects.create(
             sku="R-1", nome="Ração Golden 15kg", categoria=categoria,
-            preco=Decimal("289.90"), estoque=3, publicado=True,
+            preco=Decimal("289.90"), estoque=3, sem_controle_estoque=False, publicado=True,
         )
         config = SiteConfig.load()
         config.assistente_ativo = True
@@ -202,9 +202,9 @@ class CartoesDeProdutoTests(TestCase):
     def setUp(self):
         categoria = Categoria.objects.create(nome="Ração")
         self.racao = Produto.objects.create(sku="R-1", nome="Ração Golden 15kg", categoria=categoria,
-                                            preco=Decimal("289.90"), estoque=3, publicado=True)
+                                            preco=Decimal("289.90"), estoque=3, sem_controle_estoque=False, publicado=True)
         self.comedouro = Produto.objects.create(sku="C-1", nome="Comedouro Inox", categoria=categoria,
-                                                preco=Decimal("79.90"), estoque=0, publicado=True)
+                                                preco=Decimal("79.90"), estoque=0, sem_controle_estoque=False, publicado=True)
 
     def test_links_de_produto_viram_cartoes_e_saem_do_texto(self):
         texto = ("Temos a Ração Golden por R$ 289,90 e o Comedouro Inox.\n\n"

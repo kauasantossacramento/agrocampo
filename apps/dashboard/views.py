@@ -248,13 +248,26 @@ def itinerario(request):
 
 @operador_requerido
 def estoque(request):
-    produtos = Produto.objects.select_related("categoria").order_by("estoque")
-    if request.GET.get("critico") == "1":
-        produtos = produtos.filter(estoque__lte=F("estoque_minimo"))
+    """Lista o catálogo inteiro. Quem não controla estoque aparece como ∞."""
+    produtos = Produto.objects.select_related("categoria").order_by(
+        "sem_controle_estoque", "estoque", "nome"
+    )
+    filtro = request.GET.get("critico")
+    if filtro == "1":
+        produtos = produtos.filter(sem_controle_estoque=False, estoque__lte=F("estoque_minimo"))
+    elif filtro == "contados":
+        produtos = produtos.filter(sem_controle_estoque=False)
     return render(
         request,
         "dashboard/estoque.html",
-        {"secao": "estoque", "produtos": produtos[:200], "metricas": _metricas()},
+        {
+            "secao": "estoque",
+            "produtos": produtos,
+            "filtro": filtro or "",
+            "total": Produto.objects.count(),
+            "sem_controle": Produto.objects.filter(sem_controle_estoque=True).count(),
+            "metricas": _metricas(),
+        },
     )
 
 

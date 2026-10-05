@@ -41,7 +41,7 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             "nome", "categoria", "linha", "sku",
             "resumo", "descricao",
             "preco", "preco_promocional", "promocao_ate",
-            "sem_controle_estoque", "estoque", "estoque_minimo", "unidade", "peso_kg",
+            "sem_controle_estoque", "estoque", "estoque_minimo", "unidade", "peso_kg", "proteina",
             "permite_assinatura", "desconto_assinatura_proprio",
             "destaque", "lancamento", "publicado",
         )
@@ -52,13 +52,18 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             }),
             "sku": forms.TextInput(attrs={"placeholder": "Deixe vazio para gerar automático"}),
             "resumo": forms.TextInput(attrs={"placeholder": "Uma frase que aparece no card"}),
-            "descricao": forms.Textarea(attrs={"rows": 4, "placeholder": "Detalhes do produto"}),
+            "descricao": forms.Textarea(attrs={
+                "rows": 10, "data-autogrow": "", "placeholder":
+                "Detalhes do produto — pode escrever à vontade; a caixa cresce "
+                "conforme você digita.",
+            }),
             "preco": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal", "placeholder": "0,00"}),
             "preco_promocional": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal", "placeholder": "opcional"}),
             "promocao_ate": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "estoque": forms.NumberInput(attrs={"inputmode": "numeric"}),
             "estoque_minimo": forms.NumberInput(attrs={"inputmode": "numeric"}),
             "peso_kg": forms.NumberInput(attrs={"step": "0.001", "inputmode": "decimal"}),
+            "proteina": forms.NumberInput(attrs={"inputmode": "numeric", "placeholder": "ex.: 26"}),
             "desconto_assinatura_proprio": forms.NumberInput(attrs={
                 "inputmode": "numeric", "placeholder": "vazio = usa o global",
             }),
@@ -280,6 +285,7 @@ class VitrinesForm(_EstilizadoMixin, forms.ModelForm):
             "vitrine_ouro_ativa", "vitrine_ouro_titulo",
             "vitrine_prata_ativa", "vitrine_prata_titulo",
             "vitrine_bronze_ativa", "vitrine_bronze_titulo",
+            "linha_ouro_nome", "linha_prata_nome", "linha_bronze_nome",
             "home_ordem",
         )
         widgets = {"home_ordem": forms.HiddenInput()}

@@ -117,6 +117,19 @@
   /* Marca digitada: Enter cria a que não existe, ali mesmo.
      O Enter num input de texto enviaria o formulário — aqui ele é
      interceptado e vira "incluir marca". */
+  /* Caixas de texto que crescem com o conteúdo: descrição de ração é longa e
+     rolar dentro de um retângulo de 4 linhas atrapalha quem escreve. */
+  function prepararAutogrow(raiz) {
+    $$('[data-autogrow]', raiz || document).forEach(function (campo) {
+      const ajustar = function () {
+        campo.style.height = 'auto';
+        campo.style.height = Math.min(campo.scrollHeight + 2, 900) + 'px';
+      };
+      campo.addEventListener('input', ajustar);
+      ajustar();
+    });
+  }
+
   function prepararMarca(raiz) {
     const campo = $('[data-marca-campo]', raiz);
     const lista = $('#lista-marcas', raiz);
@@ -177,6 +190,7 @@
     const btSalvar = $('[data-wizard-salvar]', wizard);
 
     prepararMarca(wizard);
+    prepararAutogrow(wizard);
 
     const novasFotos = [];   // File[] ainda não enviados
     const removidas = [];    // ids de ProdutoImagem marcados para apagar

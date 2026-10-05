@@ -62,9 +62,25 @@
           observador.unobserve(entrada.target);
         });
       },
-      { threshold: 0.12, rootMargin: '0px 0px -60px 0px' }
+      // threshold 0: basta um pixel aparecer. Com uma fração (0.12) um bloco
+      // mais alto que a janela — uma tabela com dezenas de produtos — nunca
+      // alcançava a fração exigida e ficava invisível para sempre.
+      { threshold: 0, rootMargin: '0px 0px -40px 0px' }
     );
-    alvos.forEach((el) => observador.observe(el));
+    alvos.forEach((el) => {
+      // bloco que já nasce ocupando a tela inteira não espera observador
+      if (el.getBoundingClientRect().top < window.innerHeight) {
+        el.classList.add('is-visible');
+        return;
+      }
+      observador.observe(el);
+    });
+
+    // rede de segurança: nada neste site pode ficar invisível por causa de
+    // animação. Se em 3 s algo ainda não apareceu, aparece.
+    setTimeout(() => {
+      alvos.forEach((el) => el.classList.add('is-visible'));
+    }, 3000);
   }
 
   /* ------------------------------------------ cabeçalho condensa ao rolar */

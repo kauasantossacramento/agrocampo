@@ -29,6 +29,12 @@
         {% if produto.promocao_vigente %}
           <span class="badge badge--sale" style="position:absolute;top:var(--s-4);left:var(--s-4);font-size:var(--fs-sm);padding:.4rem .8rem">−{{ produto.percentual_desconto }}%</span>
         {% endif %}
+        {% if produto.proteina %}
+          <span class="faixa-proteina faixa-proteina--grande" aria-label="{{ produto.proteina }} por cento de proteína">
+            <strong>{{ produto.proteina }}%</strong><span>de proteína</span>
+          </span>
+        {% endif %}
+        {% include 'partials/selo_linha.html' %}
       </div>
 
       {% if produto.imagens.count > 1 %}
@@ -52,7 +58,7 @@
         {% if produto.linha %}
           <span class="linha-selo linha-selo--{{ produto.linha }} linha-selo--estatico">
             <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
-            {{ produto.get_linha_display }}
+            {{ produto.linha_nome }}
           </span>
         {% endif %}
         <h1 style="font-size:var(--fs-2xl);margin-block:var(--s-2) var(--s-3)">{{ produto.nome }}</h1>
@@ -201,17 +207,21 @@
   {# --------------------------------------------------------- DETALHES #}
   {% if produto.descricao or produto.composicao %}
     <section class="section section--tight" data-reveal>
-      <div class="grid grid--2">
+      {% comment %}
+        Sem composição cadastrada o texto ocupa a largura toda, em vez de ficar
+        numa coluna estreita com meia página vazia ao lado.
+      {% endcomment %}
+      <div class="grid {% if produto.descricao and produto.composicao %}grid--2{% endif %}">
         {% if produto.descricao %}
           <div class="card card--pad">
-            <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Descrição</h3>
-            <p class="small" style="color:var(--ink-3);margin:0;white-space:pre-line">{{ produto.descricao }}</p>
+            <h3 class="texto-produto__titulo">Descrição</h3>
+            <div class="texto-produto">{{ produto.descricao|linebreaks }}</div>
           </div>
         {% endif %}
         {% if produto.composicao %}
           <div class="card card--pad">
-            <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-3)">Composição e informações</h3>
-            <p class="small" style="color:var(--ink-3);margin:0;white-space:pre-line">{{ produto.composicao }}</p>
+            <h3 class="texto-produto__titulo">Composição e informações</h3>
+            <div class="texto-produto">{{ produto.composicao|linebreaks }}</div>
           </div>
         {% endif %}
       </div>

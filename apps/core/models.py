@@ -249,15 +249,30 @@ class SiteConfig(TimeStampedModel):
         "Gemini · modelo", max_length=60, default="gemini-3.6-flash", blank=True,
     )
 
+    # ------------------------------------------ nomes das linhas
+    # As três linhas internas continuam sendo ouro/prata/bronze (é o que está
+    # gravado em cada produto); o lojista escolhe como elas se chamam na loja.
+    linha_ouro_nome = models.CharField(
+        "nome da 1ª linha", max_length=40, blank=True, default="Super Premium",
+        help_text="A linha mais alta. Vazio esconde o selo nos produtos.",
+    )
+    linha_prata_nome = models.CharField(
+        "nome da 2ª linha", max_length=40, blank=True, default="Premium",
+    )
+    linha_bronze_nome = models.CharField(
+        "nome da 3ª linha", max_length=40, blank=True, default="",
+        help_text="Ainda sem nome definido — escreva quando decidir.",
+    )
+
     # ------------------------------------------ vitrines por linha
     vitrine_ouro_titulo = models.CharField(
-        max_length=60, blank=True, default="Mais vendidos — Linha Ouro"
+        max_length=60, blank=True, default="Mais vendidos — Super Premium"
     )
     vitrine_prata_titulo = models.CharField(
-        max_length=60, blank=True, default="Mais vendidos — Linha Prata"
+        max_length=60, blank=True, default="Mais vendidos — Premium"
     )
     vitrine_bronze_titulo = models.CharField(
-        max_length=60, blank=True, default="Mais vendidos — Linha Bronze"
+        max_length=60, blank=True, default="Mais vendidos — Linha 3"
     )
     vitrine_ouro_ativa = models.BooleanField(default=True)
     vitrine_prata_ativa = models.BooleanField(default=True)
@@ -439,6 +454,14 @@ class SiteConfig(TimeStampedModel):
                 vistas.add(c)
                 ordem.append(c)
         return ordem
+
+    def nome_da_linha(self, linha: str) -> str:
+        """Nome que o lojista deu à linha interna (ouro/prata/bronze)."""
+        return {
+            "ouro": self.linha_ouro_nome,
+            "prata": self.linha_prata_nome,
+            "bronze": self.linha_bronze_nome,
+        }.get(linha or "", "").strip()
 
     def vitrines_por_linha(self):
         """Config das três vitrines, na ordem em que aparecem na home."""

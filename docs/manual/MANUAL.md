@@ -249,6 +249,15 @@ lápis que abre o cadastro completo em modal: nome, categoria, marca, **linha
 **tamanhos** (kg/g com preço/estoque/foto), assinatura, fotos, benefícios,
 "Maior sucesso", lançamento, publicado. O SKU é opcional (gerado).
 
+**Selo da linha:** produto com linha marcada ganha um selo de medalha sobre a foto —
+dourado na 1ª linha (**Super Premium**), prateado na 2ª (**Premium**) e bronze na 3ª.
+Os nomes são editáveis em **Configurações › Vitrines › Nome das linhas**; nome vazio
+esconde o selo daquela linha.
+
+**% de proteína:** no passo *Preço*, o campo *% de proteína* mostra uma faixa azul
+sobre a foto do produto (“26% DE PROTEÍNA”), como no rótulo da embalagem. Vazio não
+mostra nada.
+
 **Sem controle de estoque:** no passo *Preço* há a opção **“Sem controle de estoque —
 vende mesmo sem quantidade”**. Ligada, o produto fica sempre disponível para compra
 (selo *SOB ENCOMENDA* no card, “Disponível sob encomenda” na página), não entra no

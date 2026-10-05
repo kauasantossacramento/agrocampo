@@ -6,13 +6,9 @@
     celular o invólucro vira uma faixa abaixo da imagem — três selos sobre um
     card de 170px escondiam o produto que o cliente foi ver.
   {% endcomment %}
+
   <div class="product__selos">
-    {% if produto.linha %}
-      <span class="linha-selo linha-selo--{{ produto.linha }}">
-        <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
-        {{ produto.get_linha_display }}
-      </span>
-    {% endif %}
+    {% include 'partials/selo_linha.html' %}
 
     <div class="product__flags">
       {% if produto.promocao_vigente %}<span class="badge badge--sale">−{{ produto.percentual_desconto }}%</span>{% endif %}
@@ -40,6 +36,12 @@
         </span>
       {% endif %}
     {% endwith %}
+    {% if produto.proteina %}
+      {# faixa azul do rótulo, sobre a foto — o número manda, como na embalagem #}
+      <span class="faixa-proteina" aria-label="{{ produto.proteina }} por cento de proteína">
+        <strong>{{ produto.proteina }}%</strong><span>de proteína</span>
+      </span>
+    {% endif %}
   </a>
 
   <div class="product__body">

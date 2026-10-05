@@ -273,12 +273,18 @@ class Produto(TimeStampedModel, SluggedModel):
 
     unidade = models.CharField(max_length=5, choices=Unidade.choices, default=Unidade.UN)
     peso_kg = models.DecimalField(max_digits=7, decimal_places=3, default=0)
+    proteina = models.PositiveSmallIntegerField(
+        "% de proteína", null=True, blank=True,
+        validators=[MaxValueValidator(100)],
+        help_text="Aparece numa faixa azul sobre a foto, como no rótulo da ração. "
+                  "Vazio não mostra nada.",
+    )
     sem_controle_estoque = models.BooleanField(
-        "sem controle de estoque", default=False,
+        "sem controle de estoque", default=True,
         help_text=(
-            "Para quem vende sob encomenda ou não conta quantidade: o produto fica "
-            "sempre disponível para compra e a loja combina a entrega. O número de "
-            "estoque abaixo passa a ser só referência."
+            "Padrão da loja: o produto fica sempre disponível para compra e, se "
+            "faltar, a equipe fala com o cliente pelo WhatsApp para trocar ou "
+            "devolver. Desmarque só para contar quantidade de verdade."
         ),
     )
     estoque = models.IntegerField(default=0)
@@ -413,6 +419,19 @@ class Produto(TimeStampedModel, SluggedModel):
     @property
     def economia_assinatura(self) -> Decimal:
         return self.preco_atual - self.preco_assinatura
+
+    @property
+    def linha_nome(self) -> str:
+        """Como esta linha se chama na loja (o lojista edita em Configurações).
+
+        Nome vazio é uma escolha, não um descuido: a terceira linha ainda não
+        tem nome definido, e sem nome o produto simplesmente não ganha selo.
+        """
+        from apps.core.models import SiteConfig
+
+        if not self.linha:
+            return ""
+        return SiteConfig.load().nome_da_linha(self.linha)
 
     @property
     def percentual_desconto(self) -> int:

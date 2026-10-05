@@ -1385,3 +1385,66 @@
 .silvinha__produto-texto strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .silvinha__produto-preco { color: var(--green-deep); font-weight: 700; }
 .silvinha__produto-ver { font-size: var(--fs-xs); font-weight: 700; color: var(--red); white-space: nowrap; }
+
+/* ═══════════════════════════ selo de linha (Super Premium / Premium / 3ª) */
+/* A cor é da linha; o desenho está em partials/selo_linha.html. */
+.selo-linha {
+  position: absolute; top: var(--s-3); right: var(--s-3); z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px 3px 3px; border-radius: 999px;
+  background: rgba(26, 20, 16, .92); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+.selo-linha__medalha { width: 24px; height: 24px; flex: none; }
+.selo-linha__miolo { fill: #1A1410; }
+.selo-linha--ouro   { --selo-a: #FFE9A3; --selo-b: #E8B429; --selo-c: #A77C10; }
+.selo-linha--prata  { --selo-a: #F4F6F8; --selo-b: #C3CBD3; --selo-c: #8A949E; }
+.selo-linha--bronze { --selo-a: #F3D3B0; --selo-b: #C98A4B; --selo-c: #8C5A28; }
+.selo-linha__borda  { fill: var(--selo-b); }
+.selo-linha__aro    { stroke: var(--selo-a); stroke-width: 1.2; }
+.selo-linha__brilho { fill: var(--selo-a); }
+.selo-linha__texto  { white-space: nowrap; }
+
+/* na página do produto o selo é maior e fica no alto da foto */
+.gallery__main { position: relative; }
+.gallery__main .selo-linha { top: var(--s-4); right: var(--s-4); font-size: var(--fs-xs); padding: 4px 14px 4px 4px; }
+.gallery__main .selo-linha__medalha { width: 34px; height: 34px; }
+
+/* ═══════════════════════════════ faixa azul do percentual de proteína */
+.product__media { position: relative; }
+.faixa-proteina {
+  position: absolute; left: 0; bottom: var(--s-3); z-index: 3;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 5px 12px 5px 10px; border-radius: 0 8px 8px 0;
+  background: #1B3C8C; color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .22);
+  font-weight: 700; line-height: 1;
+}
+.faixa-proteina strong { font-family: var(--font-display); font-size: 1.05rem; font-weight: 800; }
+.faixa-proteina span { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; opacity: .95; }
+.faixa-proteina--grande { bottom: var(--s-6); padding: 9px 20px 9px 16px; border-radius: 0 12px 12px 0; }
+.faixa-proteina--grande strong { font-size: 1.9rem; }
+.faixa-proteina--grande span { font-size: var(--fs-xs); }
+
+/* ═══════════════════════════════ texto de descrição do produto */
+/* Descrição de ração é longa e cheia de subtítulo; o corpo maior e a medida
+   de leitura limitada tornam o bloco legível em vez de um paredão cinza. */
+.texto-produto__titulo { font-size: var(--fs-lg); margin-bottom: var(--s-4); }
+.texto-produto {
+  /* corpo maior que o resto do site: descrição de ração é texto para ler,
+     não legenda. A medida de 70 caracteres mantém a linha confortável. */
+  font-size: 1.02rem; line-height: 1.8; color: var(--ink-2);
+  max-width: 70ch;
+}
+.texto-produto p { margin: 0 0 var(--s-4); }
+.texto-produto p:last-child { margin-bottom: 0; }
+/* primeira linha de cada parágrafo curto vira subtítulo natural */
+.texto-produto strong { color: var(--ink); }
+
+@media (max-width: 620px) {
+  .selo-linha { font-size: 9px; padding: 2px 8px 2px 2px; }
+  .selo-linha__medalha { width: 20px; height: 20px; }
+  .faixa-proteina strong { font-size: .95rem; }
+  .faixa-proteina--grande strong { font-size: 1.5rem; }
+  .texto-produto { font-size: var(--fs-sm); line-height: 1.7; }
+}

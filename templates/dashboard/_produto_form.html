@@ -116,6 +116,11 @@
         {{ form.unidade }}
       </div>
       <div class="field">
+        <label for="{{ form.proteina.id_for_label }}">% de proteína</label>
+        {{ form.proteina }}
+        <span class="help">{{ form.proteina.help_text }}</span>
+      </div>
+      <div class="field">
         <label for="{{ form.peso_kg.id_for_label }}">Peso (kg)</label>
         {{ form.peso_kg }}
       </div>

@@ -37,7 +37,7 @@ class BasePedido(TestCase):
         categoria = Categoria.objects.create(nome="Ração")
         self.produto = Produto.objects.create(
             sku="P-1", nome="Ração Golden 15kg", categoria=categoria,
-            preco=Decimal("300.00"), estoque=5,
+            preco=Decimal("300.00"), estoque=5, sem_controle_estoque=False,
             permite_assinatura=True, desconto_assinatura_proprio=10,
         )
         self.carrinho = Carrinho.objects.create(usuario=self.cliente)
@@ -247,7 +247,7 @@ class DescontoAssinaturaGlobalTests(BasePedido):
     def test_mudar_o_global_muda_a_loja_toda_de_uma_vez(self):
         outro = Produto.objects.create(
             sku="P-2", nome="Outro assinável", categoria=self.produto.categoria,
-            preco=Decimal("100.00"), estoque=5, permite_assinatura=True,
+            preco=Decimal("100.00"), estoque=5, sem_controle_estoque=False, permite_assinatura=True,
         )
         self.produto.desconto_assinatura_proprio = None
         self.produto.save()
@@ -753,7 +753,7 @@ class LinhasDeExemploTests(TestCase):
         categoria = Categoria.objects.create(nome="Ração")
         meu = Produto.objects.create(
             sku="AGC-9999", nome="Escolha do lojista", categoria=categoria,
-            preco=Decimal("999.00"), estoque=1, linha=Produto.Linha.BRONZE,
+            preco=Decimal("999.00"), estoque=1, sem_controle_estoque=False, linha=Produto.Linha.BRONZE,
         )
         call_command("seed", verbosity=0)
 

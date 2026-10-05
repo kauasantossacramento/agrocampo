@@ -985,9 +985,9 @@ class OrdemDasVitrinesTests(TestCase):
         html = self.client.get(reverse("core:home")).content.decode()
 
         # os títulos das vitrines (os cards também dizem "Linha X", por isso o "— ")
-        ouro = html.index("— Linha Ouro")
-        prata = html.index("— Linha Prata")
-        bronze = html.index("— Linha Bronze")
+        ouro = html.index("— Super Premium")
+        prata = html.index("— Premium")
+        bronze = html.index("— Linha 3")
 
         self.assertLess(ouro, prata)
         self.assertLess(prata, bronze)
@@ -995,15 +995,15 @@ class OrdemDasVitrinesTests(TestCase):
     def test_ordem_das_secoes_vem_do_painel(self):
         """Padrão (21/09): Maiores sucessos abre; o lojista pode pôr Ouro antes."""
         html = self.client.get(reverse("core:home")).content.decode()
-        self.assertLess(html.index("Maiores sucessos"), html.index("— Linha Ouro"))
+        self.assertLess(html.index("Maiores sucessos"), html.index("— Super Premium"))
 
         config = SiteConfig.load()
         config.home_ordem = "ouro,sucessos"
         config.save()
         html = self.client.get(reverse("core:home")).content.decode()
-        self.assertLess(html.index("— Linha Ouro"), html.index("Maiores sucessos"))
+        self.assertLess(html.index("— Super Premium"), html.index("Maiores sucessos"))
         # as seções não listadas continuam entrando, no fim
-        self.assertIn("— Linha Prata", html)
+        self.assertIn("— Premium", html)
 
 
 class ModalDeConteudoTests(TestCase):
