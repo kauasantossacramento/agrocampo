@@ -1559,3 +1559,55 @@ class MarcaNoCadastroDeProdutoTests(TestCase):
         self.assertIn('data-marca-campo', html)
         self.assertIn('id="lista-marcas"', html)
         self.assertIn('<option value="Golden">', html)
+
+
+class TextoRicoTests(TestCase):
+    """Negrito na descrição: `**assim**` e subtítulo reconhecido sozinho."""
+
+    def setUp(self):
+        from apps.core.templatetags.agro_extras import texto_rico
+
+        self.f = texto_rico
+
+    def test_negrito_com_asteriscos(self):
+        self.assertIn("<strong>muito importante</strong>", self.f("É **muito importante** cuidar."))
+
+    def test_subtitulo_curto_vira_negrito(self):
+        texto = ("Benefícios do alimento seco\n"
+                 "A maior vantagem é que ele pode ser armazenado por muito mais tempo.")
+        html = self.f(texto)
+        self.assertIn("<strong>Benefícios do alimento seco</strong>", html)
+        self.assertNotIn("<strong>A maior vantagem", html)
+
+    def test_frase_comum_nao_vira_titulo(self):
+        texto = "Alimento completo.\nContém minerais como cálcio e fósforo."
+        self.assertNotIn("<strong>", self.f(texto))
+
+    def test_paragrafos_separados(self):
+        html = self.f("Primeiro parágrafo.\n\nSegundo parágrafo.")
+        self.assertEqual(html.count("<p>"), 2)
+
+    def test_html_do_usuario_nao_passa(self):
+        html = self.f("<script>alert(1)</script> e <b>isso</b>")
+        self.assertNotIn("<script>", html)
+        self.assertNotIn("<b>", html)
+        self.assertIn("&lt;script&gt;", html)
+
+    def test_vazio_nao_quebra(self):
+        self.assertEqual(self.f(""), "")
+        self.assertEqual(self.f(None), "")
+
+    def test_descricao_do_produto_sai_formatada_na_loja(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Categoria, Produto
+
+        categoria = Categoria.objects.create(nome="Ração")
+        produto = Produto.objects.create(
+            sku="R-9", nome="Ração com descrição", categoria=categoria, preco=Decimal("10"),
+            publicado=True,
+            descricao="Texto de abertura.\n\nProteína para uma nutrição completa\n"
+                      "Alimento rico em proteína animal de alto valor biológico.",
+        )
+        html = self.client.get(produto.get_absolute_url()).content.decode()
+        self.assertIn("<strong>Proteína para uma nutrição completa</strong>", html)

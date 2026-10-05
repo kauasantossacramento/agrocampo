@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load agro_extras %}
 
 {% block title %}{{ produto.nome }} — {{ site.nome_loja }}{% endblock %}
 {% block description %}{{ produto.resumo|default:produto.nome }}{% endblock %}
@@ -215,13 +216,13 @@
         {% if produto.descricao %}
           <div class="card card--pad">
             <h3 class="texto-produto__titulo">Descrição</h3>
-            <div class="texto-produto">{{ produto.descricao|linebreaks }}</div>
+            <div class="texto-produto">{{ produto.descricao|texto_rico }}</div>
           </div>
         {% endif %}
         {% if produto.composicao %}
           <div class="card card--pad">
             <h3 class="texto-produto__titulo">Composição e informações</h3>
-            <div class="texto-produto">{{ produto.composicao|linebreaks }}</div>
+            <div class="texto-produto">{{ produto.composicao|texto_rico }}</div>
           </div>
         {% endif %}
       </div>

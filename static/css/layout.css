@@ -1387,16 +1387,15 @@
 .silvinha__produto-ver { font-size: var(--fs-xs); font-weight: 700; color: var(--red); white-space: nowrap; }
 
 /* ═══════════════════════════ selo de linha (Super Premium / Premium / 3ª) */
-/* A cor é da linha; o desenho está em partials/selo_linha.html. */
+/* Só a medalha, grande, vazando do canto do card — o desenho está em
+   partials/selo_linha.html e a cor vem da linha. */
 .selo-linha {
-  position: absolute; top: var(--s-3); right: var(--s-3); z-index: 3;
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 3px 10px 3px 3px; border-radius: 999px;
-  background: rgba(26, 20, 16, .92); color: #fff;
-  font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  position: absolute; top: -14px; right: -14px; z-index: 5;
+  display: block; width: 62px; height: 62px;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .3));
+  pointer-events: none;
 }
-.selo-linha__medalha { width: 24px; height: 24px; flex: none; }
+.selo-linha__medalha { width: 100%; height: 100%; display: block; }
 .selo-linha__miolo { fill: #1A1410; }
 .selo-linha--ouro   { --selo-a: #FFE9A3; --selo-b: #E8B429; --selo-c: #A77C10; }
 .selo-linha--prata  { --selo-a: #F4F6F8; --selo-b: #C3CBD3; --selo-c: #8A949E; }
@@ -1404,12 +1403,14 @@
 .selo-linha__borda  { fill: var(--selo-b); }
 .selo-linha__aro    { stroke: var(--selo-a); stroke-width: 1.2; }
 .selo-linha__brilho { fill: var(--selo-a); }
-.selo-linha__texto  { white-space: nowrap; }
 
-/* na página do produto o selo é maior e fica no alto da foto */
-.gallery__main { position: relative; }
-.gallery__main .selo-linha { top: var(--s-4); right: var(--s-4); font-size: var(--fs-xs); padding: 4px 14px 4px 4px; }
-.gallery__main .selo-linha__medalha { width: 34px; height: 34px; }
+/* o card recorta a foto, mas deixa o selo passar da borda */
+.product { overflow: visible; }
+.product__media { overflow: hidden; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+
+/* na página do produto a medalha é maior e também vaza da moldura */
+.gallery__main { overflow: visible; }
+.gallery__main .selo-linha { top: -20px; right: -20px; width: 104px; height: 104px; }
 
 /* ═══════════════════════════════ faixa azul do percentual de proteína */
 .product__media { position: relative; }
