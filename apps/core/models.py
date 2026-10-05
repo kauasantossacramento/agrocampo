@@ -260,8 +260,8 @@ class SiteConfig(TimeStampedModel):
         "nome da 2ª linha", max_length=40, blank=True, default="Premium",
     )
     linha_bronze_nome = models.CharField(
-        "nome da 3ª linha", max_length=40, blank=True, default="",
-        help_text="Ainda sem nome definido — escreva quando decidir.",
+        "nome da 3ª linha", max_length=40, blank=True, default="Especial",
+        help_text="Vazio esconde o selo dos produtos desta linha.",
     )
 
     # ------------------------------------------ vitrines por linha
@@ -272,7 +272,7 @@ class SiteConfig(TimeStampedModel):
         max_length=60, blank=True, default="Mais vendidos — Premium"
     )
     vitrine_bronze_titulo = models.CharField(
-        max_length=60, blank=True, default="Mais vendidos — Linha 3"
+        max_length=60, blank=True, default="Mais vendidos — Especial"
     )
     vitrine_ouro_ativa = models.BooleanField(default=True)
     vitrine_prata_ativa = models.BooleanField(default=True)

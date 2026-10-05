@@ -10,11 +10,15 @@
   <div class="product__selos">
     {% include 'partials/selo_linha.html' %}
 
+    {% comment %}
+      Sobre a foto fica só o que muda a decisão de compra: desconto, assinatura
+      e esgotado. "Novo" e "sob encomenda" saíram — a embalagem do produto já
+      disputa esse espaço, e nenhum dos dois era marcação do lojista.
+    {% endcomment %}
     <div class="product__flags">
       {% if produto.promocao_vigente %}<span class="badge badge--sale">−{{ produto.percentual_desconto }}%</span>{% endif %}
       {% if produto.permite_assinatura and site.assinatura_visivel %}<span class="badge badge--sub">ASSINATURA{% if produto.desconto_assinatura %} −{{ produto.desconto_assinatura }}%{% endif %}</span>{% endif %}
-      {% if produto.lancamento %}<span class="badge badge--new">NOVO</span>{% endif %}
-      {% if not produto.em_estoque %}<span class="badge badge--gray">ESGOTADO</span>{% elif produto.sem_controle_estoque %}<span class="badge badge--amber">SOB ENCOMENDA</span>{% endif %}
+      {% if not produto.em_estoque %}<span class="badge badge--gray">ESGOTADO</span>{% endif %}
     </div>
   </div>
 

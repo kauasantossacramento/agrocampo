@@ -987,7 +987,7 @@ class OrdemDasVitrinesTests(TestCase):
         # os títulos das vitrines (os cards também dizem "Linha X", por isso o "— ")
         ouro = html.index("— Super Premium")
         prata = html.index("— Premium")
-        bronze = html.index("— Linha 3")
+        bronze = html.index("— Especial")
 
         self.assertLess(ouro, prata)
         self.assertLess(prata, bronze)

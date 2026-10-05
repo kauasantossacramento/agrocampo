@@ -840,7 +840,7 @@ class SemControleDeEstoqueTests(BasePedido):
     def test_fica_disponivel_mesmo_com_zero(self):
         self.assertTrue(self.produto.em_estoque)
         self.assertFalse(self.produto.estoque_baixo)
-        self.assertEqual(self.produto.rotulo_estoque, "Disponível sob encomenda")
+        self.assertEqual(self.produto.rotulo_estoque, "Disponível")
 
     def test_cliente_consegue_comprar(self):
         r = self.client.post(f"/carrinho/adicionar/{self.produto.slug}/", {"quantidade": 3})
@@ -874,11 +874,11 @@ class SemControleDeEstoqueTests(BasePedido):
 
     def test_card_e_pagina_mostram_que_da_para_comprar(self):
         html = self.client.get(self.produto.get_absolute_url()).content.decode()
-        self.assertIn("Disponível sob encomenda", html)
+        self.assertIn("Disponível", html)
         self.assertIn("Adicionar ao carrinho", html)
         self.assertNotIn("Produto esgotado", html)
         html = self.client.get("/catalogo/").content.decode()
-        self.assertIn("SOB ENCOMENDA", html)
+        self.assertIn("Adicionar", html)       # dá para comprar
         self.assertNotIn("ESGOTADO", html)
 
     def test_painel_salva_a_opcao_no_cadastro(self):

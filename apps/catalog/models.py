@@ -283,8 +283,8 @@ class Produto(TimeStampedModel, SluggedModel):
         "sem controle de estoque", default=True,
         help_text=(
             "Padrão da loja: o produto fica sempre disponível para compra e, se "
-            "faltar, a equipe fala com o cliente pelo WhatsApp para trocar ou "
-            "devolver. Desmarque só para contar quantidade de verdade."
+            "faltar na separação, a equipe fala com o cliente pelo WhatsApp para "
+            "trocar ou devolver. Desmarque só para contar quantidade de verdade."
         ),
     )
     estoque = models.IntegerField(default=0)
@@ -466,7 +466,7 @@ class Produto(TimeStampedModel, SluggedModel):
     @property
     def rotulo_estoque(self):
         if self.sem_controle_estoque:
-            return "Disponível sob encomenda"
+            return "Disponível"
         total = self.estoque_total
         if total <= 0:
             return "Esgotado"

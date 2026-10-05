@@ -250,7 +250,7 @@ lápis que abre o cadastro completo em modal: nome, categoria, marca, **linha
 "Maior sucesso", lançamento, publicado. O SKU é opcional (gerado).
 
 **Selo da linha:** produto com linha marcada ganha um selo de medalha sobre a foto —
-dourado na 1ª linha (**Super Premium**), prateado na 2ª (**Premium**) e bronze na 3ª.
+dourado na 1ª linha (**Super Premium**), prateado na 2ª (**Premium**) e bronze na 3ª (**Especial**).
 Os nomes são editáveis em **Configurações › Vitrines › Nome das linhas**; nome vazio
 esconde o selo daquela linha.
 
@@ -260,7 +260,7 @@ mostra nada.
 
 **Sem controle de estoque:** no passo *Preço* há a opção **“Sem controle de estoque —
 vende mesmo sem quantidade”**. Ligada, o produto fica sempre disponível para compra
-(selo *SOB ENCOMENDA* no card, “Disponível sob encomenda” na página), não entra no
+(na página do produto o rótulo diz apenas “Disponível”), não entra no
 alerta de estoque baixo e não vira “item em falta” na separação — a loja combina a
 entrega com o cliente. Desligada, vale a contagem normal de quantidade.
 

@@ -77,7 +77,7 @@ class SeloProteinaELinhasTests(TestCase):
     def test_nomes_padrao_das_linhas(self):
         self.assertEqual(self.config.linha_ouro_nome, "Super Premium")
         self.assertEqual(self.config.linha_prata_nome, "Premium")
-        self.assertEqual(self.config.linha_bronze_nome, "")
+        self.assertEqual(self.config.linha_bronze_nome, "Especial")
         self.assertEqual(self.produto.linha_nome, "Super Premium")
 
     def test_lojista_renomeia_a_linha(self):
@@ -89,6 +89,8 @@ class SeloProteinaELinhasTests(TestCase):
         self.assertNotIn("Super Premium", html)
 
     def test_linha_sem_nome_nao_mostra_selo(self):
+        self.config.linha_bronze_nome = ""
+        self.config.save()
         self.produto.linha = "bronze"
         self.produto.save()
         self.assertEqual(self.produto.linha_nome, "")
