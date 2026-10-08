@@ -1390,8 +1390,8 @@
 /* Só a medalha, grande, vazando do canto do card — o desenho está em
    partials/selo_linha.html e a cor vem da linha. */
 .selo-linha {
-  position: absolute; top: -14px; right: -14px; z-index: 5;
-  display: block; width: 62px; height: 62px;
+  position: absolute; top: -16px; right: -16px; z-index: 5;
+  display: block; width: 96px; height: 96px;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .3));
   pointer-events: none;
 }
@@ -1410,7 +1410,7 @@
 
 /* na página do produto a medalha é maior e também vaza da moldura */
 .gallery__main { overflow: visible; }
-.gallery__main .selo-linha { top: -20px; right: -20px; width: 104px; height: 104px; }
+.gallery__main .selo-linha { top: -26px; right: -26px; width: 160px; height: 160px; }
 
 /* ═══════════════════════════════ faixa azul do percentual de proteína */
 .product__media { position: relative; }
@@ -1443,8 +1443,9 @@
 .texto-produto strong { color: var(--ink); }
 
 @media (max-width: 620px) {
-  .selo-linha { font-size: 9px; padding: 2px 8px 2px 2px; }
-  .selo-linha__medalha { width: 20px; height: 20px; }
+  /* no celular a medalha continua grande: é o selo que vende a linha */
+  .selo-linha { width: 76px; height: 76px; top: -12px; right: -12px; }
+  .gallery__main .selo-linha { width: 110px; height: 110px; top: -16px; right: -16px; }
   .faixa-proteina strong { font-size: .95rem; }
   .faixa-proteina--grande strong { font-size: 1.5rem; }
   .texto-produto { font-size: var(--fs-sm); line-height: 1.7; }
