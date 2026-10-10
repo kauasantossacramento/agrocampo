@@ -656,6 +656,13 @@
 }
 .auth__card { width: min(440px, 100%); max-width: 100%; }
 .auth__arte { display: block; width: 120px; height: 80px; margin: 0 auto var(--s-3); }
+@media (max-width: 980px) {
+  /* no celular o topo já ocupa um terço da tela (faixa + cabeçalho + busca);
+     centralizar numa altura de tela inteira jogava o cartão para baixo e
+     deixava um vazio enorme acima dele */
+  .auth { min-height: 0; padding-block: var(--s-5) var(--s-10); align-content: start; }
+  .auth__arte { width: 96px; height: 64px; }
+}
 .auth .card h1 { text-align: center; }
 .auth .card > p.small { text-align: center; }
 
