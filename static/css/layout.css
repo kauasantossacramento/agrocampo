@@ -442,8 +442,32 @@
   background: var(--surface); border: 1px solid var(--line);
   display: grid; place-items: center; position: relative;
 }
-.gallery__main img { width: 100%; height: 100%; object-fit: contain; padding: var(--s-6); transition: transform .4s var(--ease-out); }
+/* a foto do produto é o argumento de venda: moldura com pouca folga e a
+   imagem ocupando tudo o que couber dentro dela */
+.gallery__main img { width: 100%; height: 100%; object-fit: contain; padding: var(--s-3); transition: transform .4s var(--ease-out); }
 .gallery__main:hover img { transform: scale(1.06); }
+.gallery__main[data-ampliar] { cursor: zoom-in; }
+
+/* Visor da foto ampliada: fundo escuro, imagem do tamanho da tela. É o lugar
+   onde o cliente lê o rótulo da embalagem. */
+.lupa {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center; padding: var(--s-5);
+  background: rgba(10, 8, 6, .9);
+}
+.lupa img {
+  max-width: min(96vw, 1200px); max-height: 92vh;
+  width: auto; height: auto; object-fit: contain;
+  border-radius: var(--r-md); background: #fff;
+}
+.lupa__fechar {
+  position: absolute; top: var(--s-4); right: var(--s-4);
+  width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: #fff; color: var(--ink); border: 0; box-shadow: var(--sh-2);
+}
+@media (max-width: 640px) { .lupa { padding: var(--s-3); } }
+
 .gallery__thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-3); margin-top: var(--s-3); }
 .gallery__thumb {
   aspect-ratio: 1; border-radius: var(--r-md); overflow: hidden;
@@ -1117,6 +1141,13 @@
 }
 .vitrine-capa__slide { display: block; width: 100%; }
 .vitrine-capa__slide img { display: block; width: 100%; aspect-ratio: 16 / 5; object-fit: cover; }
+/* O vídeo do slide não tinha regra nenhuma: entrava com o tamanho que o
+   arquivo tem, estourando o quadro e aparecendo como um retângulo preto.
+   Vídeo de celular é 16/9, então o quadro acompanha e nada é cortado. */
+.vitrine-capa__slide video {
+  display: block; width: 100%; aspect-ratio: 16 / 9;
+  object-fit: cover; background: #000;
+}
 .vitrine-capa__legenda { position: absolute; left: var(--s-6); top: var(--s-6); }
 /* banner sem imagem: reaproveita o desenho do hero clássico dentro do quadro */
 .vitrine-capa__slide--texto {
@@ -1205,6 +1236,7 @@
 @media (max-width: 620px) {
   .vitrine-capa { padding-top: var(--s-3); }
   .vitrine-capa__slide img { aspect-ratio: 16 / 9; }
+  .vitrine-capa__slide video { aspect-ratio: 16 / 9; }
   .vitrine-capa__seta { display: none; }
   .secao-titulo h2 { font-size: var(--fs-lg); }
   .secao-titulo__icone { width: 28px; height: 28px; }
@@ -1389,17 +1421,24 @@
 /* ═══════════════════════════ selo de linha (Super Premium / Premium / 3ª) */
 /* Só a medalha, grande, vazando do canto do card — o desenho está em
    partials/selo_linha.html e a cor vem da linha. */
+/* O tamanho sai do cadastro da linha (--selo-base, padrão 64px); o recuo
+   acompanha para o selo vazar sempre na mesma medida, seja qual for a arte. */
 .selo-linha {
-  position: absolute; top: -16px; right: -16px; z-index: 5;
-  display: block; width: 96px; height: 96px;
+  --selo-tamanho: var(--selo-base, 64px);
+  position: absolute; z-index: 5; display: block;
+  width: var(--selo-tamanho); height: var(--selo-tamanho);
+  top: calc(var(--selo-tamanho) / -6); right: calc(var(--selo-tamanho) / -6);
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .3));
   pointer-events: none;
 }
 .selo-linha__medalha { width: 100%; height: 100%; display: block; }
+.selo-linha__png { width: 100%; height: 100%; display: block; object-fit: contain; }
 .selo-linha__miolo { fill: #1A1410; }
 .selo-linha--ouro   { --selo-a: #FFE9A3; --selo-b: #E8B429; --selo-c: #A77C10; }
 .selo-linha--prata  { --selo-a: #F4F6F8; --selo-b: #C3CBD3; --selo-c: #8A949E; }
 .selo-linha--bronze { --selo-a: #F3D3B0; --selo-b: #C98A4B; --selo-c: #8C5A28; }
+.selo-linha--verde  { --selo-a: #B9E6CC; --selo-b: #3E9A65; --selo-c: #1E5635; }
+.selo-linha--azul   { --selo-a: #C3D4F4; --selo-b: #2C56B4; --selo-c: #152F6B; }
 .selo-linha__borda  { fill: var(--selo-b); }
 .selo-linha__aro    { stroke: var(--selo-a); stroke-width: 1.2; }
 .selo-linha__brilho { fill: var(--selo-a); }
@@ -1410,7 +1449,7 @@
 
 /* na página do produto a medalha é maior e também vaza da moldura */
 .gallery__main { overflow: visible; }
-.gallery__main .selo-linha { top: -26px; right: -26px; width: 160px; height: 160px; }
+.gallery__main .selo-linha { --selo-tamanho: calc(var(--selo-base, 64px) * 1.6); }
 
 /* ═══════════════════════════════ faixa azul do percentual de proteína */
 .product__media { position: relative; }
@@ -1444,8 +1483,8 @@
 
 @media (max-width: 620px) {
   /* no celular a medalha continua grande: é o selo que vende a linha */
-  .selo-linha { width: 76px; height: 76px; top: -12px; right: -12px; }
-  .gallery__main .selo-linha { width: 110px; height: 110px; top: -16px; right: -16px; }
+  .selo-linha { --selo-tamanho: calc(var(--selo-base, 64px) * .85); }
+  .gallery__main .selo-linha { --selo-tamanho: calc(var(--selo-base, 64px) * 1.2); }
   .faixa-proteina strong { font-size: .95rem; }
   .faixa-proteina--grande strong { font-size: 1.5rem; }
   .texto-produto { font-size: var(--fs-sm); line-height: 1.7; }

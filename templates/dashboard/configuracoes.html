@@ -364,67 +364,17 @@
         class="card card--pad" style="max-width:720px">
     {% csrf_token %}
     <h2 style="font-size:var(--fs-lg);margin-bottom:var(--s-2)">Vitrines da home</h2>
-    <p class="small muted" style="margin-bottom:var(--s-5)">
-      Cada produto pertence a uma linha (Ouro, Prata ou Bronze) e a home ganha
-      uma vitrine para cada uma. Você escolhe o título e se ela aparece.
+    <p class="small muted" style="margin-bottom:var(--s-4)">
+      O nome de cada linha, a cor do selo e o título da vitrine agora ficam no
+      cadastro das linhas — lá você renomeia, troca a cor e cria quantas linhas
+      quiser, sem depender do desenvolvedor.
     </p>
-
-    <div class="stack" style="gap:var(--s-5)">
-      <div class="vitrine-config vitrine-linha--ouro">
-        <span class="vitrine-linha__fita" aria-hidden="true"></span>
-        <label class="switch-row">
-          {{ form_vitrines.vitrine_ouro_ativa }} {{ form_vitrines.vitrine_ouro_ativa.label }}
-        </label>
-        <div class="field" style="margin-top:var(--s-2)">
-          <label for="{{ form_vitrines.vitrine_ouro_titulo.id_for_label }}">Título</label>
-          {{ form_vitrines.vitrine_ouro_titulo }}
-        </div>
-      </div>
-
-      <div class="vitrine-config vitrine-linha--prata">
-        <span class="vitrine-linha__fita" aria-hidden="true"></span>
-        <label class="switch-row">
-          {{ form_vitrines.vitrine_prata_ativa }} {{ form_vitrines.vitrine_prata_ativa.label }}
-        </label>
-        <div class="field" style="margin-top:var(--s-2)">
-          <label for="{{ form_vitrines.vitrine_prata_titulo.id_for_label }}">Título</label>
-          {{ form_vitrines.vitrine_prata_titulo }}
-        </div>
-      </div>
-
-      <div class="vitrine-config vitrine-linha--bronze">
-        <span class="vitrine-linha__fita" aria-hidden="true"></span>
-        <label class="switch-row">
-          {{ form_vitrines.vitrine_bronze_ativa }} {{ form_vitrines.vitrine_bronze_ativa.label }}
-        </label>
-        <div class="field" style="margin-top:var(--s-2)">
-          <label for="{{ form_vitrines.vitrine_bronze_titulo.id_for_label }}">Título</label>
-          {{ form_vitrines.vitrine_bronze_titulo }}
-        </div>
-      </div>
-    </div>
-
-    <hr class="divider">
-    <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Nome das linhas</h3>
-    <p class="small muted" style="margin-bottom:var(--s-3)">
-      É o nome que aparece no selo dourado do produto e nas vitrines. Deixe vazio
-      para esconder o selo daquela linha.
+    <p style="margin-bottom:var(--s-5)">
+      <a class="btn btn--ghost btn--sm" href="{% url 'dashboard:gestao' 'linhas' %}">
+        <svg width="15" height="15"><use href="#i-medalha"></use></svg>
+        Abrir as linhas de produto
+      </a>
     </p>
-    <div class="grid grid--3" style="gap:var(--s-4);margin-bottom:var(--s-5)">
-      <div class="field">
-        <label for="{{ form_vitrines.linha_ouro_nome.id_for_label }}">1ª linha (selo dourado)</label>
-        {{ form_vitrines.linha_ouro_nome }}
-      </div>
-      <div class="field">
-        <label for="{{ form_vitrines.linha_prata_nome.id_for_label }}">2ª linha (selo prateado)</label>
-        {{ form_vitrines.linha_prata_nome }}
-      </div>
-      <div class="field">
-        <label for="{{ form_vitrines.linha_bronze_nome.id_for_label }}">3ª linha (selo bronze)</label>
-        {{ form_vitrines.linha_bronze_nome }}
-        <span class="help">{{ form_vitrines.linha_bronze_nome.help_text }}</span>
-      </div>
-    </div>
 
     <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Ordem das seções da home</h3>
     <p class="small muted" style="margin-bottom:var(--s-3)">

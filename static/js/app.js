@@ -202,8 +202,22 @@
 
     const mostrar = (indice) => {
       slides.forEach((s, i) => {
-        s.hidden = i !== indice;
-        if (i === indice && !reduzido) s.classList.add('anim-fade-in');
+        const visivel = i === indice;
+        s.hidden = !visivel;
+        if (visivel && !reduzido) s.classList.add('anim-fade-in');
+
+        /* O `autoplay` do HTML só vale no carregamento: slide de vídeo que
+           nasce escondido nunca começava e o cliente via um retângulo preto.
+           Ao entrar em cena o vídeo toca; ao sair, pausa — fora da tela é só
+           bateria e dados do celular. */
+        const video = s.querySelector('video');
+        if (!video) return;
+        if (visivel) {
+          const talvez = video.play();
+          if (talvez && talvez.catch) talvez.catch(() => {});
+        } else {
+          video.pause();
+        }
       });
       pontos.forEach((p, i) => p.classList.toggle('is-active', i === indice));
       atual = indice;
@@ -404,6 +418,33 @@
       });
     });
     principal.style.transition = 'opacity .13s ease';
+
+    /* Clicar na foto abre o visor com a imagem no tamanho da tela — e é
+       sempre a foto que está em cena, inclusive depois de trocar o tamanho
+       ou a miniatura. */
+    const moldura = $('[data-ampliar]');
+    const lupa = $('[data-lupa]');
+    const lupaImg = $('[data-lupa-img]');
+    if (!moldura || !lupa || !lupaImg) return;
+
+    const abrir = () => {
+      lupaImg.src = principal.currentSrc || principal.src;
+      lupa.hidden = false;
+      document.body.style.overflow = 'hidden';
+    };
+    const fechar = () => {
+      lupa.hidden = true;
+      document.body.style.overflow = '';
+    };
+
+    moldura.addEventListener('click', abrir);
+    moldura.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); }
+    });
+    lupa.addEventListener('click', fechar);   // clicar em qualquer lugar fecha
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !lupa.hidden) fechar();
+    });
   }
 
   /* --------------------------------- tamanhos (variações) do produto */

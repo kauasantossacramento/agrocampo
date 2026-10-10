@@ -130,53 +130,75 @@
     });
   }
 
-  function prepararMarca(raiz) {
-    const campo = $('[data-marca-campo]', raiz);
-    const lista = $('#lista-marcas', raiz);
-    if (!campo || !lista) return;
-    const ajuda = $('[data-marca-ajuda]', raiz);
-    const padrao = ajuda ? ajuda.textContent : '';
+  /* Campos que não são listas fechadas: marca, categoria, linha, animal.
+     O lojista digita e aperta Enter; o que não existe é criado na hora pela
+     rota de cadastro rápido daquele tipo, sem sair do formulário. Campos com
+     data-multiplo aceitam vários nomes separados por vírgula e criam só o
+     último digitado. */
+  function prepararCamposLivres(raiz) {
+    $$('[data-livre]', raiz || document).forEach(function (campo) {
+      const tipo = campo.dataset.livre;
+      const lista = $('#lista-' + tipo, raiz || document);
+      if (!lista || !lista.dataset.criarUrl) return;
+      const varios = campo.dataset.multiplo === '1';
+      const ajuda = $('[data-ajuda-de="' + tipo + '"]', raiz || document);
+      const padrao = ajuda ? ajuda.textContent : '';
 
-    function aviso(texto, cor) {
-      if (!ajuda) return;
-      ajuda.textContent = texto || padrao;
-      ajuda.style.color = cor || '';
-    }
-
-    async function incluir() {
-      const nome = campo.value.trim();
-      if (nome.length < 2) { aviso('Escreva o nome da marca.', 'var(--red)'); return; }
-      const jaTem = $$('option', lista).some(function (o) {
-        return o.value.toLowerCase() === nome.toLowerCase();
-      });
-      if (jaTem) { aviso('Marca “' + nome + '” selecionada.', 'var(--green-deep)'); return; }
-
-      aviso('Incluindo…');
-      try {
-        const corpo = new FormData();
-        corpo.append('nome', nome);
-        const r = await fetch(lista.dataset.marcaUrl, {
-          method: 'POST', body: corpo,
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf() },
-        });
-        const d = await r.json();
-        if (!d.ok) { aviso(d.erro || 'Não consegui incluir.', 'var(--red)'); return; }
-        const opcao = document.createElement('option');
-        opcao.value = d.nome;
-        lista.appendChild(opcao);
-        campo.value = d.nome;
-        aviso(d.criada ? 'Marca “' + d.nome + '” criada.' : 'Marca “' + d.nome + '” selecionada.', 'var(--green-deep)');
-      } catch (e) {
-        aviso('Sem conexão agora.', 'var(--red)');
+      function aviso(texto, cor) {
+        if (!ajuda) return;
+        ajuda.textContent = texto || padrao;
+        ajuda.style.color = cor || '';
       }
-    }
 
-    campo.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();      // não envia o formulário
-      incluir();
+      function ultimoNome() {
+        const bruto = varios ? campo.value.split(',').pop() : campo.value;
+        return bruto.trim();
+      }
+
+      function trocarUltimo(nome) {
+        if (!varios) { campo.value = nome; return; }
+        const partes = campo.value.split(',');
+        partes[partes.length - 1] = ' ' + nome;
+        campo.value = partes.join(',').replace(/^\s+/, '');
+      }
+
+      async function incluir() {
+        const nome = ultimoNome();
+        if (nome.length < 2) { aviso('Escreva o nome.', 'var(--red)'); return; }
+        const jaTem = $$('option', lista).some(function (o) {
+          return o.value.toLowerCase() === nome.toLowerCase();
+        });
+        if (jaTem) { aviso('“' + nome + '” selecionado.', 'var(--green-deep)'); return; }
+
+        aviso('Incluindo…');
+        try {
+          const corpo = new FormData();
+          corpo.append('nome', nome);
+          const r = await fetch(lista.dataset.criarUrl, {
+            method: 'POST', body: corpo,
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf() },
+          });
+          const d = await r.json();
+          if (!d.ok) { aviso(d.erro || 'Não consegui incluir.', 'var(--red)'); return; }
+          const opcao = document.createElement('option');
+          opcao.value = d.nome;
+          lista.appendChild(opcao);
+          trocarUltimo(d.nome);
+          aviso('“' + d.nome + '” ' + (d.criada ? 'criado.' : 'selecionado.'),
+                'var(--green-deep)');
+          if (varios) { campo.value += ', '; }
+        } catch (e) {
+          aviso('Sem conexão agora.', 'var(--red)');
+        }
+      }
+
+      campo.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();      // não envia o formulário
+        incluir();
+      });
+      campo.addEventListener('input', function () { aviso(''); });
     });
-    campo.addEventListener('input', function () { aviso(''); });
   }
 
   function prepararWizard() {
@@ -189,7 +211,7 @@
     const btAvancar = $('[data-wizard-avancar]', wizard);
     const btSalvar = $('[data-wizard-salvar]', wizard);
 
-    prepararMarca(wizard);
+    prepararCamposLivres(wizard);
     prepararAutogrow(wizard);
 
     const novasFotos = [];   // File[] ainda não enviados

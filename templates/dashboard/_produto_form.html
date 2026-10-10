@@ -31,25 +31,52 @@
       {% if form.nome.errors %}<span class="error-text">{{ form.nome.errors|join:" " }}</span>{% endif %}
     </div>
 
+    {% comment %}
+      Categoria, marca, linha e animal são campos de texto, não listas
+      fechadas: o lojista digita, vê o que já existe como sugestão e cria o
+      que faltar apertando Enter. Cada um aponta para o seu <datalist> e para
+      a rota de cadastro rápido daquele tipo.
+    {% endcomment %}
     <div class="grid grid--2" style="gap:var(--s-4);margin-top:var(--s-4)">
       <div class="field">
-        <label for="{{ form.categoria.id_for_label }}">Categoria *</label>
-        {{ form.categoria }}
-        {% if form.categoria.errors %}<span class="error-text">{{ form.categoria.errors|join:" " }}</span>{% endif %}
+        <label for="{{ form.categoria_nome.id_for_label }}">Categoria *</label>
+        {{ form.categoria_nome }}
+        <datalist id="lista-categorias"
+                  data-criar-url="{% url 'dashboard:cadastro_rapido' 'categorias' %}">
+          {% for c in categorias_existentes %}<option value="{{ c.nome }}"></option>{% endfor %}
+        </datalist>
+        <span class="help" data-ajuda-de="categorias">{{ form.categoria_nome.help_text }}</span>
+        {% if form.categoria_nome.errors %}<span class="error-text">{{ form.categoria_nome.errors|join:" " }}</span>{% endif %}
       </div>
       <div class="field">
         <label for="{{ form.marca_nome.id_for_label }}">Marca</label>
         {{ form.marca_nome }}
-        <datalist id="lista-marcas" data-marca-url="{% url 'dashboard:marca_criar' %}">
+        <datalist id="lista-marcas"
+                  data-criar-url="{% url 'dashboard:cadastro_rapido' 'marcas' %}">
           {% for m in marcas_existentes %}<option value="{{ m.nome }}"></option>{% endfor %}
         </datalist>
-        <span class="help" data-marca-ajuda>{{ form.marca_nome.help_text }}</span>
+        <span class="help" data-ajuda-de="marcas">{{ form.marca_nome.help_text }}</span>
         {% if form.marca_nome.errors %}<span class="error-text">{{ form.marca_nome.errors|join:" " }}</span>{% endif %}
       </div>
       <div class="field">
-        <label for="{{ form.linha.id_for_label }}">Linha</label>
-        {{ form.linha }}
-        <span class="help">Define o selo do produto e em qual vitrine ele aparece.</span>
+        <label for="{{ form.linha_nome.id_for_label }}">Linha</label>
+        {{ form.linha_nome }}
+        <datalist id="lista-linhas"
+                  data-criar-url="{% url 'dashboard:cadastro_rapido' 'linhas' %}">
+          {% for l in linhas_existentes %}<option value="{{ l.nome }}"></option>{% endfor %}
+        </datalist>
+        <span class="help" data-ajuda-de="linhas">{{ form.linha_nome.help_text }}</span>
+        {% if form.linha_nome.errors %}<span class="error-text">{{ form.linha_nome.errors|join:" " }}</span>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.especies_nomes.id_for_label }}">Indicado para (animais)</label>
+        {{ form.especies_nomes }}
+        <datalist id="lista-especies"
+                  data-criar-url="{% url 'dashboard:cadastro_rapido' 'especies' %}">
+          {% for e in especies_existentes %}<option value="{{ e.nome }}"></option>{% endfor %}
+        </datalist>
+        <span class="help" data-ajuda-de="especies">{{ form.especies_nomes.help_text }}</span>
+        {% if form.especies_nomes.errors %}<span class="error-text">{{ form.especies_nomes.errors|join:" " }}</span>{% endif %}
       </div>
     </div>
 
@@ -119,6 +146,10 @@
       <div class="field">
         <label for="{{ form.unidade.id_for_label }}">Unidade</label>
         {{ form.unidade }}
+        <datalist id="lista-unidades">
+          {% for u in unidades_existentes %}<option value="{{ u }}"></option>{% endfor %}
+        </datalist>
+        <span class="help">{{ form.unidade.help_text }}</span>
       </div>
       <div class="field">
         <label for="{{ form.proteina.id_for_label }}">% de proteína</label>

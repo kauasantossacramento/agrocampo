@@ -336,7 +336,7 @@ class PainelSemAdminDjangoTests(TestCase):
         categoria = Categoria.objects.first()
         resposta = self.client.post(reverse("dashboard:produto_salvar_novo"), {
             "nome": "Ração Teste do Painel",
-            "categoria": categoria.id,
+            "categoria_nome": categoria.nome,
             "preco": "99.90",
             "estoque": "12",
             "estoque_minimo": "5",
@@ -358,7 +358,7 @@ class PainelSemAdminDjangoTests(TestCase):
         self.assertEqual(resposta.status_code, 400)
         dados = resposta.json()
         self.assertFalse(dados["ok"])
-        self.assertIn("categoria", dados["erros"])
+        self.assertIn("categoria_nome", dados["erros"])
         # devolve o HTML com o que já foi digitado
         self.assertIn("Sem categoria nem preço", dados["html"])
 
@@ -366,7 +366,7 @@ class PainelSemAdminDjangoTests(TestCase):
         from apps.catalog.models import Categoria
 
         resposta = self.client.post(reverse("dashboard:produto_salvar_novo"), {
-            "nome": "Promoção invertida", "categoria": Categoria.objects.first().id,
+            "nome": "Promoção invertida", "categoria_nome": Categoria.objects.first().nome,
             "preco": "50.00", "preco_promocional": "80.00",
             "estoque": "1", "estoque_minimo": "1", "unidade": "un", "peso_kg": "1",
         })
@@ -671,7 +671,7 @@ class WizardDeTamanhosTests(TestCase):
 
     def _payload(self, **extra):
         base = {
-            "nome": "Ração do wizard", "categoria": self.categoria.id,
+            "nome": "Ração do wizard", "categoria_nome": self.categoria.nome,
             "preco": "100.00", "estoque": "0", "estoque_minimo": "2",
             "unidade": "un", "peso_kg": "1", "publicado": "on",
         }
@@ -685,7 +685,7 @@ class WizardDeTamanhosTests(TestCase):
 
         self.assertIn('data-tela="3"', html)
         self.assertIn("data-variacao-modelo", html)
-        self.assertIn("id_linha", html)
+        self.assertIn("id_linha_nome", html)
 
     def test_salvar_cria_os_tamanhos_e_ignora_linha_sem_preco(self):
         from decimal import Decimal
@@ -965,20 +965,20 @@ class SemPromessaDeDescontoInexistenteTests(TestCase):
 
 
 class OrdemDasVitrinesTests(TestCase):
-    """Ouro abre a home; Prata e Bronze na sequência."""
+    """As vitrines saem na ordem do cadastro das linhas."""
 
     @classmethod
     def setUpTestData(cls):
         from decimal import Decimal
 
-        from apps.catalog.models import Categoria, Produto
+        from apps.catalog.models import Categoria, LinhaProduto, Produto
 
         categoria = Categoria.objects.create(nome="Ração")
-        for linha, preco in (("ouro", "300"), ("prata", "200"), ("bronze", "100")):
+        for slug, preco in (("ouro", "300"), ("prata", "200"), ("bronze", "100")):
             Produto.objects.create(
-                sku=f"L-{linha}", nome=f"Produto {linha}", categoria=categoria,
+                sku=f"L-{slug}", nome=f"Produto {slug}", categoria=categoria,
                 preco=Decimal(preco), estoque=5, publicado=True,
-                linha=linha, destaque=True,
+                linha=LinhaProduto.objects.get(slug=slug), destaque=True,
             )
 
     def test_ouro_prata_bronze_nesta_ordem(self):
@@ -993,17 +993,26 @@ class OrdemDasVitrinesTests(TestCase):
         self.assertLess(prata, bronze)
 
     def test_ordem_das_secoes_vem_do_painel(self):
-        """Padrão (21/09): Maiores sucessos abre; o lojista pode pôr Ouro antes."""
+        """Padrão: Maiores sucessos abre; o lojista pode pôr as linhas antes."""
         html = self.client.get(reverse("core:home")).content.decode()
         self.assertLess(html.index("Maiores sucessos"), html.index("— Super Premium"))
 
         config = SiteConfig.load()
-        config.home_ordem = "ouro,sucessos"
+        config.home_ordem = "linhas,sucessos"
         config.save()
         html = self.client.get(reverse("core:home")).content.decode()
         self.assertLess(html.index("— Super Premium"), html.index("Maiores sucessos"))
         # as seções não listadas continuam entrando, no fim
         self.assertIn("— Premium", html)
+
+    def test_ordem_antiga_salva_continua_valendo(self):
+        """Quem tinha "ouro,prata,bronze" salvo aponta para a seção única."""
+        config = SiteConfig.load()
+        config.home_ordem = "ouro,prata,bronze,sucessos"
+        config.save()
+        self.assertEqual(SiteConfig.load().secoes_home()[0], "linhas")
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertLess(html.index("— Super Premium"), html.index("Maiores sucessos"))
 
 
 class ModalDeConteudoTests(TestCase):
@@ -1504,7 +1513,8 @@ class MarcaNoCadastroDeProdutoTests(TestCase):
 
     def _dados(self, **extra):
         base = {
-            "nome": "Ração Teste 10kg", "categoria": self.categoria.id, "linha": "",
+            "nome": "Ração Teste 10kg", "categoria_nome": "Ração", "linha_nome": "",
+            "especies_nomes": "",
             "sku": "", "resumo": "", "descricao": "", "preco": "99.90",
             "preco_promocional": "", "promocao_ate": "", "estoque": "5",
             "estoque_minimo": "1", "unidade": "un", "peso_kg": "10",
@@ -1556,9 +1566,123 @@ class MarcaNoCadastroDeProdutoTests(TestCase):
 
     def test_formulario_traz_o_campo_e_as_marcas_existentes(self):
         html = self.client.get("/painel/produtos/novo/form/").content.decode()
-        self.assertIn('data-marca-campo', html)
+        self.assertIn('data-livre="marcas"', html)
         self.assertIn('id="lista-marcas"', html)
         self.assertIn('<option value="Golden">', html)
+
+
+class CadastroSemListaFechadaTests(TestCase):
+    """Nada no cadastro de produto é lista fechada.
+
+    Categoria, linha, animal e unidade seguem a mesma regra da marca: o
+    lojista digita, o que existe é reaproveitado e o que falta é criado — pelo
+    Enter (rota de cadastro rápido) ou na hora de salvar o produto.
+    """
+
+    def setUp(self):
+        from apps.catalog.models import Categoria, Especie, LinhaProduto, Produto
+
+        self.Categoria, self.Especie = Categoria, Especie
+        self.LinhaProduto, self.Produto = LinhaProduto, Produto
+        self.lojista = User.objects.create_user(
+            email="loja2@exemplo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+        self.client.force_login(self.lojista)
+        Categoria.objects.create(nome="Ração")
+
+    def _dados(self, **extra):
+        base = {
+            "nome": "Ração Nova 20kg", "categoria_nome": "Ração",
+            "marca_nome": "", "linha_nome": "", "especies_nomes": "",
+            "sku": "", "resumo": "", "descricao": "", "preco": "150.00",
+            "preco_promocional": "", "promocao_ate": "", "estoque": "0",
+            "estoque_minimo": "1", "unidade": "un", "peso_kg": "20",
+            "desconto_assinatura_proprio": "",
+        }
+        base.update(extra)
+        return base
+
+    def _salvar(self, **extra):
+        r = self.client.post("/painel/produtos/novo/salvar/", self._dados(**extra))
+        self.assertEqual(r.status_code, 200, r.content[:400])
+        return self.Produto.objects.get(nome="Ração Nova 20kg")
+
+    def test_categoria_digitada_e_criada(self):
+        produto = self._salvar(categoria_nome="Suplementos Minerais")
+        self.assertEqual(produto.categoria.nome, "Suplementos Minerais")
+
+    def test_categoria_existente_nao_duplica(self):
+        produto = self._salvar(categoria_nome="  ração  ")
+        self.assertEqual(self.Categoria.objects.filter(nome__iexact="ração").count(), 1)
+        self.assertEqual(produto.categoria.nome, "Ração")
+
+    def test_linha_digitada_e_criada_com_selo(self):
+        produto = self._salvar(linha_nome="Super Premium")
+        self.assertEqual(produto.linha_nome, "Super Premium")
+        self.assertTrue(self.LinhaProduto.objects.filter(nome="Super Premium").exists())
+
+    def test_animais_separados_por_virgula(self):
+        produto = self._salvar(especies_nomes="Cão, Gato , Calopsita")
+        self.assertEqual(
+            sorted(produto.especies.values_list("nome", flat=True)),
+            ["Calopsita", "Cão", "Gato"],
+        )
+
+    def test_unidade_fora_da_lista_e_aceita(self):
+        self.assertEqual(self._salvar(unidade="fardo").unidade, "fardo")
+
+    def test_unidade_vazia_vira_unidade(self):
+        self.assertEqual(self._salvar(unidade="").unidade, "un")
+
+    def test_produto_sem_categoria_e_recusado(self):
+        r = self.client.post("/painel/produtos/novo/salvar/", self._dados(categoria_nome=""))
+        self.assertNotEqual(r.status_code, 200)
+        self.assertFalse(self.Produto.objects.filter(nome="Ração Nova 20kg").exists())
+
+    def test_enter_cria_cada_tipo(self):
+        for tipo, modelo, nome in (
+            ("categorias", self.Categoria, "Medicamentos"),
+            ("linhas", self.LinhaProduto, "Linha do Campo"),
+            ("especies", self.Especie, "Equino"),
+        ):
+            d = self.client.post(f"/painel/cadastro-rapido/{tipo}/", {"nome": nome}).json()
+            self.assertTrue(d["ok"], tipo)
+            self.assertTrue(d["criada"], tipo)
+            self.assertTrue(modelo.objects.filter(nome=nome).exists(), tipo)
+
+    def test_tipo_desconhecido_nao_cria_nada(self):
+        r = self.client.post("/painel/cadastro-rapido/bichos/", {"nome": "Qualquer"})
+        self.assertEqual(r.status_code, 404)
+
+    def test_cadastro_rapido_exige_operador(self):
+        self.client.logout()
+        r = self.client.post("/painel/cadastro-rapido/linhas/", {"nome": "Pirata"})
+        self.assertNotEqual(r.status_code, 200)
+        self.assertFalse(self.LinhaProduto.objects.filter(nome="Pirata").exists())
+
+    def test_edicao_traz_o_que_ja_estava_escolhido(self):
+        produto = self._salvar(linha_nome="Premium", marca_nome="Golden",
+                               especies_nomes="Cão")
+        html = self.client.get(f"/painel/produtos/{produto.id}/form/").content.decode()
+        self.assertIn('value="Premium"', html)
+        self.assertIn('value="Golden"', html)
+        self.assertIn('value="Cão"', html)
+
+    def test_selo_usa_o_tamanho_da_linha(self):
+        linha = self.LinhaProduto.objects.create(nome="Linha Teste", selo_tamanho=48)
+        produto = self._salvar()
+        produto.linha, produto.publicado = linha, True
+        produto.save(update_fields=["linha", "publicado"])
+        html = self.client.get(produto.get_absolute_url()).content.decode()
+        self.assertIn("--selo-base:48px", html)
+
+    def test_formulario_lista_todos_os_campos_livres(self):
+        html = self.client.get("/painel/produtos/novo/form/").content.decode()
+        for tipo in ("marcas", "categorias", "linhas", "especies"):
+            self.assertIn(f'data-livre="{tipo}"', html)
+            self.assertIn(f'id="lista-{tipo}"', html)
+        self.assertIn('id="lista-unidades"', html)
 
 
 class TextoRicoTests(TestCase):

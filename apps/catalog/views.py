@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 
 from apps.shipping.models import Cidade
 
-from .models import Avaliacao, Categoria, Especie, ListaDesejos, Marca, Produto
+from .models import LinhaProduto, Avaliacao, Categoria, Especie, ListaDesejos, Marca, Produto
 
 ORDENACOES = {
     "relevancia": ("-destaque", "-vendas", "-criado_em"),
@@ -72,9 +72,9 @@ def catalogo(request, categoria=None, marca=None, especie=None):
         produtos = produtos.filter(marca__slug__in=marcas_filtro)
 
     linha = request.GET.get("linha", "")
-    if linha in dict(Produto.Linha.choices):
+    if linha and LinhaProduto.objects.filter(slug=linha, ativo=True).exists():
         produtos = produtos.da_linha(linha)
-        titulo = dict(Produto.Linha.choices)[linha]
+        titulo = LinhaProduto.objects.get(slug=linha).nome
 
     if request.GET.get("assinatura") == "1":
         produtos = produtos.filter(permite_assinatura=True)
@@ -107,7 +107,7 @@ def catalogo(request, categoria=None, marca=None, especie=None):
             "busca": busca,
             "ordem": ordem,
             "ordenacoes": ORDENACOES.keys(),
-            "linhas": Produto.Linha.choices,
+            "linhas": [(l.slug, l.nome) for l in LinhaProduto.objects.filter(ativo=True)],
             "linha_atual": linha,
             "categorias": Categoria.objects.menu(),
             "marcas": Marca.objects.publicados(),

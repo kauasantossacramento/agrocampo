@@ -12,7 +12,7 @@ from typing import Callable
 
 from django import forms
 
-from apps.catalog.models import Categoria, Especie, Marca
+from apps.catalog.models import Categoria, Especie, LinhaProduto, Marca
 from apps.core.models import Banner, Diferencial, Pagina, PromocaoDestaque, SiteConfig
 from apps.orders.models import Cupom
 from apps.shipping.models import DIAS_SEMANA, Cidade, Localidade, RegraEntrega
@@ -239,6 +239,39 @@ class RegraEntregaForm(_EstilizadoMixin, forms.ModelForm):
         self.fields["cidade"].empty_label = "Todas as cidades"
 
 
+class LinhaProdutoForm(_EstilizadoMixin, forms.ModelForm):
+    """As linhas da loja — nome, cor do selo e vitrine — editáveis aqui.
+
+    Eram três opções fixas no código (ouro, prata, bronze). Virou cadastro:
+    o lojista renomeia, muda a cor do selo, liga ou desliga a vitrine e cria
+    quantas linhas quiser.
+    """
+
+    class Meta:
+        model = LinhaProduto
+        fields = ("nome", "cor", "selo_imagem", "selo_tamanho",
+                  "vitrine_titulo", "vitrine_ativa", "ordem", "ativo")
+
+        widgets = {
+            "vitrine_titulo": forms.TextInput(attrs={
+                "placeholder": "Vazio usa “Mais vendidos — nome da linha”",
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["nome"].help_text = (
+            "É o que aparece no selo do produto e no filtro do catálogo."
+        )
+        self.fields["cor"].help_text = (
+            "Cor da medalha desenhada pelo site. Com PNG próprio, a cor não é usada."
+        )
+        self.fields["selo_tamanho"].widget.attrs.update({"inputmode": "numeric"})
+        self.fields["vitrine_ativa"].help_text = (
+            "A vitrine só aparece se houver produto publicado nesta linha."
+        )
+
+
 # ══════════════════════════════════════════════════════════ registro
 class PromocaoDestaqueForm(_EstilizadoMixin, forms.ModelForm):
     """Bloco de promoção com prazo e posição na home."""
@@ -397,6 +430,20 @@ SECOES: dict[str, Secao] = {
             ("Produtos", lambda o: o.produtos.count()),
             ("Na vitrine", lambda o: o.destaque),
             ("No ar", lambda o: o.publicado),
+        ],
+    ),
+    "linhas": Secao(
+        slug="linhas", artigo="Nova", titulo="Linhas de produto", singular="linha",
+        model=LinhaProduto, form=LinhaProdutoForm, icone="i-medalha",
+        descricao="Premium, Super Premium, Especial… o nome, o selo e a vitrine de cada uma.",
+        ordenacao=("ordem", "nome"),
+        busca=("nome",),
+        colunas=[
+            ("Linha", lambda o: o.nome),
+            ("Selo", lambda o: o.get_cor_display()),
+            ("Produtos", lambda o: o.produtos.count()),
+            ("Vitrine na home", lambda o: o.vitrine_ativa),
+            ("Em uso", lambda o: o.ativo),
         ],
     ),
     "especies": Secao(

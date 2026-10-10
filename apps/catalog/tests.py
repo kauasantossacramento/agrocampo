@@ -62,8 +62,16 @@ class SeloProteinaELinhasTests(TestCase):
         categoria = Categoria.objects.create(nome="Ração", exibir_no_menu=True)
         self.produto = Produto.objects.create(
             sku="R-1", nome="Ração Special Care 15kg", categoria=categoria,
-            preco=Decimal("289.90"), publicado=True, linha="ouro", proteina=26,
+            preco=Decimal("289.90"), publicado=True, proteina=26,
         )
+        # as linhas são cadastro do lojista; a migração já cria as três iniciais
+        from apps.catalog.models import LinhaProduto
+
+        self.LinhaProduto = LinhaProduto
+        self.ouro = LinhaProduto.objects.get(slug="ouro")
+        self.bronze = LinhaProduto.objects.get(slug="bronze")
+        self.produto.linha = self.ouro
+        self.produto.save(update_fields=["linha"])
         self.config = SiteConfig.load()
 
     def test_produto_novo_ja_nasce_sem_contagem(self):
@@ -75,27 +83,36 @@ class SeloProteinaELinhasTests(TestCase):
         self.assertTrue(novo.em_estoque)
 
     def test_nomes_padrao_das_linhas(self):
-        self.assertEqual(self.config.linha_ouro_nome, "Super Premium")
-        self.assertEqual(self.config.linha_prata_nome, "Premium")
-        self.assertEqual(self.config.linha_bronze_nome, "Especial")
+        nomes = list(self.LinhaProduto.objects.values_list("nome", flat=True))
+        self.assertEqual(nomes, ["Super Premium", "Premium", "Especial"])
         self.assertEqual(self.produto.linha_nome, "Super Premium")
 
     def test_lojista_renomeia_a_linha(self):
-        self.config.linha_ouro_nome = "Linha Ouro Especial"
-        self.config.save()
+        self.ouro.nome = "Linha Ouro Especial"
+        self.ouro.save()
         self.produto.refresh_from_db()
         html = self.client.get(self.produto.get_absolute_url()).content.decode()
         self.assertIn("Linha Ouro Especial", html)
         self.assertNotIn("Super Premium", html)
 
-    def test_linha_sem_nome_nao_mostra_selo(self):
-        self.config.linha_bronze_nome = ""
-        self.config.save()
-        self.produto.linha = "bronze"
+    def test_produto_sem_linha_nao_mostra_selo(self):
+        self.produto.linha = None
         self.produto.save()
         self.assertEqual(self.produto.linha_nome, "")
         html = self.client.get("/catalogo/").content.decode()
-        self.assertNotIn("selo-linha selo-linha--bronze", html)
+        self.assertNotIn("selo-linha selo-linha--ouro", html)
+
+    def test_linha_fora_de_uso_nao_mostra_selo(self):
+        self.ouro.ativo = False
+        self.ouro.save()
+        self.produto.refresh_from_db()
+        self.assertEqual(self.produto.linha_nome, "")
+
+    def test_selo_segue_o_tamanho_e_o_png_da_linha(self):
+        self.ouro.selo_tamanho = 40
+        self.ouro.save()
+        html = self.client.get("/catalogo/").content.decode()
+        self.assertIn("--selo-base:40px", html)
 
     def test_selo_aparece_no_card_e_na_pagina(self):
         html = self.client.get("/catalogo/").content.decode()
@@ -115,3 +132,47 @@ class SeloProteinaELinhasTests(TestCase):
         self.produto.proteina = None
         self.produto.save()
         self.assertNotIn("faixa-proteina", self.client.get("/catalogo/").content.decode())
+
+
+class FotoDoProdutoTests(TestCase):
+    """A foto leva ao produto na listagem e abre ampliada na página dele."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Categoria, Produto
+
+        categoria = Categoria.objects.create(nome="Ração", exibir_no_menu=True)
+        self.produto = Produto.objects.create(
+            sku="F-1", nome="Ração com foto", categoria=categoria,
+            preco=Decimal("99.90"), publicado=True,
+        )
+
+    def test_card_da_listagem_tem_a_foto_dentro_do_link_do_produto(self):
+        html = self.client.get("/catalogo/").content.decode()
+        inicio = html.index('class="product__media"')
+        trecho = html[html.rindex("<a ", 0, inicio):inicio]
+        self.assertIn(self.produto.get_absolute_url(), trecho)
+
+    def test_pagina_do_produto_oferece_a_foto_ampliada(self):
+        html = self.client.get(self.produto.get_absolute_url()).content.decode()
+        self.assertIn("data-ampliar", html)
+        self.assertIn("data-lupa", html)
+
+    def test_oferta_do_dia_tem_a_foto_clicavel(self):
+        """A foto da oferta não levava a lugar nenhum; agora abre o produto."""
+        from datetime import timedelta
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        self.produto.preco_promocional = Decimal("79.90")
+        self.produto.promocao_ate = timezone.now() + timedelta(days=2)
+        self.produto.save()
+
+        html = self.client.get("/").content.decode()
+        if "promoção do dia" not in html.lower():
+            self.skipTest("a home está no estilo clássico, sem a seção de oferta")
+        bloco = html[html.index("flash__inner"):]
+        bloco = bloco[:bloco.index("</section>")]
+        self.assertIn(f'href="{self.produto.get_absolute_url()}"', bloco)

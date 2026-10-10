@@ -16,7 +16,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.blog.models import CategoriaPost, Post
-from apps.catalog.models import Categoria, Especie, Marca, Produto, ProdutoImagem
+from apps.catalog.models import LinhaProduto, Categoria, Especie, Marca, Produto, ProdutoImagem
 from apps.core.models import Banner, Diferencial, Pagina, SiteConfig
 from apps.payments.models import ProvedorPagamento
 
@@ -383,7 +383,7 @@ class Command(BaseCommand):
         Trocar é um clique no cadastro do produto.
         """
         sem_linha = list(
-            Produto.objects.filter(linha="").order_by("-preco").values_list("pk", "preco")
+            Produto.objects.filter(linha__isnull=True).order_by("-preco").values_list("pk", "preco")
         )
         if not sem_linha:
             return
@@ -393,13 +393,15 @@ class Command(BaseCommand):
         corte_prata = max(corte_ouro + 1, (total * 2) // 3)
 
         faixas = {
-            Produto.Linha.OURO: sem_linha[:corte_ouro],
-            Produto.Linha.PRATA: sem_linha[corte_ouro:corte_prata],
-            Produto.Linha.BRONZE: sem_linha[corte_prata:],
+            "ouro": sem_linha[:corte_ouro],
+            "prata": sem_linha[corte_ouro:corte_prata],
+            "bronze": sem_linha[corte_prata:],
         }
         for linha, itens in faixas.items():
             if itens:
-                Produto.objects.filter(pk__in=[pk for pk, _ in itens]).update(linha=linha)
+                alvo = LinhaProduto.objects.filter(slug=linha).first()
+                if alvo:
+                    Produto.objects.filter(pk__in=[pk for pk, _ in itens]).update(linha=alvo)
 
         self.stdout.write(
             "  linhas de exemplo: "

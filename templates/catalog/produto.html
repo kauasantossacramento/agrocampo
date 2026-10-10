@@ -17,7 +17,13 @@
 
     {# ------------------------------------------------------- GALERIA #}
     <div data-reveal="left">
-      <div class="gallery__main">
+      {% comment %}
+        A moldura é um botão: clicar na foto abre a imagem em tela cheia, do
+        tamanho que a tela permitir — quem quer ver a embalagem precisa ler o
+        rótulo, e dentro da moldura a letra fica pequena.
+      {% endcomment %}
+      <div class="gallery__main" data-ampliar role="button" tabindex="0"
+           aria-label="Ampliar a foto de {{ produto.nome }}">
         {% with principal=produto.imagem_principal %}
           {% if principal %}
             <img src="{{ principal.imagem.url }}" alt="{{ produto.nome }}" data-gallery-main>
@@ -38,6 +44,13 @@
         {% include 'partials/selo_linha.html' %}
       </div>
 
+      <div class="lupa" data-lupa hidden>
+        <button type="button" class="lupa__fechar" data-lupa-fechar aria-label="Fechar">
+          <svg width="20" height="20"><use href="#i-x"></use></svg>
+        </button>
+        <img data-lupa-img src="" alt="{{ produto.nome }}">
+      </div>
+
       {% if produto.imagens.count > 1 %}
         <div class="gallery__thumbs">
           {% for img in produto.imagens.all %}
@@ -56,8 +69,8 @@
         <p class="eyebrow">
           {{ produto.categoria.nome }}{% if produto.marca %} · {{ produto.marca.nome }}{% endif %}
         </p>
-        {% if produto.linha %}
-          <span class="linha-selo linha-selo--{{ produto.linha }} linha-selo--estatico">
+        {% if produto.linha_nome %}
+          <span class="linha-selo linha-selo--{{ produto.linha_cor }} linha-selo--estatico">
             <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
             {{ produto.linha_nome }}
           </span>

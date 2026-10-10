@@ -630,24 +630,31 @@ class VariacaoTests(BasePedido):
 
 
 class LinhaTests(BasePedido):
+    """As linhas são cadastro do lojista; o filtro aceita o objeto ou o slug."""
+
     def test_filtro_por_linha(self):
+        from apps.catalog.models import LinhaProduto
         from apps.catalog.models import Produto as P
 
-        self.produto.linha = P.Linha.OURO
+        ouro = LinhaProduto.objects.get(slug="ouro")
+        bronze = LinhaProduto.objects.get(slug="bronze")
+        self.produto.linha = ouro
         self.produto.save()
         outro = P.objects.create(
             sku="P-2", nome="Ração Comum", categoria=self.produto.categoria,
-            preco=Decimal("80.00"), estoque=3, linha=P.Linha.BRONZE,
+            preco=Decimal("80.00"), estoque=3, linha=bronze,
         )
-        self.assertIn(self.produto, P.objects.da_linha(P.Linha.OURO))
-        self.assertNotIn(outro, P.objects.da_linha(P.Linha.OURO))
+        self.assertIn(self.produto, P.objects.da_linha(ouro))
+        self.assertIn(self.produto, P.objects.da_linha("ouro"))
+        self.assertNotIn(outro, P.objects.da_linha(ouro))
 
     def test_produto_sem_linha_nao_entra_em_nenhuma_vitrine(self):
+        from apps.catalog.models import LinhaProduto
         from apps.catalog.models import Produto as P
 
-        self.assertEqual(self.produto.linha, "")
-        for valor, _ in P.Linha.choices:
-            self.assertNotIn(self.produto, P.objects.da_linha(valor))
+        self.assertIsNone(self.produto.linha)
+        for linha in LinhaProduto.objects.all():
+            self.assertNotIn(self.produto, P.objects.da_linha(linha))
 
 
 class ContatoPorWhatsAppTests(BasePedido):
@@ -738,28 +745,31 @@ class LinhasDeExemploTests(TestCase):
 
         call_command("seed", verbosity=0)
 
-        self.assertFalse(Produto.objects.filter(linha="").exists())
-        for valor, _ in Produto.Linha.choices:
+        from apps.catalog.models import LinhaProduto
+
+        self.assertFalse(Produto.objects.filter(linha__isnull=True).exists())
+        for linha in LinhaProduto.objects.all():
             self.assertTrue(
-                Produto.objects.da_linha(valor).exists(),
-                f"nenhum produto na linha {valor}",
+                Produto.objects.da_linha(linha).exists(),
+                f"nenhum produto na linha {linha.nome}",
             )
 
     def test_nao_reescreve_a_linha_definida_pelo_lojista(self):
         from django.core.management import call_command
 
-        from apps.catalog.models import Categoria, Produto
+        from apps.catalog.models import Categoria, LinhaProduto, Produto
 
         categoria = Categoria.objects.create(nome="Ração")
+        bronze = LinhaProduto.objects.get(slug="bronze")
         meu = Produto.objects.create(
             sku="AGC-9999", nome="Escolha do lojista", categoria=categoria,
-            preco=Decimal("999.00"), estoque=1, sem_controle_estoque=False, linha=Produto.Linha.BRONZE,
+            preco=Decimal("999.00"), estoque=1, sem_controle_estoque=False, linha=bronze,
         )
         call_command("seed", verbosity=0)
 
         meu.refresh_from_db()
         # o mais caro do catálogo, mas o lojista disse Bronze
-        self.assertEqual(meu.linha, Produto.Linha.BRONZE)
+        self.assertEqual(meu.linha, bronze)
 
 
 class ItinerarioTests(BasePedido):

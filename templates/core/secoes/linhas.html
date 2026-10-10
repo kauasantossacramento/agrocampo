@@ -1,5 +1,10 @@
-{% comment %}Vitrine da linha ouro — só aparece se houver produto nela.{% endcomment %}
-{% for vitrine in vitrines_linha %}{% if vitrine.classe == "ouro" %}
+{% comment %}
+  Uma vitrine por linha cadastrada (Painel › Conteúdo › Linhas de produto),
+  na ordem definida lá. Antes eram três partials fixas — ouro, prata e
+  bronze; agora o lojista cria quantas linhas quiser e a home acompanha.
+  Linha sem produto publicado não rende seção: a view já não a envia.
+{% endcomment %}
+{% for vitrine in vitrines_linha %}
 <section class="section section--tight wrap vitrine-linha vitrine-linha--{{ vitrine.classe }}">
   <div class="secao-titulo" data-reveal>
     <h2 class="vitrine-linha__titulo"><span class="vitrine-linha__fita" aria-hidden="true"></span>{{ vitrine.titulo }}</h2>
@@ -9,4 +14,4 @@
     {% for produto in vitrine.produtos %}{% include 'partials/product_card.html' %}{% endfor %}
   </div>
 </section>
-{% endif %}{% endfor %}
+{% endfor %}

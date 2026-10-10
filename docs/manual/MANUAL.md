@@ -84,7 +84,8 @@ O estilo **Clássico** (o desenho anterior) continua disponível em Configuraç�
 ![Home no celular](prints/loja-home-celular.png)
 
 **Ordem das seções** (editável em Configurações › Vitrines, com setas):
-Maiores sucessos → Linha Ouro → Prata → Bronze → Navegue pelo seu animal →
+Maiores sucessos → Vitrines das linhas (uma por linha cadastrada, na ordem do
+cadastro) → Navegue pelo seu animal →
 Compre por categoria → Faixas de produtos → Oferta do dia → Em promoção →
 Ofertas em destaque → Lançamentos → Assinatura → Por que comprar → Blog →
 Newsletter → Nossas marcas. Uma seção sem conteúdo (sem produto na linha, sem
@@ -110,7 +111,7 @@ funcionam. No celular a busca fica logo abaixo do cabeçalho, com a lupa branca.
 
 ### 3.3 Catálogo e filtros
 
-Filtros por categoria, faixa de preço, marca, espécie, linha (Ouro/Prata/Bronze),
+Filtros por categoria, faixa de preço, marca, espécie, linha (as que você cadastrou),
 assinatura e promoção; ordenação por relevância, preço, novidades, mais vendidos.
 No celular os filtros ficam recolhidos num botão e abrem em painel sem limite de altura.
 
@@ -244,15 +245,31 @@ endereço, referência, itens e valor. Filtros por status, cidade e "pagos até"
 ### 6.3 Produtos
 
 Lista com **edição rápida** em linha (preço, estoque, no ar, **Sucesso**) e o botão de
-lápis que abre o cadastro completo em modal: nome, categoria, marca, **linha
-(Ouro/Prata/Bronze)**, preços, promoção com prazo, estoque, unidade, peso,
+lápis que abre o cadastro completo em modal: nome, **categoria**, **marca**,
+**linha**, **animais indicados**, preços, promoção com prazo, estoque, unidade, peso,
 **tamanhos** (kg/g com preço/estoque/foto), assinatura, fotos, benefícios,
 "Maior sucesso", lançamento, publicado. O SKU é opcional (gerado).
 
-**Selo da linha:** produto com linha marcada ganha um selo de medalha sobre a foto —
-dourado na 1ª linha (**Super Premium**), prateado na 2ª (**Premium**) e bronze na 3ª (**Especial**).
-Os nomes são editáveis em **Configurações › Vitrines › Nome das linhas**; nome vazio
-esconde o selo daquela linha.
+**Nada aqui é lista fechada.** Categoria, marca, linha e animal são campos
+digitados: comece a escrever e o sistema sugere o que já existe; se for algo
+novo, escreva o nome e aperte **Enter** — ele é criado na hora, sem sair do
+cadastro (a confirmação aparece em verde abaixo do campo). Nomes iguais não
+duplicam, mesmo com maiúsculas diferentes. Em *animais* dá para listar vários,
+separados por vírgula. A **unidade** também é livre: use as sugestões (un, kg,
+g, L, ml, pct) ou escreva a sua, como *fardo* ou *saco*.
+
+**Selo da linha:** produto com linha marcada ganha um selo sobre a foto. As
+linhas são cadastro seu em **Conteúdo › Linhas de produto**: nome, **imagem do
+selo (PNG)**, **tamanho do selo**, cor da medalha desenhada pelo site (usada
+quando não há PNG), título da vitrine na home, ordem e liga/desliga.
+
+- **Imagem do selo:** suba um PNG com fundo transparente para usar a arte da
+  loja no lugar da medalha padrão.
+- **Tamanho do selo:** a medida em pixels no card da vitrine (padrão **64**,
+  de 24 a 220). Na página do produto o selo cresce na mesma proporção e no
+  celular ele encolhe sozinho — ajuste um número só e vale em todo o site.
+
+Produto sem linha não mostra selo.
 
 **% de proteína:** no passo *Preço*, o campo *% de proteína* mostra uma faixa azul
 sobre a foto do produto (“26% DE PROTEÍNA”), como no rótulo da embalagem. Vazio não
@@ -263,12 +280,6 @@ vende mesmo sem quantidade”**. Ligada, o produto fica sempre disponível para 
 (na página do produto o rótulo diz apenas “Disponível”), não entra no
 alerta de estoque baixo e não vira “item em falta” na separação — a loja combina a
 entrega com o cliente. Desligada, vale a contagem normal de quantidade.
-
-**Marca:** o campo é digitado, não escolhido numa lista. Comece a escrever e o
-sistema sugere as marcas que já existem; se a marca for nova, escreva o nome e
-aperte **Enter** — ela é criada na hora, sem sair do cadastro (a confirmação
-aparece em verde abaixo do campo). Nomes iguais não duplicam, mesmo com
-maiúsculas diferentes.
 
 ![Produtos](prints/painel-produtos-desktop.png)
 ![Cadastro de produto](prints/painel-produto-editar-desktop.png)
@@ -299,6 +310,7 @@ uma lista com busca e o botão "Novo…" que abre o formulário em modal.
 | **Faixa de garantias** | os quatro selos abaixo do carrossel (frete, Pix, assinatura, compra garantida). |
 | **Páginas institucionais** | Quem somos, Entregas e prazos, Trocas, Privacidade, FAQ (HTML simples). |
 | **Categorias / Marcas / Espécies** | a árvore do catálogo; marca tem o atalho de "Maiores sucessos"; espécie tem foto e destaque na home. |
+| **Linhas de produto** | Premium, Super Premium, Especial… Nome, **PNG e tamanho do selo**, cor da medalha padrão, título da vitrine na home, ordem e liga/desliga. É o que o cadastro de produto oferece no campo *Linha*. |
 | **Cupons** | código, percentual/valor, validade, mínimo. |
 | **Cidades atendidas / Ilhas e localidades / Avisos de entrega** | ver a seção 9. |
 
@@ -321,7 +333,7 @@ uma lista com busca e o botão "Novo…" que abre o formulário em modal.
 | **Pagamentos** | credenciais da Stone (API Key, Merchant ID, webhook secret, chave Pix…), driver (Stone/Simulado), ambiente, parcelas sem juros. ![](prints/painel-config-pagamentos-desktop.png) |
 | **Regras da loja** | frete global (para cidade não cadastrada), frete grátis acima de, **desconto da assinatura (padrão 0)**, **mostrar a assinatura na loja**, desconto no Pix, blog ligado. ![](prints/painel-config-regras-desktop.png) |
 | **Entrega** | entregas a partir de (hora), **pedidos até (hora de corte)**, aviso geral, balão do WhatsApp e mensagem. ![](prints/painel-config-entrega-desktop.png) |
-| **Vitrines** | título e interruptor de cada linha (Ouro/Prata/Bronze) e a **ordem das seções da home**. ![](prints/painel-config-vitrines-desktop.png) |
+| **Vitrines** | a **ordem das seções da home** (com setas) e o atalho para as linhas de produto — título, cor e interruptor de cada linha ficam em Conteúdo › Linhas de produto. ![](prints/painel-config-vitrines-desktop.png) |
 | **Contato** | telefone, WhatsApp, e-mail, endereço, horário, CNPJ, redes, ano de fundação, texto do rodapé. ![](prints/painel-config-contato-desktop.png) |
 | **WhatsApp** | interruptor do envio automático, sessão (QR Code), teste, últimas mensagens — ver seção 11. Se aparecer "Funcionalidade não ativada", fale com o suporte KS TEC. ![](prints/painel-config-whatsapp-desktop.png) |
 | **Silvinha** | ver seção 4. |

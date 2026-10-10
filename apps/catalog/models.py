@@ -107,6 +107,60 @@ class Categoria(TimeStampedModel, SluggedModel):
         return ids
 
 
+class LinhaProduto(TimeStampedModel, SluggedModel):
+    """Faixa de posicionamento do produto (Super Premium, Premium, Especial…).
+
+    Era uma lista fechada no código; virou cadastro para o lojista criar
+    quantas quiser, dar nome, escolher a cor do selo e a ordem das vitrines.
+    """
+
+    class Metal(models.TextChoices):
+        OURO = "ouro", "Dourado"
+        PRATA = "prata", "Prateado"
+        BRONZE = "bronze", "Bronze"
+        VERDE = "verde", "Verde"
+        AZUL = "azul", "Azul"
+
+    cor = models.CharField(
+        "cor do selo", max_length=10, choices=Metal.choices, default=Metal.OURO,
+    )
+    # o selo desenhado aqui serve de padrão; quem tiver a arte da marca sobe o
+    # PNG e escolhe o tamanho, porque o mesmo símbolo pesa diferente em cada
+    # desenho — o que cabia no card virava um adesivo tapando o produto
+    selo_imagem = models.ImageField(
+        "imagem do selo (PNG)", upload_to="selos/", blank=True,
+        help_text="PNG com fundo transparente. Vazio usa a medalha desenhada pelo site.",
+    )
+    selo_tamanho = models.PositiveSmallIntegerField(
+        "tamanho do selo (px)", default=64,
+        validators=[MinValueValidator(24), MaxValueValidator(220)],
+        help_text="Medida no card da vitrine; na página do produto ele cresce na "
+                  "mesma proporção. Entre 24 e 220 — o padrão é 64.",
+    )
+    vitrine_titulo = models.CharField(
+        "título da vitrine na home", max_length=60, blank=True,
+        help_text="Vazio usa “Mais vendidos — <nome da linha>”.",
+    )
+    vitrine_ativa = models.BooleanField("mostrar vitrine na home", default=True)
+    ordem = models.PositiveIntegerField(default=0, help_text="Menor aparece primeiro.")
+    ativo = models.BooleanField("em uso", default=True)
+
+    class Meta:
+        ordering = ["ordem", "nome"]
+        verbose_name = "linha de produto"
+        verbose_name_plural = "linhas de produto"
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def titulo_da_vitrine(self) -> str:
+        return self.vitrine_titulo or f"Mais vendidos — {self.nome}"
+
+    def get_absolute_url(self):
+        return f"/catalogo/?linha={self.slug}"
+
+
 class Marca(TimeStampedModel, SluggedModel):
     logo = models.ImageField(upload_to="marcas/", blank=True)
     descricao = models.TextField(blank=True)
@@ -204,7 +258,10 @@ class ProdutoQuerySet(PublicadoQuerySet):
         return self.publicados().filter(permite_assinatura=True)
 
     def da_linha(self, linha):
-        return self.publicados().filter(linha=linha)
+        """Aceita o objeto da linha ou o slug dela."""
+        if hasattr(linha, "pk"):
+            return self.publicados().filter(linha=linha)
+        return self.publicados().filter(linha__slug=linha)
 
     def vitrine(self):
         """Seleção padrão de listagem, já com os joins e agregados necessários."""
@@ -217,20 +274,9 @@ class ProdutoQuerySet(PublicadoQuerySet):
 
 
 class Produto(TimeStampedModel, SluggedModel):
-    class Unidade(models.TextChoices):
-        UN = "un", "Unidade"
-        KG = "kg", "Quilo"
-        G = "g", "Grama"
-        L = "l", "Litro"
-        ML = "ml", "Mililitro"
-        PCT = "pct", "Pacote"
-
-    class Linha(models.TextChoices):
-        """Faixa de posicionamento do produto na vitrine."""
-
-        OURO = "ouro", "Linha Ouro"
-        PRATA = "prata", "Linha Prata"
-        BRONZE = "bronze", "Linha Bronze"
+    # Sugestoes do campo de unidade. Nao sao uma lista fechada: o lojista pode
+    # escrever a dele (fardo, saco, duzia) e o valor digitado e o que vale.
+    UNIDADES_SUGERIDAS = ("un", "kg", "g", "l", "ml", "pct", "fardo", "saco")
 
     sku = models.CharField("SKU", max_length=40, unique=True)
     categoria = models.ForeignKey(
@@ -271,7 +317,10 @@ class Produto(TimeStampedModel, SluggedModel):
         ),
     )
 
-    unidade = models.CharField(max_length=5, choices=Unidade.choices, default=Unidade.UN)
+    unidade = models.CharField(
+        max_length=5, default="un",
+        help_text="un, kg, g, L… ou a que a loja usar.",
+    )
     peso_kg = models.DecimalField(max_digits=7, decimal_places=3, default=0)
     proteina = models.PositiveSmallIntegerField(
         "% de proteína", null=True, blank=True,
@@ -292,13 +341,13 @@ class Produto(TimeStampedModel, SluggedModel):
         default=5, help_text="Abaixo disso o painel emite alerta."
     )
 
-    linha = models.CharField(
-        "linha",
-        max_length=10,
-        choices=Linha.choices,
-        blank=True,
-        db_index=True,
-        help_text="Ouro, Prata ou Bronze. Vazio deixa o produto fora das vitrines por linha.",
+    # mantido só para a migração de dados levar os valores antigos para a FK
+    linha_antiga = models.CharField(max_length=10, blank=True, db_index=True, editable=False)
+    linha = models.ForeignKey(
+        "catalog.LinhaProduto",
+        null=True, blank=True, on_delete=models.SET_NULL, related_name="produtos",
+        help_text="Define o selo do produto e em qual vitrine ele aparece. "
+                  "Pode criar uma linha nova digitando o nome.",
     )
 
     destaque = models.BooleanField(
@@ -422,16 +471,13 @@ class Produto(TimeStampedModel, SluggedModel):
 
     @property
     def linha_nome(self) -> str:
-        """Como esta linha se chama na loja (o lojista edita em Configurações).
+        """Nome da linha, como o lojista cadastrou. Sem linha, sem selo."""
+        return self.linha.nome if self.linha_id and self.linha.ativo else ""
 
-        Nome vazio é uma escolha, não um descuido: a terceira linha ainda não
-        tem nome definido, e sem nome o produto simplesmente não ganha selo.
-        """
-        from apps.core.models import SiteConfig
-
-        if not self.linha:
-            return ""
-        return SiteConfig.load().nome_da_linha(self.linha)
+    @property
+    def linha_cor(self) -> str:
+        """Cor do selo (dourado, prateado…), escolhida no cadastro da linha."""
+        return self.linha.cor if self.linha_id else ""
 
     @property
     def percentual_desconto(self) -> int:

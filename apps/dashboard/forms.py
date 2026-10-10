@@ -6,11 +6,29 @@ português e validação pensada para uso no celular.
 """
 from django import forms
 
-from apps.catalog.models import Categoria, Marca, Produto, ProdutoImagem
+from apps.catalog.models import (Categoria, Especie, LinhaProduto, Marca, Produto,
+                                 ProdutoImagem)
 from apps.core.models import SiteConfig
 from apps.payments.models import ProvedorPagamento
 
 CLASSE = "campo"
+
+
+def campo_livre(rotulo, tipo, ajuda, placeholder, obrigatorio=False, **extra):
+    """Campo de texto com sugestões do que já existe e criação do que faltar.
+
+    Usado no cadastro de produto para marca, categoria, linha e animal: o
+    lojista digita, as opções já cadastradas aparecem como sugestão e o nome
+    novo passa a existir — pelo Enter (JS) ou na hora de salvar.
+    """
+    return forms.CharField(
+        label=rotulo, max_length=250, required=obrigatorio,
+        widget=forms.TextInput(attrs={
+            "list": f"lista-{tipo}", "autocomplete": "off",
+            "placeholder": placeholder, "data-livre": tipo, **extra,
+        }),
+        help_text=ajuda,
+    )
 
 
 class _EstilizadoMixin:
@@ -38,7 +56,7 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Produto
         fields = (
-            "nome", "categoria", "linha", "sku",
+            "nome", "sku",
             "resumo", "descricao",
             "preco", "preco_promocional", "promocao_ate",
             "sem_controle_estoque", "estoque", "estoque_minimo", "unidade", "peso_kg", "proteina",
@@ -69,45 +87,95 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             }),
         }
 
-    # a marca é digitada, não escolhida numa lista: o lojista cadastra no balcão
-    # e quase sempre a marca do produto novo ainda não existe. O campo sugere as
-    # que já existem e cria a que faltar, sem sair da tela.
-    marca_nome = forms.CharField(
-        label="Marca", max_length=180, required=False,
-        widget=forms.TextInput(attrs={
-            "list": "lista-marcas", "autocomplete": "off",
-            "placeholder": "Digite e pressione Enter para criar",
-            "data-marca-campo": "",
-        }),
-        help_text="Escolha uma da lista ou escreva o nome de uma marca nova.",
+    # Nada no cadastro é lista fechada: marca, categoria, linha e animal são
+    # digitados, com sugestão do que já existe e criação do que faltar.
+    marca_nome = campo_livre(
+        "Marca", "marcas",
+        "Escolha uma da lista ou escreva o nome de uma marca nova.",
+        "Digite e pressione Enter para criar",
+    )
+    categoria_nome = campo_livre(
+        "Categoria", "categorias",
+        "Escolha uma da lista ou escreva o nome de uma categoria nova.",
+        "Digite e pressione Enter para criar",
+        obrigatorio=True,
+    )
+    linha_nome = campo_livre(
+        "Linha", "linhas",
+        "Define o selo do produto e em qual vitrine ele aparece. "
+        "Pode criar uma linha nova digitando o nome.",
+        "Ex.: Super Premium — digite e pressione Enter",
+    )
+    especies_nomes = campo_livre(
+        "Indicado para (animais)", "especies",
+        "Separe por vírgula. Animal que ainda não existe é criado na hora.",
+        "Cão, Gato, Calopsita…",
+        **{"data-multiplo": "1"},
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["sku"].required = False
-        self.fields["categoria"].queryset = Categoria.objects.publicados().order_by("nome")
-        self.fields["categoria"].empty_label = "Escolha a categoria"
         self.fields["promocao_ate"].input_formats = ["%Y-%m-%dT%H:%M"]
-        self.fields.pop("marca", None)
-        if not self.is_bound and self.instance and self.instance.marca_id:
+        # os campos de relação saem: quem manda são os de texto acima
+        for campo in ("marca", "categoria", "linha", "especies"):
+            self.fields.pop(campo, None)
+        self.fields["unidade"].widget = forms.TextInput(attrs={
+            "class": CLASSE, "list": "lista-unidades", "autocomplete": "off",
+            "placeholder": "un, kg, g, L…",
+        })
+        self.fields["unidade"].required = False
+        if self.is_bound or not self.instance:
+            return
+        if self.instance.marca_id:
             self.fields["marca_nome"].initial = self.instance.marca.nome
+        if self.instance.categoria_id:
+            self.fields["categoria_nome"].initial = self.instance.categoria.nome
+        if self.instance.linha_id:
+            self.fields["linha_nome"].initial = self.instance.linha.nome
+        if self.instance.pk:
+            self.fields["especies_nomes"].initial = ", ".join(
+                self.instance.especies.values_list("nome", flat=True)
+            )
 
-    def clean_marca_nome(self):
-        """Devolve a marca existente (sem diferenciar maiúsculas) ou cria uma nova."""
-        nome = " ".join((self.cleaned_data.get("marca_nome") or "").split())
+    @staticmethod
+    def _obter_ou_criar(modelo, nome):
+        """Nome igual (ignorando maiúsculas) reaproveita; o resto vira cadastro novo."""
+        nome = " ".join((nome or "").split())[:180]
         if not nome:
             return None
-        marca = Marca.objects.filter(nome__iexact=nome).first()
-        if marca:
-            return marca
-        return Marca.objects.create(nome=nome)
+        return (modelo.objects.filter(nome__iexact=nome).first()
+                or modelo.objects.create(nome=nome))
+
+    def clean_marca_nome(self):
+        return self._obter_ou_criar(Marca, self.cleaned_data.get("marca_nome"))
+
+    def clean_categoria_nome(self):
+        categoria = self._obter_ou_criar(Categoria, self.cleaned_data.get("categoria_nome"))
+        if not categoria:
+            raise forms.ValidationError("Escreva a categoria do produto.")
+        return categoria
+
+    def clean_linha_nome(self):
+        return self._obter_ou_criar(LinhaProduto, self.cleaned_data.get("linha_nome"))
+
+    def clean_especies_nomes(self):
+        nomes = (self.cleaned_data.get("especies_nomes") or "").split(",")
+        achados = (self._obter_ou_criar(Especie, nome) for nome in nomes)
+        return [especie for especie in achados if especie]
+
+    def clean_unidade(self):
+        return (self.cleaned_data.get("unidade") or "un").strip().lower()[:5] or "un"
 
     def save(self, commit=True):
         produto = super().save(commit=False)
         produto.marca = self.cleaned_data.get("marca_nome")
+        produto.categoria = self.cleaned_data.get("categoria_nome")
+        produto.linha = self.cleaned_data.get("linha_nome")
         if commit:
             produto.save()
             self.save_m2m()
+            produto.especies.set(self.cleaned_data.get("especies_nomes") or [])
         return produto
 
     def clean_sku(self):
@@ -277,33 +345,17 @@ class EntregaForm(_EstilizadoMixin, forms.ModelForm):
 
 
 class VitrinesForm(_EstilizadoMixin, forms.ModelForm):
-    """Títulos das três vitrines da home, editáveis pelo lojista."""
+    """Ordem das seções da home.
+
+    Nome da linha, cor do selo e título da vitrine saíram daqui: viraram
+    cadastro em Conteúdo › Linhas de produto, onde o lojista cria quantas
+    linhas quiser.
+    """
 
     class Meta:
         model = SiteConfig
-        fields = (
-            "vitrine_ouro_ativa", "vitrine_ouro_titulo",
-            "vitrine_prata_ativa", "vitrine_prata_titulo",
-            "vitrine_bronze_ativa", "vitrine_bronze_titulo",
-            "linha_ouro_nome", "linha_prata_nome", "linha_bronze_nome",
-            "home_ordem",
-        )
+        fields = ("home_ordem",)
         widgets = {"home_ordem": forms.HiddenInput()}
-        labels = {
-            "vitrine_ouro_titulo": "Título da vitrine Ouro",
-            "vitrine_prata_titulo": "Título da vitrine Prata",
-            "vitrine_bronze_titulo": "Título da vitrine Bronze",
-            "vitrine_ouro_ativa": "Mostrar a vitrine Ouro na home",
-            "vitrine_prata_ativa": "Mostrar a vitrine Prata na home",
-            "vitrine_bronze_ativa": "Mostrar a vitrine Bronze na home",
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for linha in ("ouro", "prata", "bronze"):
-            self.fields[f"vitrine_{linha}_titulo"].help_text = (
-                "A vitrine só aparece se houver produto nesta linha."
-            )
 
 
 class WhatsAppAutoForm(_EstilizadoMixin, forms.ModelForm):

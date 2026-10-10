@@ -66,8 +66,8 @@ def _linha_produto(p: Produto) -> str:
     partes = [f"- {p.nome} — R$ {preco:.2f}".replace(".", ",")]
     if p.promocao_vigente:
         partes.append("(em promoção)")
-    if p.linha:
-        partes.append(f"[linha {p.get_linha_display()}]")
+    if p.linha_id:
+        partes.append(f"[linha {p.linha_nome}]")
     if p.tem_variacoes:
         tamanhos = ", ".join(str(v) for v in p.variacoes_disponiveis[:6])
         partes.append(f"tamanhos: {tamanhos}")

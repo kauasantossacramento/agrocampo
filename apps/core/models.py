@@ -171,7 +171,7 @@ class SiteConfig(TimeStampedModel):
     # é ignorado — assim uma seção nova nunca some por causa de config velha.
     home_ordem = models.CharField(
         "ordem das seções da home", max_length=400, blank=True,
-        default="sucessos,ouro,prata,bronze,especies,categorias,faixas,oferta,"
+        default="sucessos,linhas,especies,categorias,faixas,oferta,"
                 "promocoes,destaques,lancamentos,assinatura,porque,blog,newsletter,marcas",
     )
 
@@ -249,34 +249,21 @@ class SiteConfig(TimeStampedModel):
         "Gemini · modelo", max_length=60, default="gemini-3.6-flash", blank=True,
     )
 
-    # ------------------------------------------ nomes das linhas
-    # As três linhas internas continuam sendo ouro/prata/bronze (é o que está
-    # gravado em cada produto); o lojista escolhe como elas se chamam na loja.
-    linha_ouro_nome = models.CharField(
-        "nome da 1ª linha", max_length=40, blank=True, default="Super Premium",
-        help_text="A linha mais alta. Vazio esconde o selo nos produtos.",
-    )
-    linha_prata_nome = models.CharField(
-        "nome da 2ª linha", max_length=40, blank=True, default="Premium",
-    )
-    linha_bronze_nome = models.CharField(
-        "nome da 3ª linha", max_length=40, blank=True, default="Especial",
-        help_text="Vazio esconde o selo dos produtos desta linha.",
-    )
-
-    # ------------------------------------------ vitrines por linha
-    vitrine_ouro_titulo = models.CharField(
-        max_length=60, blank=True, default="Mais vendidos — Super Premium"
-    )
-    vitrine_prata_titulo = models.CharField(
-        max_length=60, blank=True, default="Mais vendidos — Premium"
-    )
-    vitrine_bronze_titulo = models.CharField(
-        max_length=60, blank=True, default="Mais vendidos — Especial"
-    )
-    vitrine_ouro_ativa = models.BooleanField(default=True)
-    vitrine_prata_ativa = models.BooleanField(default=True)
-    vitrine_bronze_ativa = models.BooleanField(default=True)
+    # --------------------------- nomes e vitrines das linhas (histórico)
+    # As linhas viraram cadastro (Painel › Conteúdo › Linhas de produto):
+    # nome, cor do selo, título e liga/desliga da vitrine ficam em
+    # catalog.LinhaProduto. Estes campos saíram de tela, mas seguem no banco
+    # guardando o que o lojista tinha configurado — é por eles que a migração
+    # volta atrás se precisar.
+    linha_ouro_nome = models.CharField(max_length=40, blank=True, default="Super Premium", editable=False)
+    linha_prata_nome = models.CharField(max_length=40, blank=True, default="Premium", editable=False)
+    linha_bronze_nome = models.CharField(max_length=40, blank=True, default="Especial", editable=False)
+    vitrine_ouro_titulo = models.CharField(max_length=60, blank=True, default="Mais vendidos — Super Premium", editable=False)
+    vitrine_prata_titulo = models.CharField(max_length=60, blank=True, default="Mais vendidos — Premium", editable=False)
+    vitrine_bronze_titulo = models.CharField(max_length=60, blank=True, default="Mais vendidos — Especial", editable=False)
+    vitrine_ouro_ativa = models.BooleanField(default=True, editable=False)
+    vitrine_prata_ativa = models.BooleanField(default=True, editable=False)
+    vitrine_bronze_ativa = models.BooleanField(default=True, editable=False)
 
     # ------------------------------------------------------------- PWA
     pwa_convite_ativo = models.BooleanField(
@@ -426,9 +413,7 @@ class SiteConfig(TimeStampedModel):
     # (chave, rótulo no painel) — a ordem aqui é a padrão
     SECOES_HOME = [
         ("sucessos", "Maiores sucessos"),
-        ("ouro", "Linha Ouro"),
-        ("prata", "Linha Prata"),
-        ("bronze", "Linha Bronze"),
+        ("linhas", "Vitrines das linhas (Premium, Super Premium…)"),
         ("especies", "Navegue pelo seu animal"),
         ("categorias", "Compre por categoria"),
         ("faixas", "Faixas de produtos (banners com fotos)"),
@@ -443,10 +428,18 @@ class SiteConfig(TimeStampedModel):
         ("marcas", "Nossas marcas"),
     ]
 
+    # as três vitrines fixas deram lugar a uma seção só, que percorre as
+    # linhas cadastradas; ordens salvas antes disso continuam valendo
+    SECOES_ANTIGAS = {"ouro": "linhas", "prata": "linhas", "bronze": "linhas"}
+
     def secoes_home(self) -> list[str]:
         """Chaves na ordem escolhida, completadas com as que faltarem."""
         validas = [c for c, _ in self.SECOES_HOME]
-        escolhidas = [c.strip() for c in (self.home_ordem or "").split(",") if c.strip() in validas]
+        pedidas = [
+            self.SECOES_ANTIGAS.get(c.strip(), c.strip())
+            for c in (self.home_ordem or "").split(",")
+        ]
+        escolhidas = [c for c in pedidas if c in validas]
         vistas = set()
         ordem = []
         for c in escolhidas + validas:
@@ -455,25 +448,19 @@ class SiteConfig(TimeStampedModel):
                 ordem.append(c)
         return ordem
 
-    def nome_da_linha(self, linha: str) -> str:
-        """Nome que o lojista deu à linha interna (ouro/prata/bronze)."""
-        return {
-            "ouro": self.linha_ouro_nome,
-            "prata": self.linha_prata_nome,
-            "bronze": self.linha_bronze_nome,
-        }.get(linha or "", "").strip()
-
     def vitrines_por_linha(self):
-        """Config das três vitrines, na ordem em que aparecem na home."""
-        from apps.catalog.models import Produto
+        """Uma vitrine por linha cadastrada, na ordem definida pelo lojista."""
+        from apps.catalog.models import LinhaProduto
 
         return [
-            {"linha": Produto.Linha.OURO, "titulo": self.vitrine_ouro_titulo,
-             "ativa": self.vitrine_ouro_ativa, "classe": "ouro"},
-            {"linha": Produto.Linha.PRATA, "titulo": self.vitrine_prata_titulo,
-             "ativa": self.vitrine_prata_ativa, "classe": "prata"},
-            {"linha": Produto.Linha.BRONZE, "titulo": self.vitrine_bronze_titulo,
-             "ativa": self.vitrine_bronze_ativa, "classe": "bronze"},
+            {
+                "linha": linha.slug,
+                "titulo": linha.titulo_da_vitrine,
+                "ativa": linha.vitrine_ativa,
+                "classe": linha.cor,
+                "objeto": linha,
+            }
+            for linha in LinhaProduto.objects.filter(ativo=True)
         ]
 
 

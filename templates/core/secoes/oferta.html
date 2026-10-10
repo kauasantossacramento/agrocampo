@@ -14,10 +14,16 @@
         <a href="{{ oferta_relampago.get_absolute_url }}" class="btn btn--accent" style="margin-top:var(--s-5)">Aproveitar oferta</a>
       </div>
       <div>
+        {% comment %}
+          A foto leva ao produto como o botão: quem clica na embalagem está
+          pedindo para ver o produto, não admirando a imagem.
+        {% endcomment %}
         {% with imagem=oferta_relampago.imagem_principal %}
           {% if imagem %}
-            <img src="{{ imagem.imagem.url }}" alt="{{ oferta_relampago.nome }}"
-                 style="border-radius:var(--r-lg);background:#fff;padding:var(--s-4)" loading="lazy">
+            <a href="{{ oferta_relampago.get_absolute_url }}" aria-label="{{ oferta_relampago.nome }}">
+              <img src="{{ imagem.imagem.url }}" alt="{{ oferta_relampago.nome }}"
+                   style="border-radius:var(--r-lg);background:#fff;padding:var(--s-4)" loading="lazy">
+            </a>
           {% endif %}
         {% endwith %}
       </div>

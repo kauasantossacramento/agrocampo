@@ -482,15 +482,20 @@ def produto_form(request, produto_id=None):
 
 
 def _contexto_wizard(form, produto):
-    from apps.catalog.models import Marca, VariacaoProduto
+    from apps.catalog.models import (Categoria, Especie, LinhaProduto, Marca,
+                                     Produto, VariacaoProduto)
 
     return {
         "form": form,
         "produto": produto,
         "variacoes": (produto.variacoes.order_by("ordem", "preco") if produto else []),
         "unidades_variacao": VariacaoProduto.Unidade.choices,
-        # alimenta o <datalist> do campo de marca
+        # alimentam os <datalist> dos campos digitáveis do cadastro
         "marcas_existentes": Marca.objects.order_by("nome"),
+        "categorias_existentes": Categoria.objects.order_by("nome"),
+        "linhas_existentes": LinhaProduto.objects.order_by("ordem", "nome"),
+        "especies_existentes": Especie.objects.order_by("nome"),
+        "unidades_existentes": Produto.UNIDADES_SUGERIDAS,
     }
 
 
@@ -955,22 +960,48 @@ def whatsapp_teste(request):
     return redirect(f"{reverse('dashboard:configuracoes')}?aba=whatsapp")
 
 
+def _modelos_do_cadastro_rapido():
+    """O que o lojista pode criar digitando, sem sair do cadastro de produto."""
+    from apps.catalog.models import Categoria, Especie, LinhaProduto, Marca
+
+    return {
+        "marcas": (Marca, "marca"),
+        "categorias": (Categoria, "categoria"),
+        "linhas": (LinhaProduto, "linha"),
+        "especies": (Especie, "animal"),
+    }
+
+
 @operador_requerido
 @require_POST
-def marca_criar(request):
-    """Cria (ou reaproveita) uma marca pelo nome, direto do cadastro de produto.
+def cadastro_rapido(request, tipo):
+    """Cria (ou reaproveita) marca, categoria, linha ou animal pelo nome.
 
-    O lojista digita a marca e aperta Enter: quem não existe passa a existir na
-    hora, sem sair do formulário e sem abrir outra tela.
+    O lojista digita e aperta Enter: o que não existe passa a existir na hora,
+    sem sair do formulário e sem abrir outra tela. Nenhuma lista do cadastro de
+    produto é fechada — tudo que ele precisa, ele cria aqui.
     """
-    from apps.catalog.models import Marca
+    escolha = _modelos_do_cadastro_rapido().get(tipo)
+    if not escolha:
+        return JsonResponse({"ok": False, "erro": "Tipo desconhecido."}, status=404)
+    modelo, rotulo = escolha
 
     nome = " ".join((request.POST.get("nome") or "").split())[:180]
     if len(nome) < 2:
-        return JsonResponse({"ok": False, "erro": "Escreva o nome da marca."}, status=400)
+        return JsonResponse(
+            {"ok": False, "erro": f"Escreva o nome d{'a' if rotulo != 'animal' else 'o'} {rotulo}."},
+            status=400,
+        )
 
-    marca = Marca.objects.filter(nome__iexact=nome).first()
-    criada = marca is None
+    item = modelo.objects.filter(nome__iexact=nome).first()
+    criada = item is None
     if criada:
-        marca = Marca.objects.create(nome=nome)
-    return JsonResponse({"ok": True, "id": marca.id, "nome": marca.nome, "criada": criada})
+        item = modelo.objects.create(nome=nome)
+    return JsonResponse({"ok": True, "id": item.id, "nome": item.nome, "criada": criada})
+
+
+@operador_requerido
+@require_POST
+def marca_criar(request):
+    """Rota antiga do campo de marca — segue valendo para links já salvos."""
+    return cadastro_rapido(request, "marcas")
