@@ -244,6 +244,20 @@ endereço, referência, itens e valor. Filtros por status, cidade e "pagos até"
 
 ### 6.3 Produtos
 
+**Rascunho:** o cadastro guarda sozinho o que você digita, neste aparelho,
+enquanto escreve. Se o modal fechar, a internet cair ou o celular morrer, ao
+abrir o formulário de novo aparece um aviso com **Recuperar** ou **Descartar**
+— recuperar é escolha sua, para não sobrescrever sem querer um produto que
+você abriu para editar. O rascunho some quando o produto é salvo e vale por
+uma semana. As **fotos** precisam ser escolhidas de novo (arquivo não cabe
+nessa memória do navegador) e o rascunho é só daquele aparelho.
+
+**Lixeira:** o botão ✕ na linha tira o produto da loja sem apagar nada — ele
+some da vitrine, do catálogo e da busca, mas o cadastro continua inteiro e os
+pedidos antigos e as assinaturas seguem apontando para ele. O chip
+**Lixeira** mostra o que foi retirado, com o botão **Restaurar**. Não existe
+"apagar de vez" de propósito: produto já vendido não pode sumir do histórico.
+
 **Filtrar e ordenar pela própria tabela:** clique no título de uma coluna
 (Produto, Categoria, Preço, Estoque, No ar, Sucesso) para ordenar — o segundo
 clique inverte. Clique no **valor** de uma célula (a categoria, a marca ou a

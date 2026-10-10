@@ -1770,3 +1770,50 @@ class ManualDaStoneTests(TestCase):
         self.client.force_login(self.lojista)
         html = self.client.get("/painel/configuracoes/").content.decode()
         self.assertIn("/painel/manual/stone/", html)
+
+
+class BannerSemTituloNaArteTests(TestCase):
+    """Peça de apresentação entra limpa: o texto já está dentro da arte."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.core.models import Banner
+
+        config = SiteConfig.load()
+        config.layout_home = SiteConfig.LayoutHome.VITRINE
+        config.capa_slides_ativa = True
+        config.save()
+        cls.Banner = Banner
+
+    def _banner(self, posicao, titulo):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return self.Banner.objects.create(
+            titulo=titulo, subtitulo="texto que não deve tapar a arte",
+            posicao=posicao, link="/catalogo/",
+            imagem=SimpleUploadedFile("capa.jpg", b"fake", content_type="image/jpeg"),
+        )
+
+    def test_apresentacao_nao_recebe_faixa_de_texto(self):
+        self._banner(self.Banner.Posicao.APRESENTACAO, "Título que fica só no cadastro")
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        self.assertIn("vitrine-capa__slide", html)          # a peça entrou
+        self.assertNotIn("vitrine-capa__sobre", html)       # sem faixa por cima
+        # nada de texto visível: o título sobrevive só no alt e no aria-label,
+        # que são para quem usa leitor de tela
+        self.assertNotIn("<strong>Título que fica só no cadastro</strong>", html)
+        self.assertNotIn("texto que não deve tapar a arte", html)
+
+    def test_carrossel_principal_continua_podendo_ter_texto(self):
+        self._banner(self.Banner.Posicao.HERO, "Promoção da semana")
+        html = self.client.get(reverse("core:home")).content.decode()
+
+        self.assertIn("vitrine-capa__sobre", html)
+        self.assertIn("Promoção da semana", html)
+
+    def test_o_titulo_continua_guardado_no_cadastro(self):
+        """Some da tela, não do banco: o lojista ainda identifica a peça."""
+        banner = self._banner(self.Banner.Posicao.APRESENTACAO, "Peça de setembro")
+        banner.refresh_from_db()
+        self.assertEqual(banner.titulo, "Peça de setembro")

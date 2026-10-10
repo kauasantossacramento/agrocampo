@@ -16,6 +16,7 @@ urlpatterns = [
     path("marcas/criar/", views.marca_criar, name="marca_criar"),
     path("cadastro-rapido/<slug:tipo>/", views.cadastro_rapido, name="cadastro_rapido"),
     path("produtos/<int:produto_id>/salvar/", views.salvar_produto_rapido, name="salvar_produto"),
+    path("produtos/<int:produto_id>/lixeira/", views.produto_lixeira, name="produto_lixeira"),
     path("produtos/limpar/", views.limpar_catalogo_view, name="limpar_catalogo"),
     path("produtos/novo/form/", views.produto_form, name="produto_form_novo"),
     path("produtos/novo/salvar/", views.produto_salvar, name="produto_salvar_novo"),

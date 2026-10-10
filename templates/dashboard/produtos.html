@@ -22,13 +22,17 @@
 
 <div class="row" style="gap:var(--s-2);margin-bottom:var(--s-5);flex-wrap:wrap">
   <a href="{% url 'dashboard:produtos' %}" class="chip {% if not filtro %}is-active{% endif %}">
-    Todos <span class="badge badge--gray">{{ total }}</span>
+    Todos <span class="badge badge--gray">{{ total_loja }}</span>
   </a>
   <a href="?filtro=sem-imagem" class="chip {% if filtro == 'sem-imagem' %}is-active{% endif %}">
     Sem imagem {% if sem_imagem %}<span class="badge badge--sale">{{ sem_imagem }}</span>{% endif %}
   </a>
   <a href="?filtro=sem-estoque" class="chip {% if filtro == 'sem-estoque' %}is-active{% endif %}">Sem estoque</a>
   <a href="?filtro=despublicados" class="chip {% if filtro == 'despublicados' %}is-active{% endif %}">Despublicados</a>
+
+  <a href="?filtro=lixeira" class="chip {% if na_lixeira %}is-active{% endif %}">
+    Lixeira {% if total_lixeira %}<span class="badge badge--gray">{{ total_lixeira }}</span>{% endif %}
+  </a>
 
   {% if tem_recorte %}
     <span class="chip is-active">
@@ -42,6 +46,17 @@
   {% endif %}
 </div>
 
+{% if na_lixeira %}
+  <div class="alert alert--warning" style="margin-bottom:var(--s-5)">
+    <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+    <span>
+      Estes produtos não aparecem na loja. O cadastro continua inteiro —
+      pedidos antigos e assinaturas seguem apontando para eles — e qualquer um
+      pode voltar com um clique em <strong>Restaurar</strong>.
+    </span>
+  </div>
+{% endif %}
+
 {% comment %}
   Um <form> por linha, declarado FORA da tabela. Form entre <td>s é HTML
   inválido: o parser expulsa o elemento e a tabela renderiza vazia. Os
@@ -50,6 +65,10 @@
 {% for p in produtos %}
   <form method="post" action="{% url 'dashboard:salvar_produto' p.id %}" id="f{{ p.id }}" hidden>
     {% csrf_token %}
+  </form>
+  <form method="post" action="{% url 'dashboard:produto_lixeira' p.id %}" id="lx{{ p.id }}" hidden>
+    {% csrf_token %}
+    <input type="hidden" name="voltar_para" value="{{ request.get_full_path }}">
   </form>
 {% endfor %}
 
@@ -117,8 +136,10 @@
             <a class="col-filtro" href="{% com_parametros categoria=p.categoria.slug %}">{{ p.categoria.nome }}</a>
           </td>
           <td data-rotulo="Preço">
+            {% if na_lixeira %}R$ {{ p.preco|floatformat:2 }}{% else %}
             <input form="f{{ p.id }}" type="text" name="preco" value="{{ p.preco|floatformat:2 }}"
                    style="width:88px;padding:.4rem .5rem" aria-label="Preço de {{ p.nome }}">
+            {% endif %}
           </td>
           <td data-rotulo="Estoque">
             {% if p.sem_controle_estoque %}
@@ -142,7 +163,17 @@
           </td>
           <td data-rotulo="Ações">
             <div class="row" style="gap:var(--s-2)">
-              <button form="f{{ p.id }}" type="submit" class="btn btn--ghost btn--sm nowrap">Salvar</button>
+              {% if na_lixeira %}
+                <button form="lx{{ p.id }}" type="submit" class="btn btn--primary btn--sm nowrap">Restaurar</button>
+              {% else %}
+                <button form="f{{ p.id }}" type="submit" class="btn btn--ghost btn--sm nowrap">Salvar</button>
+                <button form="lx{{ p.id }}" type="submit" class="icon-btn"
+                        aria-label="Mandar {{ p.nome }} para a lixeira"
+                        title="Mandar para a lixeira — o cadastro fica guardado"
+                        onclick="return confirm('Tirar “{{ p.nome|escapejs }}” da loja? O cadastro fica guardado na lixeira.')">
+                  <svg width="16" height="16"><use href="#i-x"></use></svg>
+                </button>
+              {% endif %}
               <button type="button" class="icon-btn" aria-label="Editar {{ p.nome }}"
                       data-produto-modal="{% url 'dashboard:produto_form' p.id %}"
                       data-produto-titulo="Editar produto">

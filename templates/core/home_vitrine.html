@@ -37,13 +37,20 @@
                  {% if banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
             <source src="{{ banner.video.url }}">
           </video>
-          {% if banner.titulo or banner.selo %}
-            <span class="vitrine-capa__sobre">
-              {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}
-              {% if banner.titulo %}<strong>{{ banner.titulo }}</strong>{% endif %}
-              {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
-              {% if banner.texto_botao and banner.destino %}<span class="btn btn--accent">{{ banner.texto_botao }}</span>{% endif %}
-            </span>
+          {% comment %}
+            Quem cadastra em "apresentação" sobe a peça já pronta, com o texto
+            dentro da arte. A faixa escura por cima só tapava o trabalho — o
+            título continua guardado no cadastro, mas não vai para a tela.
+          {% endcomment %}
+          {% if banner.posicao != 'apresentacao' %}
+            {% if banner.titulo or banner.selo %}
+              <span class="vitrine-capa__sobre">
+                {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}
+                {% if banner.titulo %}<strong>{{ banner.titulo }}</strong>{% endif %}
+                {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
+                {% if banner.texto_botao and banner.destino %}<span class="btn btn--accent">{{ banner.texto_botao }}</span>{% endif %}
+              </span>
+            {% endif %}
           {% endif %}
         </{% if banner.destino %}a{% else %}div{% endif %}>
       {% elif banner.imagem %}
@@ -54,14 +61,19 @@
             Texto opcional sobre o cartaz: entra pela esquerda, sobre um
             gradiente escuro que some para a direita — a arte continua
             visível do lado direito. Sem título, o cartaz fala sozinho.
+
+            Em "apresentação" nunca entra: ali a peça já vem com o texto na
+            própria arte, e a faixa escura tapava o que o lojista desenhou.
           {% endcomment %}
-          {% if banner.titulo or banner.selo %}
-            <span class="vitrine-capa__sobre">
-              {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}
-              {% if banner.titulo %}<strong>{{ banner.titulo }}</strong>{% endif %}
-              {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
-              {% if banner.texto_botao %}<span class="btn btn--accent">{{ banner.texto_botao }}</span>{% endif %}
-            </span>
+          {% if banner.posicao != 'apresentacao' %}
+            {% if banner.titulo or banner.selo %}
+              <span class="vitrine-capa__sobre">
+                {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}
+                {% if banner.titulo %}<strong>{{ banner.titulo }}</strong>{% endif %}
+                {% if banner.subtitulo %}<span>{{ banner.subtitulo }}</span>{% endif %}
+                {% if banner.texto_botao %}<span class="btn btn--accent">{{ banner.texto_botao }}</span>{% endif %}
+              </span>
+            {% endif %}
           {% endif %}
         </a>
       {% else %}

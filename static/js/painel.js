@@ -39,7 +39,14 @@
       document.body.appendChild(modal);
 
       modal.addEventListener('click', function (e) {
-        if (e.target === modal || e.target.closest('[data-modal-fechar]')) fecharModal();
+        if (e.target.closest('[data-modal-fechar]')) { fecharModal(); return; }
+
+        // Clicar no fundo não fecha mais: num cadastro de produto meio
+        // preenchido, um toque fora da caixa jogava fora o trabalho. Para
+        // sair existe o X — e o aviso evita o clique que parece não funcionar.
+        if (e.target === modal) {
+          toast('Para sair, use o X ali em cima — o que você digitou fica guardado.');
+        }
       });
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && modal.classList.contains('is-open')) fecharModal();

@@ -249,7 +249,7 @@ def itinerario(request):
 @operador_requerido
 def estoque(request):
     """Lista o catálogo inteiro. Quem não controla estoque aparece como ∞."""
-    produtos = Produto.objects.select_related("categoria").order_by(
+    produtos = Produto.objects.na_loja().select_related("categoria").order_by(
         "sem_controle_estoque", "estoque", "nome"
     )
     filtro = request.GET.get("critico")
@@ -305,6 +305,10 @@ def produtos(request):
     busca = request.GET.get("q", "").strip()
     filtro = request.GET.get("filtro", "")
 
+    # a lixeira é uma vista à parte: no dia a dia ela não polui a listagem
+    na_lixeira = filtro == "lixeira"
+    qs = qs.na_lixeira() if na_lixeira else qs.na_loja()
+
     if busca:
         qs = qs.filter(Q(nome__icontains=busca) | Q(sku__icontains=busca))
     if filtro == "sem-imagem":
@@ -346,10 +350,37 @@ def produtos(request):
             "ordem": ordem,
             "recorte": recorte,
             "tem_recorte": any(recorte.values()),
-            "sem_imagem": Produto.objects.filter(imagens__isnull=True).count(),
+            "sem_imagem": Produto.objects.na_loja().filter(imagens__isnull=True).count(),
+            "na_lixeira": na_lixeira,
+            # o chip "Todos" conta a loja, não o recorte aberto
+            "total_loja": Produto.objects.na_loja().count(),
+            "total_lixeira": Produto.objects.na_lixeira().count(),
             "metricas": _metricas(),
         },
     )
+
+
+@operador_requerido
+@require_POST
+def produto_lixeira(request, produto_id):
+    """Manda o produto para a lixeira ou traz de volta.
+
+    Nada é apagado: pedido antigo e assinatura continuam apontando para o
+    produto. O que muda é que ele some da loja.
+    """
+    produto = get_object_or_404(Produto, pk=produto_id)
+    if produto.na_lixeira:
+        produto.restaurar()
+        messages.success(request, f"{produto.nome} voltou para a loja.")
+    else:
+        produto.mandar_para_lixeira()
+        messages.success(
+            request,
+            f"{produto.nome} foi para a lixeira. O cadastro continua guardado — "
+            f"dá para restaurar quando quiser.",
+        )
+    destino = request.POST.get("voltar_para") or reverse("dashboard:produtos")
+    return redirect(destino)
 
 
 @operador_requerido

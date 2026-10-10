@@ -280,6 +280,21 @@ class Especie(TimeStampedModel, SluggedModel):
 
 
 class ProdutoQuerySet(PublicadoQuerySet):
+    def publicados(self):
+        """Nada do que está na lixeira aparece na loja.
+
+        A regra vive aqui, e não em cada consulta: vitrine, catálogo, busca,
+        assistente e sitemap passam todos por `publicados()`.
+        """
+        return super().publicados().filter(excluido_em__isnull=True)
+
+    def na_loja(self):
+        """Tudo que não foi para a lixeira, publicado ou não."""
+        return self.filter(excluido_em__isnull=True)
+
+    def na_lixeira(self):
+        return self.filter(excluido_em__isnull=False)
+
     def disponiveis(self):
         return self.publicados().filter(estoque__gt=0)
 
@@ -365,6 +380,13 @@ class Produto(TimeStampedModel, SluggedModel):
         validators=[MaxValueValidator(100)],
         help_text="Aparece numa faixa azul sobre a foto, como no rótulo da ração. "
                   "Vazio não mostra nada.",
+    )
+    # Produto vendido não pode ser apagado: o pedido antigo aponta para ele.
+    # Excluir, aqui, é tirar da loja e guardar na lixeira — o registro fica
+    # inteiro e dá para voltar atrás.
+    excluido_em = models.DateTimeField(
+        "mandado para a lixeira em", null=True, blank=True,
+        editable=False, db_index=True,
     )
     sem_controle_estoque = models.BooleanField(
         "sem controle de estoque", default=True,
@@ -568,6 +590,26 @@ class Produto(TimeStampedModel, SluggedModel):
         """O arquivo da capa — o mesmo tipo que `VariacaoProduto.foto`."""
         principal = self.imagem_principal
         return principal.imagem if principal else None
+
+    @property
+    def na_lixeira(self) -> bool:
+        return self.excluido_em is not None
+
+    def mandar_para_lixeira(self):
+        """Tira da loja sem apagar nada. Idempotente."""
+        if self.excluido_em:
+            return self
+        self.excluido_em = timezone.now()
+        self.save(update_fields=["excluido_em", "atualizado_em"])
+        return self
+
+    def restaurar(self):
+        """Devolve à loja com a publicação que tinha antes."""
+        if not self.excluido_em:
+            return self
+        self.excluido_em = None
+        self.save(update_fields=["excluido_em", "atualizado_em"])
+        return self
 
     @property
     def fotos_do_hover(self):

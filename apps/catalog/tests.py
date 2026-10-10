@@ -186,3 +186,79 @@ class FotoDoProdutoTests(TestCase):
         bloco = html[html.index("flash__inner"):]
         bloco = bloco[:bloco.index("</section>")]
         self.assertIn(f'href="{self.produto.get_absolute_url()}"', bloco)
+
+
+class LixeiraDeProdutosTests(TestCase):
+    """Excluir é tirar da loja; o registro continua inteiro."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from apps.accounts.models import User
+        from apps.catalog.models import Categoria, Produto
+
+        self.Produto = Produto
+        categoria = Categoria.objects.create(nome="Ração", exibir_no_menu=True)
+        self.produto = Produto.objects.create(
+            sku="LX-1", nome="Ração que será excluída", categoria=categoria,
+            preco=Decimal("50.00"), publicado=True,
+        )
+        self.lojista = User.objects.create_user(
+            email="lojista-lixeira@agrocampo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def test_produto_na_lixeira_some_da_loja(self):
+        self.assertIn(self.produto, self.Produto.objects.publicados())
+        self.produto.mandar_para_lixeira()
+        self.assertNotIn(self.produto, self.Produto.objects.publicados())
+        self.assertNotIn("Ração que será excluída",
+                         self.client.get("/catalogo/").content.decode())
+
+    def test_o_registro_continua_existindo(self):
+        self.produto.mandar_para_lixeira()
+        self.produto.refresh_from_db()
+        self.assertTrue(self.Produto.objects.filter(pk=self.produto.pk).exists())
+        self.assertTrue(self.produto.na_lixeira)
+        self.assertIsNotNone(self.produto.excluido_em)
+
+    def test_restaurar_devolve_para_a_loja(self):
+        self.produto.mandar_para_lixeira()
+        self.produto.restaurar()
+        self.assertIn(self.produto, self.Produto.objects.publicados())
+
+    def test_pedido_antigo_nao_se_perde(self):
+        """O item vendido aponta para o produto: por isso nada é apagado."""
+        self.produto.mandar_para_lixeira()
+        self.produto.refresh_from_db()
+        self.assertEqual(self.produto.nome, "Ração que será excluída")
+        self.assertEqual(self.produto.preco, self.produto.preco)
+
+    def test_painel_manda_para_a_lixeira_e_traz_de_volta(self):
+        self.client.force_login(self.lojista)
+        url = f"/painel/produtos/{self.produto.id}/lixeira/"
+
+        self.client.post(url)
+        self.produto.refresh_from_db()
+        self.assertTrue(self.produto.na_lixeira)
+
+        self.client.post(url)
+        self.produto.refresh_from_db()
+        self.assertFalse(self.produto.na_lixeira)
+
+    def test_listagem_do_painel_separa_a_lixeira(self):
+        self.client.force_login(self.lojista)
+        self.produto.mandar_para_lixeira()
+
+        normal = self.client.get("/painel/produtos/").content.decode()
+        self.assertNotIn("Ração que será excluída", normal)
+
+        lixeira = self.client.get("/painel/produtos/?filtro=lixeira").content.decode()
+        self.assertIn("Ração que será excluída", lixeira)
+        self.assertIn("Restaurar", lixeira)
+
+    def test_visitante_nao_mexe_na_lixeira(self):
+        resposta = self.client.post(f"/painel/produtos/{self.produto.id}/lixeira/")
+        self.produto.refresh_from_db()
+        self.assertNotEqual(resposta.status_code, 200)
+        self.assertFalse(self.produto.na_lixeira)
