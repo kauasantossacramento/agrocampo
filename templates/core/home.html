@@ -111,8 +111,8 @@
             {% if faixa.subtitulo %}<p>{{ faixa.subtitulo }}</p>{% endif %}
             <span class="rule"></span>
           </div>
-          {% if faixa.link %}
-            <a href="{{ faixa.link }}" class="small strong link-underline">
+          {% if faixa.link or faixa.tipo_destino != 'automatico' %}
+            <a href="{{ faixa.destino|default:'/catalogo/' }}" class="small strong link-underline">
               {{ faixa.texto_botao|default:"Ver tudo" }} →
             </a>
           {% endif %}
