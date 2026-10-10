@@ -15,6 +15,25 @@ def get_item(dicionario, chave):
     return dicionario.get(chave, [])
 
 
+@register.simple_tag(takes_context=True)
+def com_parametros(context, **novos):
+    """Monta a URL atual trocando só os parâmetros informados.
+
+    Serve às colunas que ordenam e filtram no painel: a busca e os outros
+    filtros continuam valendo quando se clica no título de uma coluna.
+    Valor vazio tira o parâmetro da URL.
+    """
+    consulta = context["request"].GET.copy()
+    for chave, valor in novos.items():
+        if valor in (None, ""):
+            consulta.pop(chave, None)
+        else:
+            consulta[chave] = valor
+    consulta.pop("page", None)
+    texto = consulta.urlencode()
+    return f"?{texto}" if texto else "?"
+
+
 NEGRITO = re.compile(r"\*\*(.+?)\*\*", re.S)
 # subtítulo: linha curta, sem pontuação de fim de frase, seguida de outra linha
 FIM_DE_FRASE = (".", ":", ";", "!", "?", ",")

@@ -100,7 +100,7 @@ class SeloProteinaELinhasTests(TestCase):
         self.produto.save()
         self.assertEqual(self.produto.linha_nome, "")
         html = self.client.get("/catalogo/").content.decode()
-        self.assertNotIn("selo-linha selo-linha--ouro", html)
+        self.assertNotIn("selo-linha", html)
 
     def test_linha_fora_de_uso_nao_mostra_selo(self):
         self.ouro.ativo = False
@@ -108,18 +108,28 @@ class SeloProteinaELinhasTests(TestCase):
         self.produto.refresh_from_db()
         self.assertEqual(self.produto.linha_nome, "")
 
-    def test_selo_segue_o_tamanho_e_o_png_da_linha(self):
+    def test_selo_segue_o_tamanho_e_a_cor_da_linha(self):
         self.ouro.selo_tamanho = 40
+        self.ouro.cor = "#1B3C8C"
         self.ouro.save()
         html = self.client.get("/catalogo/").content.decode()
         self.assertIn("--selo-base:40px", html)
+        self.assertIn("--linha-cor:#1B3C8C", html)
+        # o claro e o escuro saem da cor escolhida, sem o lojista precisar pensar
+        self.assertIn(f"--linha-clara:{self.ouro.cor_clara}", html)
+        self.assertIn(f"--linha-escura:{self.ouro.cor_escura}", html)
+
+    def test_tons_derivados_da_cor(self):
+        self.ouro.cor = "#808080"
+        self.assertEqual(self.ouro.cor_clara, "#CFCFCF")
+        self.assertEqual(self.ouro.cor_escura, "#4F4F4F")
 
     def test_selo_aparece_no_card_e_na_pagina(self):
         html = self.client.get("/catalogo/").content.decode()
-        self.assertIn("selo-linha--ouro", html)
+        self.assertIn("selo-linha", html)
         self.assertIn("Super Premium", html)
         html = self.client.get(self.produto.get_absolute_url()).content.decode()
-        self.assertIn("selo-linha--ouro", html)
+        self.assertIn("selo-linha", html)
 
     def test_faixa_de_proteina(self):
         html = self.client.get("/catalogo/").content.decode()

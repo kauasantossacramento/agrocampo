@@ -4,7 +4,7 @@ from functools import wraps
 from urllib.parse import quote
 
 from django.contrib import messages
-from django.db.models import Avg, Count, F, Sum
+from django.db.models import Avg, Count, F, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -282,15 +282,31 @@ def repor_estoque(request, produto_id):
     return redirect("dashboard:estoque")
 
 
+ORDENS_PRODUTO = {
+    "nome": ["nome"],
+    "categoria": ["categoria__nome", "nome"],
+    "preco": ["preco", "nome"],
+    "estoque": ["sem_controle_estoque", "estoque", "nome"],
+    "publicado": ["publicado", "nome"],
+    "destaque": ["destaque", "nome"],
+}
+
+
 @operador_requerido
 def produtos(request):
-    """Lista de produtos com edição rápida de estoque, preço e publicação."""
-    qs = Produto.objects.select_related("categoria", "marca").prefetch_related("imagens")
+    """Lista de produtos com edição rápida de estoque, preço e publicação.
+
+    As colunas filtram e ordenam: clicar no título ordena (e inverte na
+    segunda vez), clicar no valor de uma célula — categoria, marca, linha —
+    deixa só os produtos daquele item. É assim que o lojista acha "todas as
+    rações da Golden" sem precisar pensar em busca.
+    """
+    qs = Produto.objects.select_related("categoria", "marca", "linha").prefetch_related("imagens")
     busca = request.GET.get("q", "").strip()
     filtro = request.GET.get("filtro", "")
 
     if busca:
-        qs = qs.filter(nome__icontains=busca) | qs.filter(sku__icontains=busca)
+        qs = qs.filter(Q(nome__icontains=busca) | Q(sku__icontains=busca))
     if filtro == "sem-imagem":
         qs = qs.filter(imagens__isnull=True)
     elif filtro == "despublicados":
@@ -298,15 +314,38 @@ def produtos(request):
     elif filtro == "sem-estoque":
         qs = qs.filter(estoque__lte=0)
 
+    # filtros vindos do clique numa célula
+    recorte = {
+        "categoria": request.GET.get("categoria", ""),
+        "marca": request.GET.get("marca", ""),
+        "linha": request.GET.get("linha", ""),
+    }
+    if recorte["categoria"]:
+        qs = qs.filter(categoria__slug=recorte["categoria"])
+    if recorte["marca"]:
+        qs = qs.filter(marca__slug=recorte["marca"])
+    if recorte["linha"]:
+        qs = qs.filter(linha__slug=recorte["linha"])
+
+    ordem = request.GET.get("ordem", "nome")
+    if ordem.lstrip("-") not in ORDENS_PRODUTO:
+        ordem = "nome"
+    campos = ORDENS_PRODUTO[ordem.lstrip("-")]
+    if ordem.startswith("-"):
+        campos = [f"-{c}" if not c.startswith("-") else c[1:] for c in campos]
+
     return render(
         request,
         "dashboard/produtos.html",
         {
             "secao": "produtos",
-            "produtos": qs.order_by("nome")[:300],
+            "produtos": qs.order_by(*campos)[:300],
             "total": qs.count(),
             "busca": busca,
             "filtro": filtro,
+            "ordem": ordem,
+            "recorte": recorte,
+            "tem_recorte": any(recorte.values()),
             "sem_imagem": Produto.objects.filter(imagens__isnull=True).count(),
             "metricas": _metricas(),
         },
@@ -753,8 +792,18 @@ def gestao_form(request, slug, pk=None):
     return render(
         request,
         "dashboard/_gestao_form.html",
-        {"form": secao.form(instance=obj), "secao_atual": secao, "obj": obj},
+        _contexto_gestao(secao.form(instance=obj), secao, obj),
     )
+
+
+def _contexto_gestao(form, secao, obj):
+    from apps.catalog.models import LinhaProduto
+
+    return {
+        "form": form, "secao_atual": secao, "obj": obj,
+        # sugestões do seletor de cor das linhas; a escolha segue livre
+        "cores_sugeridas": LinhaProduto.CORES_SUGERIDAS,
+    }
 
 
 @operador_requerido

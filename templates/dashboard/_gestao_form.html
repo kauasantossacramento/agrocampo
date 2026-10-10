@@ -27,6 +27,14 @@
         {% if campo.errors %}<span class="error-text">{{ campo.errors|join:" " }}</span>{% endif %}
       </div>
     {% endfor %}
+
+    {% comment %}
+      Sugestões do seletor de cor (seção de linhas). O navegador mostra as
+      cores como atalho; o lojista continua livre para escolher outra.
+    {% endcomment %}
+    <datalist id="cores-de-linha">
+      {% for valor, nome in cores_sugeridas %}<option value="{{ valor }}">{{ nome }}</option>{% endfor %}
+    </datalist>
   </section>
 
   <footer class="wizard__rodape">

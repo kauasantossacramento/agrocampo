@@ -1,0 +1,21 @@
+{% comment %}
+  Ilustração das telas de conta: desenho próprio em SVG, com as cores da
+  marca. Fica no topo do cartão para a tela não ser só formulário.
+  `aria-hidden` porque é enfeite: o título ao lado já diz o que é.
+{% endcomment %}
+<svg class="auth__arte" viewBox="0 0 120 80" aria-hidden="true" focusable="false">
+  <ellipse cx="60" cy="70" rx="46" ry="6" fill="var(--cream-warm)"/>
+  {# sacola da loja #}
+  <path d="M30 32h34a4 4 0 0 1 4 3.6l3.2 30A5 5 0 0 1 66.3 71H27.7a5 5 0 0 1-5-5.4l3.2-30A4 4 0 0 1 30 32Z"
+        fill="var(--red)"/>
+  <path d="M38 36V27a9 9 0 0 1 18 0v9" fill="none" stroke="var(--yellow)" stroke-width="4"
+        stroke-linecap="round"/>
+  {# etiqueta de preço #}
+  <path d="M74 20l22 4 4 22-18 18-26-26 18-18Z" fill="var(--yellow)" opacity=".9"/>
+  <circle cx="86" cy="32" r="4" fill="var(--red)"/>
+  {# patinha, a marca da casa #}
+  <path d="M44 48c3 0 5 2.4 5 5.4S47 59 44 59s-5-2.4-5-5.6S41 48 44 48Z" fill="#fff"/>
+  <circle cx="36.5" cy="45" r="2.6" fill="#fff"/>
+  <circle cx="44" cy="42.5" r="2.6" fill="#fff"/>
+  <circle cx="51.5" cy="45" r="2.6" fill="#fff"/>
+</svg>

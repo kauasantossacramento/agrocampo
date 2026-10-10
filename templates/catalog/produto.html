@@ -70,7 +70,7 @@
           {{ produto.categoria.nome }}{% if produto.marca %} · {{ produto.marca.nome }}{% endif %}
         </p>
         {% if produto.linha_nome %}
-          <span class="linha-selo linha-selo--{{ produto.linha_cor }} linha-selo--estatico">
+          <span class="linha-selo linha-selo--estatico" style="{{ produto.linha_estilo }}">
             <svg width="12" height="12" aria-hidden="true"><use href="#i-medalha"></use></svg>
             {{ produto.linha_nome }}
           </span>

@@ -256,6 +256,8 @@ class LinhaProdutoForm(_EstilizadoMixin, forms.ModelForm):
             "vitrine_titulo": forms.TextInput(attrs={
                 "placeholder": "Vazio usa “Mais vendidos — nome da linha”",
             }),
+            # cor livre: seletor do sistema, com as cinco clássicas à mão
+            "cor": forms.TextInput(attrs={"type": "color", "list": "cores-de-linha"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -264,7 +266,8 @@ class LinhaProdutoForm(_EstilizadoMixin, forms.ModelForm):
             "É o que aparece no selo do produto e no filtro do catálogo."
         )
         self.fields["cor"].help_text = (
-            "Cor da medalha desenhada pelo site. Com PNG próprio, a cor não é usada."
+            "Vale para a medalha desenhada pelo site, o fio no topo do card e a "
+            "etiqueta da linha. Com PNG próprio, só o fio e a etiqueta usam a cor."
         )
         self.fields["selo_tamanho"].widget.attrs.update({"inputmode": "numeric"})
         self.fields["vitrine_ativa"].help_text = (
@@ -440,7 +443,8 @@ SECOES: dict[str, Secao] = {
         busca=("nome",),
         colunas=[
             ("Linha", lambda o: o.nome),
-            ("Selo", lambda o: o.get_cor_display()),
+            ("Cor", lambda o: o.cor),
+            ("Selo próprio", lambda o: _sim_nao(o.selo_imagem)),
             ("Produtos", lambda o: o.produtos.count()),
             ("Vitrine na home", lambda o: o.vitrine_ativa),
             ("Em uso", lambda o: o.ativo),

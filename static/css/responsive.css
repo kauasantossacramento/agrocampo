@@ -45,7 +45,7 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .header__main { gap: var(--s-3); }
   /* a logo é a marca: encolhe menos que o resto, mas nunca acima de 46px
      no celular, senão empurra a busca e os ícones para fora */
-  .logo img { height: min(var(--logo-h, 46px), 46px); }
+  .logo img { height: min(var(--logo-h, 56px), 56px); }
 
   /* grades de painel declaradas inline no template caem para uma coluna */
   .panel__main .grid[style] { grid-template-columns: 1fr !important; }
@@ -148,9 +148,7 @@ pre, code { overflow-x: auto; max-width: 100%; }
   }
   .product__flags:empty { display: none; }
   /* o coração volta para o canto da foto, sozinho e sem disputar espaço */
-  .product--ouro .product__wish,
-  .product--prata .product__wish,
-  .product--bronze .product__wish { top: var(--s-3); }
+  .product--linha .product__wish { top: var(--s-3); }
 
   /* no celular o balão vira só o ícone: o texto roubava a tela do produto */
   .zap { right: var(--s-4); bottom: var(--s-4); width: 54px; height: 54px; padding: 0;
@@ -320,7 +318,7 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .header__desejos { display: none; }
   .header__burger { flex: none; }
   .logo { min-width: 0; flex: 1 1 auto; }
-  .logo img { height: min(var(--logo-h, 46px), 40px); max-width: 100%; object-fit: contain; }
+  .logo img { height: min(var(--logo-h, 52px), 52px); max-width: 100%; object-fit: contain; }
 
   /* painel de notificações (e o da conta) vira uma folha presa ao topo,
      com a largura da tela e rolagem própria */

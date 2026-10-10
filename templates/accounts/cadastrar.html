@@ -1,8 +1,14 @@
 {% extends 'base.html' %}
 {% block title %}Criar conta — {{ site.nome_loja }}{% endblock %}
 {% block content %}
+{% comment %}
+  Cadastro em três passos. É um <form> só e um POST só: o JS apenas troca
+  qual bloco está visível. Se o navegador não rodar o JS, os três aparecem
+  um embaixo do outro e o cadastro continua funcionando.
+{% endcomment %}
 <div class="wrap auth">
   <div class="card card--pad auth__card anim-fade-up" style="width:min(520px,100%)">
+    {% include 'partials/arte_conta.html' %}
     <h1 style="font-size:var(--fs-xl)">Criar conta</h1>
     <p class="small muted" style="margin-top:var(--s-2)">
       {% if 'carrinho' in destino or 'pagamento' in destino %}
@@ -11,9 +17,14 @@
         Leva menos de um minuto — e já libera o desconto da assinatura.
       {% endif %}
     </p>
-    <span class="rule" style="margin-block:var(--s-4)"></span>
 
-    <form method="post" class="stack">
+    <ol class="passos" data-cadastro-passos aria-label="Etapas do cadastro">
+      <li class="passos__item is-atual"><span>1</span>Você</li>
+      <li class="passos__item"><span>2</span>Contato</li>
+      <li class="passos__item"><span>3</span>Senha</li>
+    </ol>
+
+    <form method="post" class="stack" data-cadastro>
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ destino }}">
       {% if form.non_field_errors %}
@@ -23,25 +34,30 @@
         </div>
       {% endif %}
 
-      <div class="grid grid--2" style="gap:var(--s-4)">
-        <div class="field">
-          <label for="{{ form.first_name.id_for_label }}">Nome</label>
-          {{ form.first_name }}
-          {% if form.first_name.errors %}<span class="error-text">{{ form.first_name.errors|join:" " }}</span>{% endif %}
+      {# ---------------------------------------------------- 1. você #}
+      <section data-cadastro-tela="1">
+        <div class="grid grid--2" style="gap:var(--s-4)">
+          <div class="field">
+            <label for="{{ form.first_name.id_for_label }}">Nome *</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<span class="error-text">{{ form.first_name.errors|join:" " }}</span>{% endif %}
+          </div>
+          <div class="field">
+            <label for="{{ form.last_name.id_for_label }}">Sobrenome</label>
+            {{ form.last_name }}
+          </div>
         </div>
-        <div class="field">
-          <label for="{{ form.last_name.id_for_label }}">Sobrenome</label>
-          {{ form.last_name }}
+
+        <div class="field" style="margin-top:var(--s-4)">
+          <label for="{{ form.email.id_for_label }}">E-mail *</label>
+          {{ form.email }}
+          <span class="help">É com ele que você entra na loja.</span>
+          {% if form.email.errors %}<span class="error-text">{{ form.email.errors|join:" " }}</span>{% endif %}
         </div>
-      </div>
+      </section>
 
-      <div class="field">
-        <label for="{{ form.email.id_for_label }}">E-mail</label>
-        {{ form.email }}
-        {% if form.email.errors %}<span class="error-text">{{ form.email.errors|join:" " }}</span>{% endif %}
-      </div>
-
-      <div class="grid grid--2" style="gap:var(--s-4)">
+      {# ------------------------------------------------- 2. contato #}
+      <section data-cadastro-tela="2" hidden>
         <div class="field">
           {# campo ligado ao form: obrigatório, e o número digitado sobrevive a um erro #}
           <label for="{{ form.telefone.id_for_label }}">WhatsApp *</label>
@@ -49,34 +65,51 @@
           <span class="help">{{ form.telefone.help_text }}</span>
           {% if form.telefone.errors %}<span class="error-text">{{ form.telefone.errors|join:" " }}</span>{% endif %}
         </div>
-        <div class="field">
+
+        <div class="field" style="margin-top:var(--s-4)">
           <label for="{{ form.cpf.id_for_label }}">CPF</label>
           <input type="text" name="cpf" id="{{ form.cpf.id_for_label }}" class="campo"
                  value="{{ form.cpf.value|default:'' }}"
                  data-mask="cpf" placeholder="000.000.000-00">
+          <span class="help">Opcional. Serve para a nota fiscal do pedido.</span>
+          {% if form.cpf.errors %}<span class="error-text">{{ form.cpf.errors|join:" " }}</span>{% endif %}
         </div>
-      </div>
 
-      <label class="switch-row">
-        {{ form.aceita_contato_whatsapp }} {{ form.aceita_contato_whatsapp.label }}
-      </label>
+        <label class="switch-row" style="margin-top:var(--s-4)">
+          {{ form.aceita_contato_whatsapp }} {{ form.aceita_contato_whatsapp.label }}
+        </label>
+      </section>
 
-      <div class="field">
-        <label for="{{ form.password1.id_for_label }}">Senha</label>
-        {{ form.password1 }}
-        {% if form.password1.errors %}<span class="error-text">{{ form.password1.errors|join:" " }}</span>{% endif %}
-      </div>
-      <div class="field">
-        <label for="{{ form.password2.id_for_label }}">Confirme a senha</label>
-        {{ form.password2 }}
-        {% if form.password2.errors %}<span class="error-text">{{ form.password2.errors|join:" " }}</span>{% endif %}
-      </div>
+      {# --------------------------------------------------- 3. senha #}
+      <section data-cadastro-tela="3" hidden>
+        <div class="field">
+          <label for="{{ form.password1.id_for_label }}">Senha *</label>
+          {{ form.password1 }}
+          {% if form.password1.errors %}<span class="error-text">{{ form.password1.errors|join:" " }}</span>{% endif %}
+        </div>
+        <div class="field" style="margin-top:var(--s-4)">
+          <label for="{{ form.password2.id_for_label }}">Confirme a senha *</label>
+          {{ form.password2 }}
+          {% if form.password2.errors %}<span class="error-text">{{ form.password2.errors|join:" " }}</span>{% endif %}
+        </div>
+      </section>
 
-      <button type="submit" class="btn btn--primary btn--block btn--lg">Criar minha conta</button>
+      <div class="row" style="gap:var(--s-3);margin-top:var(--s-5)">
+        <button type="button" class="btn btn--ghost" data-cadastro-voltar hidden>
+          <svg width="15" height="15"><use href="#i-seta-esq"></use></svg>Voltar
+        </button>
+        <button type="button" class="btn btn--primary btn--lg" style="flex:1"
+                data-cadastro-avancar hidden>
+          Continuar<svg width="15" height="15"><use href="#i-seta-dir"></use></svg>
+        </button>
+        <button type="submit" class="btn btn--primary btn--lg" style="flex:1" data-cadastro-enviar>
+          Criar minha conta
+        </button>
+      </div>
     </form>
 
     <p class="small center muted" style="margin-top:var(--s-5)">
-      Já tem conta? <a href="{% url 'accounts:entrar' %}?next={{ destino|urlencode }}" class="strong" style="color:var(--red)">Entrar</a>
+      Já tem conta? <a href="{% url 'accounts:entrar' %}?acao=entrar&next={{ destino|urlencode }}" class="strong" style="color:var(--red)">Entrar</a>
     </p>
   </div>
 </div>

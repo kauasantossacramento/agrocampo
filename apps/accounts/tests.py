@@ -46,3 +46,41 @@ class WhatsAppNoCadastroTests(TestCase):
         usuario = form.save()
         self.assertFalse(usuario.aceita_contato_whatsapp)
         self.assertEqual(usuario.whatsapp_url, "")
+
+
+class EntrarOuCadastrarTests(TestCase):
+    """Quem clica em "Comprar agora" sem conta escolhe antes de digitar."""
+
+    def test_destino_de_compra_mostra_as_duas_portas(self):
+        html = self.client.get("/conta/entrar/?next=/pagamento/").content.decode()
+        self.assertIn("Entrar na sua conta", html)
+        self.assertIn("Cadastrar-se agora!", html)
+        self.assertNotIn('name="password"', html)
+
+    def test_escolhendo_entrar_vem_o_formulario(self):
+        html = self.client.get("/conta/entrar/?acao=entrar&next=/pagamento/").content.decode()
+        self.assertIn('name="password"', html)
+
+    def test_login_comum_continua_indo_direto_ao_formulario(self):
+        html = self.client.get("/conta/entrar/").content.decode()
+        self.assertIn('name="password"', html)
+        self.assertNotIn("Cadastrar-se agora!", html)
+
+    def test_cadastro_tem_os_tres_passos(self):
+        html = self.client.get("/conta/cadastrar/").content.decode()
+        for passo in ("1", "2", "3"):
+            self.assertIn(f'data-cadastro-tela="{passo}"', html)
+        self.assertIn("data-cadastro-avancar", html)
+
+    def test_cadastro_continua_sendo_um_post_so(self):
+        """Sem JS os três blocos vão juntos: um formulário, um envio."""
+        resposta = self.client.post("/conta/cadastrar/", {
+            "first_name": "Maria", "last_name": "Silva",
+            "email": "maria@exemplo.com", "telefone": "(75) 98888-7777",
+            "cpf": "", "aceita_contato_whatsapp": "on",
+            "password1": "senha-forte-123", "password2": "senha-forte-123",
+            "next": "/",
+        })
+        self.assertEqual(resposta.status_code, 302)
+        from apps.accounts.models import User
+        self.assertTrue(User.objects.filter(email="maria@exemplo.com").exists())

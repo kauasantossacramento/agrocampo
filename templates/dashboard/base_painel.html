@@ -16,7 +16,8 @@
       {% if site.logo_claro %}
         <img src="{{ site.logo_claro.url }}" alt="{{ site.nome_loja }}" class="panel__logo">
       {% else %}
-        <img src="{% static 'img/logo-agrocampo.png' %}" alt="{{ site.nome_loja }}" class="panel__logo">
+        {# a barra do painel é escura: vale a arte com "CAMPO" em branco #}
+        <img src="{% static 'img/logo-agrocampo-claro.png' %}" alt="{{ site.nome_loja }}" class="panel__logo">
       {% endif %}
     </a>
 

@@ -6,7 +6,8 @@
         {% if site.logo_claro %}
           <img src="{{ site.logo_claro.url }}" alt="{{ site.nome_loja }}" class="footer__logo">
         {% else %}
-          <img src="{% static 'img/logo-agrocampo.png' %}" alt="{{ site.nome_loja }}" class="footer__logo">
+          {# no rodapé escuro vale a arte com "CAMPO" em branco #}
+          <img src="{% static 'img/logo-agrocampo-claro.png' %}" alt="{{ site.nome_loja }}" class="footer__logo">
         {% endif %}
         <p class="footer__desc">{{ site.texto_rodape }}</p>
         <div class="footer__social">

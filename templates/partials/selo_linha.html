@@ -6,7 +6,8 @@
 
   Só a medalha, sem rótulo escrito: o símbolo vaza do canto do card como um
   adesivo e o nome da linha fica no `title`/`aria-label` — escrever "SUPER
-  PREMIUM" ao lado tapava o produto. A cor sai do CSS conforme a linha.
+  PREMIUM" ao lado tapava o produto. A cor é a que o lojista escolheu para a
+  linha; o claro e o escuro saem dela.
 
   O lojista pode trocar o desenho por um PNG próprio e escolher o tamanho em
   Painel › Conteúdo › Linhas de produto; o tamanho vem no `--selo-base` e a
@@ -14,8 +15,7 @@
 {% endcomment %}
 {% with nome=produto.linha_nome %}
   {% if nome %}
-    <span class="selo-linha selo-linha--{{ produto.linha_cor }}"
-          style="--selo-base:{{ produto.linha.selo_tamanho }}px"
+    <span class="selo-linha" style="{{ produto.linha_estilo }}"
           title="Linha {{ nome }}" role="img" aria-label="Linha {{ nome }}">
       {% if produto.linha.selo_imagem %}
       <img class="selo-linha__png" src="{{ produto.linha.selo_imagem.url }}" alt="" aria-hidden="true">

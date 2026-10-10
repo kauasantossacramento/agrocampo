@@ -142,11 +142,26 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
 # ------------------------------------------------------------------- e-mail
+# Com EMAIL_HOST preenchido no .env a loja passa a enviar de verdade; sem ele,
+# as mensagens vão para o log do container (é o que acontece hoje) e ninguém
+# recebe nada. É só preencher as quatro variáveis do provedor e reiniciar.
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
 EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
+    default=(
+        "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
+        else "django.core.mail.backends.console.EmailBackend"
+    ),
 )
+EMAIL_CONFIGURADO = bool(EMAIL_HOST)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="AgroCampo <nao-responda@agrocampo.com.br>")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ---------------------------------------------------------------------- DRF
 REST_FRAMEWORK = {

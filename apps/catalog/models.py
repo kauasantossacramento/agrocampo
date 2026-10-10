@@ -1,7 +1,8 @@
 """Catálogo: categorias hierárquicas, marcas, espécies, produtos e estoque."""
 from decimal import Decimal
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import (MaxValueValidator, MinValueValidator,
+                                    RegexValidator)
 from django.db import models
 from django.db.models import Avg, Count, Q
 from django.urls import reverse
@@ -114,15 +115,20 @@ class LinhaProduto(TimeStampedModel, SluggedModel):
     quantas quiser, dar nome, escolher a cor do selo e a ordem das vitrines.
     """
 
-    class Metal(models.TextChoices):
-        OURO = "ouro", "Dourado"
-        PRATA = "prata", "Prateado"
-        BRONZE = "bronze", "Bronze"
-        VERDE = "verde", "Verde"
-        AZUL = "azul", "Azul"
+    # Cores sugeridas no painel; a escolha é livre — a loja pode usar a cor da
+    # marca, não só as cinco que um dia estiveram no código.
+    CORES_SUGERIDAS = (
+        ("#C9971B", "Dourado"),
+        ("#8C97A3", "Prateado"),
+        ("#A8703C", "Bronze"),
+        ("#2F7D4F", "Verde"),
+        ("#1B3C8C", "Azul"),
+    )
 
     cor = models.CharField(
-        "cor do selo", max_length=10, choices=Metal.choices, default=Metal.OURO,
+        "cor do selo", max_length=7, default="#C9971B",
+        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Use uma cor no formato #RRGGBB.")],
+        help_text="Cor da medalha desenhada pelo site e do fio no topo do card.",
     )
     # o selo desenhado aqui serve de padrão; quem tiver a arte da marca sobe o
     # PNG e escolhe o tamanho, porque o mesmo símbolo pesa diferente em cada
@@ -152,6 +158,38 @@ class LinhaProduto(TimeStampedModel, SluggedModel):
 
     def __str__(self):
         return self.nome
+
+    @staticmethod
+    def _misturar(cor: str, alvo: tuple, peso: float) -> str:
+        """Aproxima a cor do branco (clarear) ou do preto (escurecer)."""
+        cor = (cor or "#C9971B").lstrip("#")
+        try:
+            canais = [int(cor[i:i + 2], 16) for i in (0, 2, 4)]
+        except (ValueError, IndexError):
+            canais = [201, 151, 27]
+        return "#" + "".join(
+            f"{round(c + (a - c) * peso):02X}" for c, a in zip(canais, alvo)
+        )
+
+    @property
+    def cor_clara(self) -> str:
+        """Brilho do selo e ponta do degradê."""
+        return self._misturar(self.cor, (255, 255, 255), 0.62)
+
+    @property
+    def cor_escura(self) -> str:
+        """Sombra do selo e cor do texto sobre o fundo claro."""
+        return self._misturar(self.cor, (0, 0, 0), 0.38)
+
+    @property
+    def estilo_css(self) -> str:
+        """Variáveis que o selo e o card usam, prontas para o atributo style."""
+        return (
+            f"--selo-base:{self.selo_tamanho}px;"
+            f"--linha-cor:{self.cor};"
+            f"--linha-clara:{self.cor_clara};"
+            f"--linha-escura:{self.cor_escura}"
+        )
 
     @property
     def titulo_da_vitrine(self) -> str:
@@ -475,9 +513,9 @@ class Produto(TimeStampedModel, SluggedModel):
         return self.linha.nome if self.linha_id and self.linha.ativo else ""
 
     @property
-    def linha_cor(self) -> str:
-        """Cor do selo (dourado, prateado…), escolhida no cadastro da linha."""
-        return self.linha.cor if self.linha_id else ""
+    def linha_estilo(self) -> str:
+        """Cores e tamanho do selo desta linha, para o atributo style."""
+        return self.linha.estilo_css if self.linha_id and self.linha.ativo else ""
 
     @property
     def percentual_desconto(self) -> int:
@@ -530,6 +568,15 @@ class Produto(TimeStampedModel, SluggedModel):
         """O arquivo da capa — o mesmo tipo que `VariacaoProduto.foto`."""
         principal = self.imagem_principal
         return principal.imagem if principal else None
+
+    @property
+    def fotos_do_hover(self):
+        """Até quatro fotos para o card trocar enquanto o mouse está em cima.
+
+        Quem está escolhendo ração quer ver a embalagem de outro ângulo sem
+        abrir o produto. Com uma foto só, não há o que passar.
+        """
+        return [img.imagem for img in self.imagens.all()[:4]]
 
     @property
     def lista_beneficios(self):

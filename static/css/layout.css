@@ -26,7 +26,7 @@
 .header__main { display: flex; align-items: center; gap: var(--s-6); height: var(--header-h); }
 
 .logo { display: flex; align-items: center; flex: none; }
-.logo img { height: var(--logo-h, 46px); width: auto; transition: transform .28s var(--ease-out); }
+.logo img { height: var(--logo-h, 56px); width: auto; transition: transform .28s var(--ease-out); }
 .logo:hover img { transform: scale(1.04); }
 .logo__fallback {
   font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xl);
@@ -138,26 +138,81 @@
   .header__search--mobile { display: block; max-width: none; padding-bottom: var(--s-3); }
 
   .header__busca-movel {
-    display: block; padding: var(--s-3) 0;
+    display: block; padding: var(--s-2) 0;
     border-top: 1px solid var(--line); background: var(--cream-warm);
   }
   .header__busca-movel .input-icon { position: relative; }
   .header__busca-movel input {
-    width: 100%; height: 46px;
-    padding: 0 52px 0 44px; border-radius: 999px;
+    width: 100%; height: 42px;
+    padding: 0 48px 0 42px; border-radius: 999px;
     border: 1.5px solid var(--line); background: var(--surface);
     font-size: 16px;  /* menor que 16px faz o iOS dar zoom ao focar */
   }
   .header__busca-movel input:focus { border-color: var(--red); }
   .header__busca-movel svg { left: 16px; }
   .header__busca-movel button {
-    position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-    width: 38px; height: 38px; border-radius: 50%;
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    width: 34px; height: 34px; border-radius: 50%;
     display: grid; place-items: center;
     background: var(--red); color: #fff;
   }
   /* a logo é a âncora da marca: no celular ela cresce em vez de encolher */
-  .logo img { height: 44px; }
+  .logo img { height: 52px; }
+}
+
+
+/* ═══════════════════════════════ colunas que ordenam e filtram (painel) */
+.col-ordem {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: inherit; white-space: nowrap;
+}
+.col-ordem:hover { color: var(--red); }
+.col-ordem.is-ativa { color: var(--red); }
+.col-filtro { color: inherit; text-decoration: underline dotted var(--muted-2); }
+.col-filtro:hover { color: var(--red); text-decoration-color: var(--red); }
+
+/* ═══════════════════════════════ sugestões da busca (AJAX)
+   O painel nasceu sem estilo nenhum: as sugestões entravam como blocos
+   soltos, com a foto no tamanho original, empurrando a página e passando
+   por cima do conteúdo. Agora é uma lista flutuante, ancorada no campo. */
+.sugestoes {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60;
+  max-height: min(70vh, 460px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: var(--sh-2);
+  padding: var(--s-2); text-align: left;
+}
+.sugestoes[hidden] { display: none; }
+.sugestoes__grupo {
+  padding: var(--s-2) var(--s-3) 4px;
+  font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted);
+}
+.sugestoes__item {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+  color: var(--ink); text-decoration: none;
+}
+.sugestoes__item:hover,
+.sugestoes__item.is-ativo { background: var(--cream-warm); }
+.sugestoes__item svg { flex: none; color: var(--muted); }
+.sugestoes__item img,
+.sugestoes__semfoto {
+  flex: none; width: 44px; height: 44px; border-radius: var(--r-sm);
+  object-fit: contain; background: var(--cream-warm);
+}
+.sugestoes__texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sugestoes__texto strong {
+  font-size: var(--fs-sm); font-weight: 600; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sugestoes__extra { font-size: var(--fs-xs); color: var(--muted); }
+.sugestoes__preco { font-size: var(--fs-sm); font-weight: 700; color: var(--red); }
+.sugestoes__vazio { padding: var(--s-4); font-size: var(--fs-sm); color: var(--muted); }
+.sugestoes__todos {
+  display: block; margin-top: var(--s-1); padding: var(--s-3);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-sm); font-weight: 600; color: var(--red);
 }
 
 /* ==================================================================== hero */
@@ -446,6 +501,10 @@
    imagem ocupando tudo o que couber dentro dela */
 .gallery__main img { width: 100%; height: 100%; object-fit: contain; padding: var(--s-3); transition: transform .4s var(--ease-out); }
 .gallery__main:hover img { transform: scale(1.06); }
+/* o zoom do ponteiro vem depois do :hover de propósito — mesma força de
+   seletor, quem está escrito por último manda. A transição some para a
+   imagem acompanhar o mouse sem atraso. */
+.gallery__main.is-zoom img { transform: scale(2.2); transition: none; }
 .gallery__main[data-ampliar] { cursor: zoom-in; }
 
 /* Visor da foto ampliada: fundo escuro, imagem do tamanho da tela. É o lugar
@@ -581,8 +640,18 @@
 }
 
 /* ============================================================ autenticação */
-.auth { display: grid; place-items: center; min-height: calc(100vh - var(--header-h)); padding-block: var(--s-12); }
-.auth__card { width: min(440px, 100%); }
+/* `minmax(0, 1fr)` é o que segura a coluna dentro da tela: com `1fr` puro a
+   coluna cresce até o conteúdo mais largo (uma frase de botão que não quebra)
+   e o cartão, que mede 100% dela, escapava pela direita no celular. */
+.auth {
+  display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center;
+  align-content: center; min-height: calc(100vh - var(--header-h));
+  padding-block: var(--s-12);
+}
+.auth__card { width: min(440px, 100%); max-width: 100%; }
+.auth__arte { display: block; width: 120px; height: 80px; margin: 0 auto var(--s-3); }
+.auth .card h1 { text-align: center; }
+.auth .card > p.small { text-align: center; }
 
 
 /* ====================================================== convite de instalar */
@@ -663,6 +732,29 @@
 .wizard__passo.is-atual span { background: rgba(255,255,255,.25); color: #fff; }
 .wizard__passo.is-feito { background: var(--green-wash); color: var(--green-deep); }
 .wizard__passo.is-feito span { background: var(--green); color: #fff; }
+
+/* os mesmos passos do painel, agora no cadastro do cliente */
+.passos {
+  display: flex; gap: var(--s-2); list-style: none;
+  margin: var(--s-5) 0 var(--s-5); padding: 0;
+}
+.passos__item {
+  display: flex; align-items: center; gap: var(--s-2); flex: 1;
+  padding: var(--s-2) var(--s-3); border-radius: var(--r-full);
+  background: var(--cream-warm); color: var(--muted);
+  font-size: var(--fs-xs); font-weight: 600; white-space: nowrap;
+  transition: background-color .2s ease, color .2s ease;
+}
+.passos__item span {
+  width: 20px; height: 20px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--surface); color: var(--muted); font-size: 10px;
+}
+.passos__item.is-atual { background: var(--red); color: #fff; }
+.passos__item.is-atual span { background: rgba(255,255,255,.25); color: #fff; }
+.passos__item.is-feito { background: var(--green-wash); color: var(--green-deep); }
+.passos__item.is-feito span { background: var(--green); color: #fff; }
+[data-cadastro-tela] { animation: fade-up .3s var(--ease-out) both; }
 
 .wizard__tela { animation: fade-up .3s var(--ease-out) both; }
 .wizard__rodape {
@@ -1141,13 +1233,6 @@
 }
 .vitrine-capa__slide { display: block; width: 100%; }
 .vitrine-capa__slide img { display: block; width: 100%; aspect-ratio: 16 / 5; object-fit: cover; }
-/* O vídeo do slide não tinha regra nenhuma: entrava com o tamanho que o
-   arquivo tem, estourando o quadro e aparecendo como um retângulo preto.
-   Vídeo de celular é 16/9, então o quadro acompanha e nada é cortado. */
-.vitrine-capa__slide video {
-  display: block; width: 100%; aspect-ratio: 16 / 9;
-  object-fit: cover; background: #000;
-}
 .vitrine-capa__legenda { position: absolute; left: var(--s-6); top: var(--s-6); }
 /* banner sem imagem: reaproveita o desenho do hero clássico dentro do quadro */
 .vitrine-capa__slide--texto {
@@ -1236,7 +1321,6 @@
 @media (max-width: 620px) {
   .vitrine-capa { padding-top: var(--s-3); }
   .vitrine-capa__slide img { aspect-ratio: 16 / 9; }
-  .vitrine-capa__slide video { aspect-ratio: 16 / 9; }
   .vitrine-capa__seta { display: none; }
   .secao-titulo h2 { font-size: var(--fs-lg); }
   .secao-titulo__icone { width: 28px; height: 28px; }
@@ -1371,10 +1455,9 @@
 
 /* vídeo de apresentação dentro do carrossel */
 .vitrine-capa__slide--video { position: relative; background: #000; }
-.vitrine-capa__slide--video video { display: block; width: 100%; aspect-ratio: 16 / 7; object-fit: cover; }
-@media (max-width: 620px) {
-  .vitrine-capa__slide--video video { aspect-ratio: 16 / 9; }
-}
+/* 16/9 é o formato em que o vídeo é gravado; no 16/7 de antes um terço da
+   cena ficava de fora, e o que sobrava parecia um retângulo escuro. */
+.vitrine-capa__slide--video video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; }
 @media (max-width: 620px) {
   .ofertas-grade { grid-template-columns: 1fr; gap: var(--s-3); }
   .ofertas-grade--1 .ofertas-grade__item img { aspect-ratio: 16 / 9; }
@@ -1433,15 +1516,11 @@
 }
 .selo-linha__medalha { width: 100%; height: 100%; display: block; }
 .selo-linha__png { width: 100%; height: 100%; display: block; object-fit: contain; }
-.selo-linha__miolo { fill: #1A1410; }
-.selo-linha--ouro   { --selo-a: #FFE9A3; --selo-b: #E8B429; --selo-c: #A77C10; }
-.selo-linha--prata  { --selo-a: #F4F6F8; --selo-b: #C3CBD3; --selo-c: #8A949E; }
-.selo-linha--bronze { --selo-a: #F3D3B0; --selo-b: #C98A4B; --selo-c: #8C5A28; }
-.selo-linha--verde  { --selo-a: #B9E6CC; --selo-b: #3E9A65; --selo-c: #1E5635; }
-.selo-linha--azul   { --selo-a: #C3D4F4; --selo-b: #2C56B4; --selo-c: #152F6B; }
-.selo-linha__borda  { fill: var(--selo-b); }
-.selo-linha__aro    { stroke: var(--selo-a); stroke-width: 1.2; }
-.selo-linha__brilho { fill: var(--selo-a); }
+/* o desenho usa as três cores que saem da cor escolhida para a linha */
+.selo-linha__borda  { fill: var(--linha-cor, #E8B429); }
+.selo-linha__aro    { stroke: var(--linha-clara, #FFE9A3); stroke-width: 1.2; }
+.selo-linha__brilho { fill: var(--linha-clara, #FFE9A3); }
+.selo-linha__miolo  { fill: var(--linha-escura, #1A1410); }
 
 /* o card recorta a foto, mas deixa o selo passar da borda */
 .product { overflow: visible; }

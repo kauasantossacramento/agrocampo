@@ -244,6 +244,12 @@ endereço, referência, itens e valor. Filtros por status, cidade e "pagos até"
 
 ### 6.3 Produtos
 
+**Filtrar e ordenar pela própria tabela:** clique no título de uma coluna
+(Produto, Categoria, Preço, Estoque, No ar, Sucesso) para ordenar — o segundo
+clique inverte. Clique no **valor** de uma célula (a categoria, a marca ou a
+linha embaixo do nome) para ver só os produtos daquele item; o chip *Limpar
+filtros* desfaz. A busca e os chips de cima continuam valendo junto.
+
 Lista com **edição rápida** em linha (preço, estoque, no ar, **Sucesso**) e o botão de
 lápis que abre o cadastro completo em modal: nome, **categoria**, **marca**,
 **linha**, **animais indicados**, preços, promoção com prazo, estoque, unidade, peso,
@@ -265,6 +271,9 @@ quando não há PNG), título da vitrine na home, ordem e liga/desliga.
 
 - **Imagem do selo:** suba um PNG com fundo transparente para usar a arte da
   loja no lugar da medalha padrão.
+- **Cor:** livre. O seletor sugere dourado, prateado, bronze, verde e azul,
+  mas você pode escolher qualquer cor — ela vale para a medalha desenhada
+  pelo site, o fio no topo do card e a etiqueta da linha.
 - **Tamanho do selo:** a medida em pixels no card da vitrine (padrão **64**,
   de 24 a 220). Na página do produto o selo cresce na mesma proporção e no
   celular ele encolhe sozinho — ajuste um número só e vale em todo o site.
@@ -431,6 +440,31 @@ simulação). Com as credenciais da Stone e o driver em *Stone*, cadastre o webh
 
 Dados de cartão nunca são guardados: só bandeira, 4 últimos dígitos e o *token* que a
 Stone devolve (é ele que permite a cobrança automática da assinatura).
+
+---
+
+## 12.1 E-mail (SMTP) — **ainda não configurado**
+
+Hoje a loja **não envia e-mail**. Sem servidor de envio, as mensagens de
+confirmação de pedido e aviso de assinatura são escritas no log do sistema e
+ninguém recebe nada. O WhatsApp e as notificações dentro do site funcionam
+normalmente — só o e-mail está parado.
+
+Para ligar, basta ter uma conta de envio (o provedor do domínio, Gmail com
+senha de app, Zoho, Brevo, Amazon SES…) e preencher no `.env` do servidor:
+
+```
+EMAIL_HOST=smtp.seuprovedor.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=nao-responda@agrocampo.online
+EMAIL_HOST_PASSWORD=a-senha-do-envio
+EMAIL_USE_TLS=1
+DEFAULT_FROM_EMAIL=AgroCampo <nao-responda@agrocampo.online>
+```
+
+Com `EMAIL_HOST` preenchido o sistema passa a enviar de verdade sozinho
+(basta reiniciar o site). Vazio, ele continua só registrando no log — de
+propósito, para nunca tentar enviar com credencial errada.
 
 ---
 

@@ -214,7 +214,9 @@
         if (!video) return;
         if (visivel) {
           const talvez = video.play();
-          if (talvez && talvez.catch) talvez.catch(() => {});
+          // navegador que recusa o autoplay deixaria um retângulo preto sem
+          // saída; com os controles à mostra o cliente dá o play
+          if (talvez && talvez.catch) talvez.catch(() => { video.controls = true; });
         } else {
           video.pause();
         }
@@ -400,6 +402,100 @@
     });
   }
 
+  /* ------------------------------------------ cadastro em três passos */
+  function iniciarCadastro() {
+    const form = $('[data-cadastro]');
+    if (!form) return;
+    const telas = $$('[data-cadastro-tela]', form);
+    const passos = $$('.passos__item');
+    const btVoltar = $('[data-cadastro-voltar]', form);
+    const btAvancar = $('[data-cadastro-avancar]', form);
+    const btEnviar = $('[data-cadastro-enviar]', form);
+    if (telas.length < 2) return;
+
+    // o formulário nasce inteiro na tela: sem JS, o cadastro continua de pé.
+    // Daqui para a frente é o JS que manda em quem aparece.
+    let atual = 0;
+    // se o servidor devolveu erro, começa no passo do primeiro campo errado
+    const comErro = form.querySelector('.error-text');
+    if (comErro) {
+      const tela = comErro.closest('[data-cadastro-tela]');
+      if (tela) atual = telas.indexOf(tela);
+    }
+
+    function mostrar(indice) {
+      atual = Math.max(0, Math.min(indice, telas.length - 1));
+      telas.forEach((t, i) => { t.hidden = i !== atual; });
+      passos.forEach((p, i) => {
+        p.classList.toggle('is-atual', i === atual);
+        p.classList.toggle('is-feito', i < atual);
+      });
+      btVoltar.hidden = atual === 0;
+      btAvancar.hidden = atual === telas.length - 1;
+      btEnviar.hidden = atual !== telas.length - 1;
+      const primeiro = telas[atual].querySelector('input:not([type=hidden])');
+      if (primeiro) primeiro.focus();
+    }
+
+    function validaTela() {
+      // deixa o próprio navegador cobrar os campos do passo visível
+      const campos = $$('input, select', telas[atual]);
+      for (const campo of campos) {
+        if (!campo.checkValidity()) { campo.reportValidity(); return false; }
+      }
+      return true;
+    }
+
+    btAvancar.addEventListener('click', () => { if (validaTela()) mostrar(atual + 1); });
+    btVoltar.addEventListener('click', () => mostrar(atual - 1));
+    // Enter no meio do cadastro avança em vez de enviar pela metade
+    form.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || atual === telas.length - 1) return;
+      if (e.target.tagName === 'TEXTAREA') return;
+      e.preventDefault();
+      if (validaTela()) mostrar(atual + 1);
+    });
+
+    mostrar(atual);
+  }
+
+  /* ------------------------- galeria passando no hover, nos cards da vitrine */
+  function iniciarHoverGaleria() {
+    // sem mouse (celular, tablet) não há hover: nada a fazer
+    if (!window.matchMedia('(hover: hover)').matches) return;
+
+    $$('[data-hover-galeria]').forEach((moldura) => {
+      const foto = $('[data-hover-foto]', moldura);
+      if (!foto) return;
+      const fotos = (foto.dataset.fotos || '').split('|').filter(Boolean);
+      if (fotos.length < 2) return;
+      const pontos = $$('.product__pontos i', moldura);
+      const capa = fotos[0];
+      let i = 0, timer = null;
+
+      // as outras fotos entram na memória do navegador antes do primeiro
+      // hover: trocar e esperar o download pisca a imagem
+      fotos.slice(1).forEach((src) => { const p = new Image(); p.src = src; });
+
+      const mostrar = (indice) => {
+        i = indice % fotos.length;
+        foto.src = fotos[i];
+        pontos.forEach((p, n) => p.classList.toggle('is-ativo', n === i));
+      };
+
+      moldura.addEventListener('mouseenter', () => {
+        if (reduzido) return;
+        timer = setInterval(() => mostrar(i + 1), 1100);
+      });
+      moldura.addEventListener('mouseleave', () => {
+        clearInterval(timer);
+        foto.src = capa;
+        pontos.forEach((p, n) => p.classList.toggle('is-ativo', n === 0));
+        i = 0;
+      });
+    });
+  }
+
   /* -------------------------------------------- galeria da página de produto */
   function iniciarGaleria() {
     const principal = $('[data-gallery-main]');
@@ -436,6 +532,23 @@
       lupa.hidden = true;
       document.body.style.overflow = '';
     };
+
+    /* Zoom seguindo o ponteiro: a imagem cresce e o ponto sob o mouse fica
+       no lugar, que é como se lê o rótulo de uma embalagem. No celular não
+       existe hover — lá vale o toque, que abre o visor. */
+    if (window.matchMedia('(hover: hover)').matches && !reduzido) {
+      moldura.addEventListener('mousemove', (e) => {
+        const r = moldura.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width) * 100;
+        const y = ((e.clientY - r.top) / r.height) * 100;
+        principal.style.transformOrigin = x + '% ' + y + '%';
+        moldura.classList.add('is-zoom');
+      });
+      moldura.addEventListener('mouseleave', () => {
+        moldura.classList.remove('is-zoom');
+        principal.style.transformOrigin = '';
+      });
+    }
 
     moldura.addEventListener('click', abrir);
     moldura.addEventListener('keydown', (e) => {
@@ -707,6 +820,8 @@
     iniciarOpcoes();
     iniciarApresentacao();
     iniciarGaleria();
+    iniciarHoverGaleria();
+    iniciarCadastro();
     iniciarTamanhos();
     iniciarQuantidade();
     iniciarCopiar();

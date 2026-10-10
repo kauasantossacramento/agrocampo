@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Continuar a compra — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+{% comment %}
+  A bifurcação do "Comprar agora": duas portas do mesmo tamanho, com o nome
+  da loja na primeira, para quem já é cliente não hesitar e quem é novo não
+  procurar o cadastro escondido embaixo do formulário.
+{% endcomment %}
+<div class="wrap auth">
+  <div class="card card--pad auth__card anim-fade-up">
+    {% include 'partials/arte_conta.html' %}
+    <h1 style="font-size:var(--fs-xl)">Vamos concluir seu pedido</h1>
+    <p class="small muted" style="margin-top:var(--s-2)">
+      Seu carrinho está guardado. Escolha como quer continuar.
+    </p>
+    <span class="rule" style="margin-block:var(--s-5)"></span>
+
+    <div class="stack" style="gap:var(--s-3)">
+      {# botões do tamanho do cartão: o nome inteiro da loja estourava a caixa #}
+      <a class="btn btn--primary btn--block btn--lg btn--duas-linhas"
+         href="{% url 'accounts:entrar' %}?acao=entrar&next={{ destino|urlencode }}">
+        <svg width="18" height="18" aria-hidden="true"><use href="#i-usuario"></use></svg>
+        Entrar na sua conta AgroCampo
+      </a>
+      <a class="btn btn--accent btn--block btn--lg btn--duas-linhas"
+         href="{% url 'accounts:cadastrar' %}?next={{ destino|urlencode }}">
+        <svg width="18" height="18" aria-hidden="true"><use href="#i-check"></use></svg>
+        Cadastrar-se agora!
+      </a>
+    </div>
+
+    <p class="xs center muted" style="margin-top:var(--s-5)">
+      O cadastro leva menos de um minuto e é em três passos.
+    </p>
+  </div>
+</div>
+{% endblock %}

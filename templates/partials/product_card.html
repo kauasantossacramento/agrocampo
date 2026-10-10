@@ -1,5 +1,6 @@
 {# Card de produto reutilizado em toda a vitrine. Espera `produto`. #}
-<article class="product {% if produto.linha_id %}product--{{ produto.linha_cor }}{% endif %}">
+<article class="product{% if produto.linha_nome %} product--linha{% endif %}"
+         {% if produto.linha_nome %}style="{{ produto.linha_estilo }}"{% endif %}>
   {% comment %}
     Os selos ficam num invólucro `display:contents`: no computador ele some do
     layout e cada selo continua flutuando sobre a foto, como sempre foi. No
@@ -30,10 +31,23 @@
     </form>
   {% endif %}
 
-  <a href="{{ produto.get_absolute_url }}" class="product__media" aria-label="{{ produto.nome }}">
+  {% comment %}
+    Com mais de uma foto, o card passa a galeria sozinho enquanto o mouse
+    está em cima: dá para ver a embalagem de outro ângulo sem abrir o
+    produto. No celular, onde não há mouse, fica só a capa.
+  {% endcomment %}
+  <a href="{{ produto.get_absolute_url }}" class="product__media" aria-label="{{ produto.nome }}"
+     {% if produto.fotos_do_hover|length > 1 %}data-hover-galeria{% endif %}>
     {% with imagem=produto.imagem_principal %}
       {% if imagem %}
-        <img src="{{ imagem.imagem.url }}" alt="{{ produto.nome }}" loading="lazy">
+        <img src="{{ imagem.imagem.url }}" alt="{{ produto.nome }}" loading="lazy"
+             {% if produto.fotos_do_hover|length > 1 %}data-hover-foto
+             data-fotos="{% for f in produto.fotos_do_hover %}{{ f.url }}{% if not forloop.last %}|{% endif %}{% endfor %}"{% endif %}>
+        {% if produto.fotos_do_hover|length > 1 %}
+          <span class="product__pontos" aria-hidden="true">
+            {% for f in produto.fotos_do_hover %}<i{% if forloop.first %} class="is-ativo"{% endif %}></i>{% endfor %}
+          </span>
+        {% endif %}
       {% else %}
         <span class="product__placeholder">
           <svg width="46" height="46" aria-hidden="true"><use href="#c-{{ produto.categoria.icone_svg }}"></use></svg>

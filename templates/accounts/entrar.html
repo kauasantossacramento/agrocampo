@@ -3,6 +3,7 @@
 {% block content %}
 <div class="wrap auth">
   <div class="card card--pad auth__card anim-fade-up">
+    {% include 'partials/arte_conta.html' %}
     <h1 style="font-size:var(--fs-xl)">Bem-vindo de volta</h1>
     <p class="small muted" style="margin-top:var(--s-2)">
       {% if 'carrinho' in destino or 'pagamento' in destino %}

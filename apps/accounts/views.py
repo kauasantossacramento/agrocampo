@@ -15,10 +15,22 @@ from .redirects import destino_seguro
 from .models import Endereco
 
 
+def _indo_para_a_compra(destino: str) -> bool:
+    """O destino é o fechamento do pedido (carrinho, checkout, pagamento)?"""
+    return any(p in destino for p in ("carrinho", "pagamento", "checkout"))
+
+
 def entrar(request):
     destino = destino_seguro(request)
     if request.user.is_authenticated:
         return redirect(destino)
+
+    # Quem clicou em "Comprar agora" e ainda não tem conta caía direto num
+    # formulário de login, sem saber que podia se cadastrar ali mesmo. Antes
+    # do formulário vem a escolha, com as duas portas do mesmo tamanho.
+    if (request.method == "GET" and _indo_para_a_compra(destino)
+            and request.GET.get("acao") != "entrar"):
+        return render(request, "accounts/continuar.html", {"destino": destino})
 
     form = AuthenticationForm(request, data=request.POST or None)
     if request.method == "POST" and form.is_valid():
