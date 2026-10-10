@@ -523,6 +523,13 @@
     const lupaImg = $('[data-lupa-img]');
     if (!moldura || !lupa || !lupaImg) return;
 
+    /* O visor é `position: fixed`, mas a galeria entra na tela com uma
+       animação de `transform` — e elemento transformado vira o novo
+       referencial do `fixed`. No celular o visor ficava preso dentro da
+       moldura, torto e por cima do produto. Mudando-o para o <body> ele
+       volta a medir a tela inteira. */
+    if (lupa.parentElement !== document.body) document.body.appendChild(lupa);
+
     const abrir = () => {
       lupaImg.src = principal.currentSrc || principal.src;
       lupa.hidden = false;

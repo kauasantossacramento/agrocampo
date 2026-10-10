@@ -525,7 +525,13 @@
   display: grid; place-items: center; cursor: pointer;
   background: #fff; color: var(--ink); border: 0; box-shadow: var(--sh-2);
 }
-@media (max-width: 640px) { .lupa { padding: var(--s-3); } }
+@media (max-width: 640px) {
+  /* no celular a foto usa a tela toda; o botão de fechar fica no alto,
+     fora da imagem, onde o polegar alcança sem tapar o rótulo */
+  .lupa { padding: 56px var(--s-2) var(--s-4); }
+  .lupa img { max-width: 100%; max-height: calc(100vh - 92px); }
+  .lupa__fechar { top: var(--s-2); right: var(--s-2); width: 40px; height: 40px; }
+}
 
 .gallery__thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-3); margin-top: var(--s-3); }
 .gallery__thumb {
