@@ -494,3 +494,45 @@ cadastrada no painel (SiteConfig, não no `.env`), modelo `gemini-3.6-flash`
 (o 2.5 responde 404 para contas novas), assistente **ligada**. Verificado em
 produção: conversa com intenção de compra devolve a ação com o produto e a
 quantidade certos; `acao/comprar` sem login pede acesso.
+
+### 10.8 Banners com tamanho opcional, tempo e destino (10/10/2026)
+
+Código `fc75759 → 593e1be`. Em Conteúdo › Banners da home, o lojista escolhe
+padronização **Sim/Não** e moldura **1600 × 500**, **1600 × 900** ou **1600 ×
+800 px**. A moldura preserva a arte inteira; sem padronização, cada mídia
+mantém a proporção original. Aplica-se às imagens e vídeos do carrossel e da
+apresentação. Cada banner tem tempo próprio, entre **1 e 300 segundos**,
+e destino para link, catálogo completo, categoria ou produtos selecionados.
+Um produto abre sua página; vários abrem uma seleção no catálogo. Os destinos
+automáticos anteriores continuam funcionando. Produtos fora do ar ou na
+lixeira não entram na seleção. A escolha por caixas facilita o uso no celular.
+
+Migração aditiva e reversível: `core.0020_configuracao_banners_home`. Os banners
+existentes recebem **6,5 segundos**, destino automático e moldura padronizada
+16:5. A ida/volta da migração foi verificada numa cópia descartável do banco,
+preservando banners, links e referências às mídias. Suíte completa: **308
+testes passaram**, além da verificação dos temporizadores e pausas do
+carrossel/apresentação com Node.
+
+Backup final validado com `gzip -t`:
+`/opt/agrocampo/backups/pre-publicacao-banners-20261010-100230.sql.gz`.
+Os backups ficam dentro do diretório autorizado e foram excluídos do Git e
+do contexto de build. A migração rodou com `docker compose run --rm --no-deps
+--entrypoint python web manage.py migrate --noinput`; a subida usou
+`docker compose up -d --no-deps --wait --wait-timeout 60 web`.
+
+Só `agrocampo-web` foi recriado e ficou saudável. A comparação dos inventários
+antes/depois confirmou os **outros 54 containers com os mesmos IDs, horários
+de início e contadores de reinício**, incluindo banco, nginx, cron e WhatsApp
+do AgroCampo. Nenhum arquivo fora de `/opt/agrocampo` foi alterado. Inventários
+e script de verificação ficaram em `/opt/agrocampo/backups/`.
+
+Verificação em produção: home, catálogo, carrinho, configurações e modal dos
+banners responderam corretamente. O conteúdo da loja não foi editado durante
+essas verificações. A conferência visual por navegador ficou indisponível:
+a sessão não tinha navegador conectado; HTML, formulários e comportamento
+dos temporizadores foram verificados por testes e requisições.
+
+Reversão apenas do código, preservando o banco e os uploads: voltar ao commit
+`fc75759`, reconstruir `web` e subir com `--no-deps`. Os campos novos podem
+permanecer no banco, pois a versão anterior os ignora.
