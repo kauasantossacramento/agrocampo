@@ -29,6 +29,7 @@ urlpatterns = [
     path("metricas/", views.metricas, name="metricas"),
     path("assinaturas/", views.assinaturas, name="assinaturas"),
     path("configuracoes/", views.configuracoes, name="configuracoes"),
+    path("manual/stone/", views.manual_stone, name="manual_stone"),
     path("conteudo/<slug:slug>/", views.gestao, name="gestao"),
     path("conteudo/<slug:slug>/novo/", views.gestao_form, name="gestao_form_novo"),
     path("conteudo/<slug:slug>/novo/salvar/", views.gestao_salvar, name="gestao_salvar_novo"),

@@ -259,7 +259,13 @@
       btVoltar.addEventListener('click', function () { mostrar(atual - 1); });
     }
     const btCancelar = $('[data-wizard-cancelar]', wizard);
-    if (btCancelar) btCancelar.addEventListener('click', fecharModal);
+    if (btCancelar) {
+      btCancelar.addEventListener('click', function () {
+        rascunho.salvar();
+        toast('Guardei o que você digitou — volta quando abrir de novo.', 'success');
+        fecharModal();
+      });
+    }
 
     /* -------------------------------------------------------- fotos */
     const grade = $('[data-foto-previa]', wizard);
@@ -354,25 +360,175 @@
       }
     }
 
+    function adicionarVariacao(focar) {
+      if (!caixaVariacoes || !modeloVariacao) return null;
+      const i = proximoIndice++;
+      const html = modeloVariacao.innerHTML.split('__i__').join(String(i));
+      const temporario = document.createElement('div');
+      temporario.innerHTML = html.trim();
+      const linha = temporario.firstElementChild;
+      caixaVariacoes.appendChild(linha);
+      ligarRemocao(linha);
+      atualizarVazioVariacao();
+      if (focar) {
+        const primeiro = $('input', linha);
+        if (primeiro) primeiro.focus();
+      }
+      return linha;
+    }
+
     if (caixaVariacoes) {
       $$('[data-variacao]', caixaVariacoes).forEach(ligarRemocao);
 
       const btAdicionar = $('[data-variacao-add]', wizard);
       if (btAdicionar && modeloVariacao) {
-        btAdicionar.addEventListener('click', function () {
-          const i = proximoIndice++;
-          const html = modeloVariacao.innerHTML.split('__i__').join(String(i));
-          const temporario = document.createElement('div');
-          temporario.innerHTML = html.trim();
-          const linha = temporario.firstElementChild;
-          caixaVariacoes.appendChild(linha);
-          ligarRemocao(linha);
-          atualizarVazioVariacao();
-          const primeiro = $('input', linha);
-          if (primeiro) primeiro.focus();
-        });
+        btAdicionar.addEventListener('click', function () { adicionarVariacao(true); });
       }
     }
+
+    /* ══════════════════════════════════════════════════════ rascunho
+       Cadastrar ração no balcão é demorado: nome, descrição, preços,
+       tamanhos. Fechar o modal sem querer, o 4G cair ou o celular morrer
+       apagava tudo. O que é digitado fica guardado neste aparelho e volta
+       quando o formulário é aberto de novo — as fotos não, porque arquivo
+       não cabe nessa memória. O rascunho morre quando o produto é salvo. */
+    const rascunho = (function () {
+      const CHAVE = 'agrocampo:rascunho:' + (wizard.dataset.acao || 'wizard');
+      const VALIDADE = 7 * 24 * 60 * 60 * 1000;   // uma semana
+      let relogio = null;
+
+      function guardaveis() {
+        return $$('input, select, textarea', wizard).filter(function (c) {
+          return c.name && c.type !== 'file' && c.name !== 'csrfmiddlewaretoken';
+        });
+      }
+
+      function apagar() {
+        try { localStorage.removeItem(CHAVE); } catch (e) { /* sem storage, sem rascunho */ }
+      }
+
+      function ler() {
+        try {
+          const cru = localStorage.getItem(CHAVE);
+          if (!cru) return null;
+          const dados = JSON.parse(cru);
+          if (!dados || Date.now() - dados.quando > VALIDADE) { apagar(); return null; }
+          return dados;
+        } catch (e) { return null; }
+      }
+
+      function salvar() {
+        const valores = {};
+        const marcados = {};
+        guardaveis().forEach(function (c) {
+          if (c.type === 'checkbox' || c.type === 'radio') {
+            marcados[c.name + '|' + c.value] = c.checked;
+            return;
+          }
+          if (c.multiple && c.tagName === 'SELECT') {
+            valores[c.name] = Array.prototype.map.call(c.selectedOptions, function (o) {
+              return o.value;
+            });
+            return;
+          }
+          valores[c.name] = c.value;
+        });
+
+        // formulário em branco não vira rascunho: senão abrir e fechar já
+        // deixaria um aviso para recuperar nada
+        const temConteudo = Object.keys(valores).some(function (k) {
+          return String(valores[k] || '').trim() !== '';
+        });
+        if (!temConteudo) { apagar(); return; }
+
+        try {
+          localStorage.setItem(CHAVE, JSON.stringify({
+            valores: valores,
+            marcados: marcados,
+            variacoes: caixaVariacoes ? $$('[data-variacao]', caixaVariacoes).length : 0,
+            tela: atual,
+            quando: Date.now(),
+          }));
+        } catch (e) { /* cota cheia ou navegação privada: segue sem rascunho */ }
+      }
+
+      function aplicar(dados) {
+        // as linhas de tamanho precisam existir antes de receber os valores
+        const existentes = caixaVariacoes ? $$('[data-variacao]', caixaVariacoes).length : 0;
+        for (let i = existentes; i < (dados.variacoes || 0); i++) adicionarVariacao(false);
+
+        guardaveis().forEach(function (c) {
+          if (c.type === 'checkbox' || c.type === 'radio') {
+            const chave = c.name + '|' + c.value;
+            if (chave in dados.marcados) c.checked = dados.marcados[chave];
+            return;
+          }
+          if (!(c.name in dados.valores)) return;
+          const valor = dados.valores[c.name];
+          if (c.multiple && c.tagName === 'SELECT') {
+            Array.prototype.forEach.call(c.options, function (o) {
+              o.selected = valor.indexOf(o.value) > -1;
+            });
+            return;
+          }
+          c.value = valor;
+        });
+        prepararAutogrow(wizard);
+        mostrar(dados.tela || 0);
+      }
+
+      function quando(instante) {
+        const minutos = Math.round((Date.now() - instante) / 60000);
+        if (minutos < 1) return 'agora há pouco';
+        if (minutos < 60) return 'há ' + minutos + ' min';
+        const horas = Math.round(minutos / 60);
+        if (horas < 24) return 'há ' + horas + 'h';
+        return 'há ' + Math.round(horas / 24) + ' dia(s)';
+      }
+
+      function oferecer() {
+        const dados = ler();
+        if (!dados) return;
+
+        // recuperar é escolha do lojista: aplicar sozinho sobrescreveria o
+        // produto aberto para edição com valores velhos
+        const barra = document.createElement('div');
+        barra.className = 'alert alert--warning rascunho-aviso';
+        barra.innerHTML =
+          '<svg width="16" height="16"><use href="#i-alerta"></use></svg>' +
+          '<span>Você tinha um cadastro em andamento aqui (' + quando(dados.quando) +
+          '). As fotos precisam ser escolhidas de novo.</span>';
+
+        const restaurar = document.createElement('button');
+        restaurar.type = 'button';
+        restaurar.className = 'btn btn--primary btn--sm nowrap';
+        restaurar.textContent = 'Recuperar';
+        restaurar.addEventListener('click', function () {
+          aplicar(dados);
+          barra.remove();
+          toast('Rascunho recuperado.', 'success');
+        });
+
+        const descartar = document.createElement('button');
+        descartar.type = 'button';
+        descartar.className = 'btn btn--ghost btn--sm nowrap';
+        descartar.textContent = 'Descartar';
+        descartar.addEventListener('click', function () { apagar(); barra.remove(); });
+
+        barra.appendChild(restaurar);
+        barra.appendChild(descartar);
+        wizard.insertBefore(barra, wizard.firstElementChild.nextSibling);
+      }
+
+      // digitar não pode gravar uma vez por tecla
+      wizard.addEventListener('input', function () {
+        clearTimeout(relogio);
+        relogio = setTimeout(salvar, 600);
+      });
+      wizard.addEventListener('change', salvar);
+
+      return { oferecer: oferecer, apagar: apagar, salvar: salvar };
+    })();
 
     /* ------------------------------------------------------- salvar */
     if (!btSalvar) return;
@@ -466,6 +622,7 @@
         const json = await resposta.json();
 
         if (json.ok) {
+          rascunho.apagar();   // o que foi digitado agora vive no banco
           toast(json.criado ? 'Produto cadastrado!' : 'Produto atualizado!', 'success');
           fecharModal();
           setTimeout(function () { window.location.reload(); }, 700);
@@ -488,6 +645,7 @@
 
     mostrar(0);
     atualizarVazio();
+    rascunho.oferecer();
   }
 
   /* ═══════════════════════════════════ abas das configurações */

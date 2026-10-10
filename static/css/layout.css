@@ -161,6 +161,13 @@
 }
 
 
+/* aviso de rascunho recuperável, no topo do wizard de produto */
+.rascunho-aviso {
+  display: flex; align-items: center; gap: var(--s-3);
+  flex-wrap: wrap; margin-bottom: var(--s-4);
+}
+.rascunho-aviso span { flex: 1; min-width: 200px; }
+
 /* ═══════════════════════════════ colunas que ordenam e filtram (painel) */
 .col-ordem {
   display: inline-flex; align-items: center; gap: 4px;

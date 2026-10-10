@@ -1735,3 +1735,38 @@ class TextoRicoTests(TestCase):
         )
         html = self.client.get(produto.get_absolute_url()).content.decode()
         self.assertIn("<strong>Proteína para uma nutrição completa</strong>", html)
+
+
+class ManualDaStoneTests(TestCase):
+    """O manual da Stone é privado e traz o endereço real do webhook."""
+
+    def setUp(self):
+        from apps.accounts.models import User
+
+        self.lojista = User.objects.create_user(
+            email="lojista-manual@agrocampo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def test_visitante_nao_ve_o_manual(self):
+        resposta = self.client.get("/painel/manual/stone/")
+        self.assertNotEqual(resposta.status_code, 200)
+
+    def test_lojista_ve_o_manual_com_o_webhook_e_os_links(self):
+        self.client.force_login(self.lojista)
+        html = self.client.get("/painel/manual/stone/").content.decode()
+        self.assertIn("/pagamentos/webhook/stone/", html)
+        self.assertIn("dashboard.pagar.me", html)
+        self.assertIn("docs.pagar.me", html)
+        self.assertIn("conta.stone.com.br", html)
+
+    def test_manual_traz_as_regras_de_impressao_em_a4(self):
+        self.client.force_login(self.lojista)
+        html = self.client.get("/painel/manual/stone/").content.decode()
+        self.assertIn("size: A4", html)
+        self.assertIn("nao-imprime", html)
+
+    def test_aba_de_pagamentos_aponta_para_o_manual(self):
+        self.client.force_login(self.lojista)
+        html = self.client.get("/painel/configuracoes/").content.decode()
+        self.assertIn("/painel/manual/stone/", html)

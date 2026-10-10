@@ -1050,6 +1050,30 @@ def cadastro_rapido(request, tipo):
 
 
 @operador_requerido
+def manual_stone(request):
+    """Manual privado de configuração da Stone, pronto para imprimir em A4.
+
+    Fica atrás do login do painel de propósito: o documento mostra o caminho
+    das credenciais de pagamento e o endereço do webhook da loja.
+    """
+    from django.conf import settings
+
+    provedor = ProvedorPagamento.ativo_padrao()
+    site_url = (getattr(settings, "SITE_URL", "") or "https://agrocampo.online").rstrip("/")
+    return render(
+        request,
+        "dashboard/manual_stone.html",
+        {
+            "secao": "configuracoes",
+            "provedor": provedor,
+            "site_url": site_url,
+            "url_webhook": f"{site_url}{reverse('payments:webhook')}",
+            "hoje": timezone.localdate(),
+        },
+    )
+
+
+@operador_requerido
 @require_POST
 def marca_criar(request):
     """Rota antiga do campo de marca — segue valendo para links já salvos."""

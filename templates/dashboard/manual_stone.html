@@ -1,0 +1,467 @@
+{% extends 'dashboard/base_painel.html' %}
+{% load static %}
+
+{% block painel_title %}Manual da Stone{% endblock %}
+{% block painel_heading %}Manual de configuração da Stone{% endblock %}
+
+{% block painel_content %}
+{% comment %}
+  Documento privado: só quem entra no painel enxerga. É escrito para ser
+  impresso em A4 — as regras de @page e .nao-imprime estão no fim do arquivo,
+  junto com o que sai da folha (menu, botões).
+
+  Escrito para o lojista e para quem for fazer a integração com ele. Por isso
+  cada campo do painel aparece com o nome exato da tela e com o lugar de onde
+  o valor vem.
+{% endcomment %}
+
+<div class="row row--between nao-imprime" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:var(--s-3)">
+  <p class="small muted" style="margin:0;max-width:60ch">
+    Página privada, visível só para quem está logado no painel.
+    Use o botão ao lado para gerar o PDF em A4 (no diálogo de impressão,
+    escolha <strong>Salvar como PDF</strong>).
+  </p>
+  <div class="row" style="gap:var(--s-2)">
+    <a href="{% url 'dashboard:configuracoes' %}?aba=pagamentos" class="btn btn--ghost btn--sm nowrap">
+      <svg width="15" height="15"><use href="#i-cartao"></use></svg>Abrir Pagamentos
+    </a>
+    <button type="button" class="btn btn--primary btn--sm nowrap" onclick="window.print()">
+      <svg width="15" height="15"><use href="#i-pacote"></use></svg>Imprimir / salvar em A4
+    </button>
+  </div>
+</div>
+
+<article class="folha">
+
+  <header class="folha__capa">
+    <img src="{% static 'img/logo-agrocampo.png' %}" alt="{{ site.nome_loja }}" class="folha__logo">
+    <h1>Configuração do pagamento com a Stone</h1>
+    <p class="folha__sub">
+      {{ site.nome_loja|default:"AgroCampo" }} · documento interno ·
+      gerado em {{ hoje|date:"d/m/Y" }}
+    </p>
+    <p class="folha__aviso">
+      Documento de uso interno. Contém o caminho das credenciais de pagamento —
+      não publique nem envie por grupo de mensagens.
+    </p>
+  </header>
+
+  {# ══════════════════════════════════════════════════ 1 #}
+  <section>
+    <h2>1. Onde a loja está hoje</h2>
+    <table class="doc">
+      <tr>
+        <th>Driver em uso</th>
+        <td><strong>{{ provedor.get_driver_display }}</strong></td>
+      </tr>
+      <tr>
+        <th>Ambiente</th>
+        <td>{{ provedor.get_ambiente_display }}</td>
+      </tr>
+      <tr>
+        <th>Credenciais</th>
+        <td>
+          {% if provedor.credenciais_completas %}
+            API Key e Merchant ID preenchidos.
+          {% else %}
+            <strong>Faltam API Key e/ou Merchant ID.</strong>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Endereço do webhook</th>
+        <td><code>{{ url_webhook }}</code></td>
+      </tr>
+    </table>
+
+    <p>
+      Enquanto o driver for <strong>Simulado</strong>, a loja funciona de ponta a
+      ponta — o cliente fecha o pedido, o painel mostra a venda, a separação e o
+      estorno acontecem — mas <strong>nenhum dinheiro é movimentado</strong>.
+      Cartão terminado em 0000 é recusado de propósito e o Pix é confirmado por
+      um botão de simulação. É o estado correto para testar a loja antes de ter
+      contrato.
+    </p>
+  </section>
+
+  {# ══════════════════════════════════════════════════ 2 #}
+  <section>
+    <h2>2. O que é preciso conseguir com a Stone</h2>
+    <p>
+      O pagamento online da Stone é operado pela plataforma <strong>Pagar.me</strong>
+      (mesma empresa, Stone Co.). A maquininha e o TEF são outro produto, com
+      outra API — não servem para o site. Ao falar com a Stone, peça
+      explicitamente <em>“pagamento online / e-commerce, com API e webhook”</em>.
+    </p>
+
+    <ol class="passos-doc">
+      <li>
+        <strong>Contratar.</strong> Pelo gerente Stone da loja ou pelo site
+        comercial. Tenha em mãos CNPJ, dados bancários de recebimento e o
+        endereço da loja: <code>{{ site_url }}</code>.
+      </li>
+      <li>
+        <strong>Pedir acesso ao painel de desenvolvedor</strong> (Dashboard
+        Pagar.me). É de lá que saem as chaves.
+      </li>
+      <li>
+        <strong>Pedir o ambiente de testes</strong> (sandbox/chave de teste)
+        antes de ligar em produção.
+      </li>
+      <li>
+        <strong>Pedir a URL base da API</strong> que a conta deve usar. Isto é
+        importante: ver o aviso do item 5.
+      </li>
+    </ol>
+  </section>
+
+  {# ══════════════════════════════════════════════════ 3 #}
+  <section>
+    <h2>3. Links oficiais</h2>
+    <table class="doc">
+      <tr>
+        <th>Portal do lojista Stone</th>
+        <td><a href="https://conta.stone.com.br">conta.stone.com.br</a><br>
+          <span class="xs muted">Conta, recebíveis, contratos.</span></td>
+      </tr>
+      <tr>
+        <th>Site comercial / contratar</th>
+        <td><a href="https://www.stone.com.br">www.stone.com.br</a></td>
+      </tr>
+      <tr>
+        <th>Painel de pagamentos online</th>
+        <td><a href="https://dashboard.pagar.me">dashboard.pagar.me</a><br>
+          <span class="xs muted">É aqui que ficam as <strong>chaves de API</strong> e o
+          cadastro do <strong>webhook</strong>.</span></td>
+      </tr>
+      <tr>
+        <th>Documentação técnica</th>
+        <td><a href="https://docs.pagar.me">docs.pagar.me</a></td>
+      </tr>
+      <tr>
+        <th>Referência da API</th>
+        <td><a href="https://docs.pagar.me/reference/">docs.pagar.me/reference</a></td>
+      </tr>
+      <tr>
+        <th>Webhooks (notificações)</th>
+        <td><a href="https://docs.pagar.me/docs/webhooks">docs.pagar.me/docs/webhooks</a></td>
+      </tr>
+      <tr>
+        <th>API da maquininha (Connect)</th>
+        <td><a href="https://connect-stone.stone.com.br">connect-stone.stone.com.br</a><br>
+          <span class="xs muted">Não é usada pelo site — está aqui só para não confundir.</span></td>
+      </tr>
+      <tr>
+        <th>Contratos e políticas</th>
+        <td><a href="https://docs.stone.com.br">docs.stone.com.br</a></td>
+      </tr>
+    </table>
+  </section>
+
+  {# ══════════════════════════════════════════════════ 4 #}
+  <section class="quebra-antes">
+    <h2>4. Campo por campo do painel</h2>
+    <p>
+      Painel → <strong>Configurações → Pagamentos</strong>. Nada disso fica no
+      código: tudo é gravado no banco de dados da loja e pode ser trocado sem
+      publicar versão nova.
+    </p>
+
+    <table class="doc doc--campos">
+      <thead>
+        <tr><th>Campo no painel</th><th>De onde vem</th><th>Obrigatório?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Driver</strong></td>
+          <td>Escolha <em>Stone</em> só quando as chaves estiverem preenchidas e testadas.</td>
+          <td>sim</td>
+        </tr>
+        <tr>
+          <td><strong>Ambiente</strong></td>
+          <td><em>Sandbox</em> para testar, <em>Produção</em> para vender de verdade.</td>
+          <td>sim</td>
+        </tr>
+        <tr>
+          <td><strong>API Key</strong></td>
+          <td>Chave secreta da conta, no painel de pagamentos online.
+              É ela que autoriza cada cobrança.</td>
+          <td><strong>sim</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Merchant ID</strong></td>
+          <td>Identificador do estabelecimento (EC) informado pela Stone.</td>
+          <td><strong>sim</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Client ID</strong> e <strong>Client Secret</strong></td>
+          <td>Só para contas que autenticam por OAuth. Preenchidos, a loja troca
+              os dois por um token a cada chamada; vazios, ela usa a API Key direto.</td>
+          <td>depende da conta</td>
+        </tr>
+        <tr>
+          <td><strong>Código de afiliação</strong></td>
+          <td>O <em>Stone Code</em> da loja. Vai no cabeçalho das chamadas.</td>
+          <td>se a Stone pedir</td>
+        </tr>
+        <tr>
+          <td><strong>Segredo do webhook</strong></td>
+          <td>Gerado junto com o webhook, no painel de pagamentos. Valida a
+              assinatura das notificações — ver item 6.</td>
+          <td><strong>sim</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Chave Pix</strong></td>
+          <td>Chave Pix do recebedor, usada para montar o QR Code.</td>
+          <td>se aceitar Pix</td>
+        </tr>
+        <tr>
+          <td><strong>URL base (sandbox)</strong> e <strong>(produção)</strong></td>
+          <td>Endereço da API informado pela Stone na abertura da conta.</td>
+          <td><strong>sim</strong> — ver item 5</td>
+        </tr>
+        <tr>
+          <td><strong>Parcelas / sem juros / valor mínimo</strong></td>
+          <td>Decisão comercial da loja, combinada com a taxa negociada.</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>Captura automática</strong></td>
+          <td>Ligada, a venda é capturada na hora. Desligada, fica autorizada e
+              alguém precisa capturar — só use se a loja trabalhar assim.</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>Soft descriptor</strong></td>
+          <td>O que o cliente lê na fatura do cartão. Máximo de 22 caracteres —
+              use o nome da loja, senão ele contesta a compra por não reconhecer.</td>
+          <td>recomendado</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  {# ══════════════════════════════════════════════════ 5 #}
+  <section>
+    <h2>5. Aviso sobre a URL base</h2>
+    <div class="aviso">
+      <p>
+        Os endereços que vêm preenchidos por padrão no painel
+        (<code>https://sandbox-api.stone.com.br</code> e
+        <code>https://api.stone.com.br</code>) são <strong>provisórios</strong>:
+        na verificação feita para este documento, o primeiro não responde e o
+        segundo não atende na raiz.
+      </p>
+      <p>
+        <strong>Peça à Stone a URL base exata da sua conta</strong> (a de teste e
+        a de produção) e substitua os dois campos antes de virar a chave. Sem
+        isso, o driver vai tentar falar com um endereço que não existe e toda
+        cobrança falha — por isso a loja continua em <em>Simulado</em> até lá.
+      </p>
+    </div>
+  </section>
+
+  {# ══════════════════════════════════════════════════ 6 #}
+  <section>
+    <h2>6. Webhook — a parte que não pode faltar</h2>
+    <p>
+      O webhook é o aviso que a Stone manda quando um pagamento muda de estado.
+      É ele que confirma o Pix e o cartão: <strong>sem webhook, o pedido pago
+      não vira “pago” no painel</strong> e a separação não começa.
+    </p>
+
+    <table class="doc">
+      <tr>
+        <th>Endereço a cadastrar</th>
+        <td><code>{{ url_webhook }}</code></td>
+      </tr>
+      <tr>
+        <th>Método</th>
+        <td><code>POST</code>, corpo em JSON</td>
+      </tr>
+      <tr>
+        <th>Assinatura</th>
+        <td>Cabeçalho <code>X-Stone-Signature</code>
+          (também aceitamos <code>Stone-Signature</code> e <code>X-Signature</code>),
+          conferido com o <em>Segredo do webhook</em> por HMAC.</td>
+      </tr>
+      <tr>
+        <th>Resposta da loja</th>
+        <td><code>200</code> quando aceita · <code>401</code> quando a assinatura
+          não confere · <code>400</code> quando o corpo não é JSON válido</td>
+      </tr>
+    </table>
+
+    <p>
+      Todo aviso recebido é gravado antes de ser processado, mesmo o que falhar.
+      Se algo der errado, o evento continua guardado e pode ser reprocessado —
+      nada se perde.
+    </p>
+  </section>
+
+  {# ══════════════════════════════════════════════════ 7 #}
+  <section class="quebra-antes">
+    <h2>7. Passo a passo da virada</h2>
+    <ol class="passos-doc">
+      <li>Contrate o pagamento online e peça acesso ao painel de pagamentos.</li>
+      <li>No painel da Stone, copie a <strong>chave de teste</strong>.</li>
+      <li>
+        No AgroCampo: <em>Configurações → Pagamentos</em>. Preencha API Key,
+        Merchant ID, a URL base de sandbox e o que mais a Stone tiver informado.
+        Deixe o <strong>Ambiente em Sandbox</strong> e o
+        <strong>Driver em Stone</strong>. Salve.
+      </li>
+      <li>
+        Ainda no painel da Stone, cadastre o webhook com o endereço do item 6 e
+        copie o segredo gerado para o campo <em>Segredo do webhook</em>.
+      </li>
+      <li>
+        Faça um pedido de teste na loja, com o cartão de teste da documentação.
+        Confira: o pedido aparece, o status vira <em>pago</em> sozinho (é o
+        webhook chegando) e o painel registra o pagamento.
+      </li>
+      <li>Teste também um Pix e um estorno.</li>
+      <li>
+        Deu certo: troque a <strong>chave de teste pela de produção</strong>,
+        a <strong>URL base</strong> pela de produção, o
+        <strong>Ambiente para Produção</strong> e cadastre o webhook também no
+        ambiente de produção. Salve.
+      </li>
+      <li>
+        Faça <strong>uma compra real de valor baixo</strong> e confira o dinheiro
+        caindo no extrato da Stone. Só então divulgue.
+      </li>
+    </ol>
+  </section>
+
+  {# ══════════════════════════════════════════════════ 8 #}
+  <section>
+    <h2>8. Quando algo não funciona</h2>
+    <table class="doc">
+      <tr>
+        <th>A loja continua em simulado</th>
+        <td>Falta API Key ou Merchant ID. Sem os dois, o sistema volta para o
+          simulado de propósito, para o checkout não quebrar na frente do cliente.</td>
+      </tr>
+      <tr>
+        <th>“Falha ao autenticar na Stone”</th>
+        <td>Client ID/Secret errados, ou a conta não usa OAuth — nesse caso
+          deixe os dois vazios e use só a API Key.</td>
+      </tr>
+      <tr>
+        <th>“Falha de comunicação”</th>
+        <td>URL base errada (item 5) ou a Stone fora do ar.</td>
+      </tr>
+      <tr>
+        <th>Pedido pago não vira “pago”</th>
+        <td>O webhook não está chegando ou a assinatura não confere: confira o
+          endereço cadastrado e o segredo.</td>
+      </tr>
+      <tr>
+        <th>Cliente não reconhece a compra na fatura</th>
+        <td>Ajuste o <em>soft descriptor</em> para o nome da loja.</td>
+      </tr>
+    </table>
+
+    <p class="nota-final">
+      Dados de cartão nunca são guardados pela loja: ficam apenas a bandeira, os
+      quatro últimos dígitos e o token devolvido pela Stone — é esse token que
+      permite a cobrança automática da assinatura.
+    </p>
+  </section>
+
+  <footer class="folha__rodape">
+    {{ site.nome_loja|default:"AgroCampo" }} · Manual de configuração da Stone ·
+    suporte técnico KS TEC
+  </footer>
+</article>
+{% endblock %}
+
+{% block head %}
+<style>
+  /* ---------------------------------------------- documento em A4 */
+  .folha {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: var(--s-8); max-width: 820px;
+    line-height: 1.65;
+  }
+  .folha h1 { font-size: var(--fs-2xl); line-height: 1.2; margin-bottom: var(--s-2); }
+  .folha h2 {
+    font-size: var(--fs-lg); margin: var(--s-8) 0 var(--s-3);
+    padding-bottom: var(--s-2); border-bottom: 2px solid var(--line);
+  }
+  .folha section:first-of-type h2 { margin-top: var(--s-6); }
+  .folha p { margin-bottom: var(--s-3); max-width: 72ch; }
+  .folha code {
+    background: var(--cream-warm); padding: 1px 6px; border-radius: 4px;
+    font-size: .92em; word-break: break-all;
+  }
+  .folha a { color: var(--red); text-decoration: underline; }
+
+  .folha__capa { text-align: center; padding-bottom: var(--s-6); border-bottom: 2px solid var(--line); }
+  .folha__logo { height: 64px; width: auto; margin-bottom: var(--s-4); }
+  .folha__sub { color: var(--muted); font-size: var(--fs-sm); margin: 0 auto; }
+  .folha__aviso {
+    margin: var(--s-4) auto 0; max-width: 60ch;
+    font-size: var(--fs-xs); color: var(--muted);
+    border: 1px dashed var(--line); border-radius: var(--r-md); padding: var(--s-2) var(--s-3);
+  }
+  .folha__rodape {
+    margin-top: var(--s-8); padding-top: var(--s-3); border-top: 1px solid var(--line);
+    font-size: var(--fs-xs); color: var(--muted); text-align: center;
+  }
+
+  table.doc { width: 100%; border-collapse: collapse; margin: var(--s-3) 0 var(--s-5); }
+  table.doc th, table.doc td {
+    border: 1px solid var(--line); padding: var(--s-2) var(--s-3);
+    text-align: left; vertical-align: top; font-size: var(--fs-sm);
+  }
+  table.doc th { background: var(--cream-warm); font-weight: 700; width: 30%; }
+  table.doc thead th { width: auto; }
+  table.doc--campos th { width: auto; }
+  table.doc--campos td:first-child { width: 28%; }
+  table.doc--campos td:last-child { width: 16%; white-space: nowrap; }
+
+  .passos-doc { margin: var(--s-3) 0 var(--s-5) var(--s-5); }
+  .passos-doc li { margin-bottom: var(--s-3); max-width: 70ch; }
+
+  .aviso {
+    border-left: 4px solid var(--red); background: var(--cream-warm);
+    padding: var(--s-4); border-radius: 0 var(--r-md) var(--r-md) 0;
+  }
+  .aviso p:last-child { margin-bottom: 0; }
+  .nota-final { font-size: var(--fs-sm); color: var(--muted); }
+
+  @media (max-width: 760px) {
+    .folha { padding: var(--s-5); }
+    /* tabela de campos vira lista no celular: três colunas não cabem */
+    table.doc--campos thead { display: none; }
+    table.doc--campos tr { display: block; margin-bottom: var(--s-3); }
+    table.doc--campos td { display: block; width: auto !important; white-space: normal !important; }
+  }
+
+  /* ---------------------------------------------- impressão em A4 */
+  @page { size: A4 portrait; margin: 16mm 14mm; }
+  @media print {
+    .nao-imprime,
+    .panel__aside, .panel__topo,
+    .zap, .silvinha, .pwa-convite { display: none !important; }
+    .panel, .panel__main, body { background: #fff !important; display: block !important; }
+    .panel__main { padding: 0 !important; }
+    .folha {
+      border: 0; border-radius: 0; padding: 0; max-width: none;
+      font-size: 10.5pt; line-height: 1.5;
+    }
+    .folha h1 { font-size: 20pt; }
+    .folha h2 { font-size: 13pt; margin-top: 14pt; }
+    .folha a { color: #000; }
+    /* o endereço completo ao lado do texto: no papel não dá para clicar */
+    .folha td a::after { content: " (" attr(href) ")"; font-size: 8.5pt; color: #555; }
+    table.doc th { background: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    section { break-inside: avoid; }
+    .quebra-antes { break-before: page; }
+    table.doc, .passos-doc li, .aviso { break-inside: avoid; }
+  }
+</style>
+{% endblock %}

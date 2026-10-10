@@ -178,6 +178,17 @@
     </span>
   </div>
 
+  {% comment %}
+    Atalho para o manual da Stone: é a primeira coisa que alguém procura ao
+    chegar nesta aba com as credenciais na mão.
+  {% endcomment %}
+  <p style="margin-bottom:var(--s-5)">
+    <a class="btn btn--ghost btn--sm" href="{% url 'dashboard:manual_stone' %}">
+      <svg width="15" height="15"><use href="#i-info"></use></svg>
+      Manual de configuração da Stone (passo a passo, imprime em A4)
+    </a>
+  </p>
+
   <form method="post" action="{% url 'dashboard:salvar_provedor' provedor.id %}">
     {% csrf_token %}
     {% if form_provedor.non_field_errors %}
@@ -764,6 +775,9 @@
         <a href="{% url 'dashboard:gestao' 'especies' %}" class="filters__link">
           <span>Espécies</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
+        <a href="{% url 'dashboard:gestao' 'linhas' %}" class="filters__link">
+          <span>Linhas de produto</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
         <a href="{% url 'dashboard:gestao' 'cupons' %}" class="filters__link">
           <span>Cupons de desconto</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
@@ -776,6 +790,9 @@
         Rastro do que foi trocado com o adquirente. Somente leitura.
       </p>
       <div class="stack" style="gap:var(--s-1)">
+        <a href="{% url 'dashboard:manual_stone' %}" class="filters__link">
+          <span>Manual de configuração da Stone</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
+        </a>
         <a href="{% url 'dashboard:auditoria' 'pagamentos' %}" class="filters__link">
           <span>Pagamentos</span><svg width="14" height="14"><use href="#i-seta-dir"></use></svg>
         </a>
