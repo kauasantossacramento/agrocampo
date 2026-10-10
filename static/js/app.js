@@ -225,9 +225,15 @@
       atual = indice;
     };
 
-    const proximo = () => mostrar((atual + 1) % slides.length);
-    const iniciar = () => { if (!reduzido) timer = setInterval(proximo, 6500); };
-    const parar = () => clearInterval(timer);
+    const proximo = () => { mostrar((atual + 1) % slides.length); iniciar(); };
+    const iniciar = () => {
+      clearTimeout(timer);
+      const segundos = Number(slides[atual].dataset.tempo) || 6.5;
+      if (!reduzido && !document.hidden && !hero.matches(':hover') && !hero.contains(document.activeElement)) {
+        timer = setTimeout(proximo, Math.min(300, Math.max(1, segundos)) * 1000);
+      }
+    };
+    const parar = () => clearTimeout(timer);
 
     pontos.forEach((p, i) =>
       p.addEventListener('click', () => { parar(); mostrar(i); iniciar(); })
@@ -238,6 +244,9 @@
     $$('[data-hero-next]', hero).forEach(b => b.addEventListener('click', () => { parar(); proximo(); iniciar(); }));
     hero.addEventListener('mouseenter', parar);
     hero.addEventListener('mouseleave', iniciar);
+    hero.addEventListener('focusin', parar);
+    hero.addEventListener('focusout', () => setTimeout(iniciar, 0));
+    document.addEventListener('visibilitychange', () => document.hidden ? parar() : iniciar());
 
     mostrar(0);
     iniciar();
@@ -276,15 +285,23 @@
       atual = indice;
     };
 
-    const proximo = () => mostrar((atual + 1) % slides.length);
-    const iniciar = () => { if (!reduzido) timer = setInterval(proximo, 7000); };
-    const parar = () => clearInterval(timer);
+    const proximo = () => { mostrar((atual + 1) % slides.length); iniciar(); };
+    const iniciar = () => {
+      clearTimeout(timer);
+      const segundos = Number(slides[atual].dataset.tempo) || 6.5;
+      if (!reduzido && !document.hidden && !caixa.matches(':hover') && !caixa.contains(document.activeElement)) {
+        timer = setTimeout(proximo, Math.min(300, Math.max(1, segundos)) * 1000);
+      }
+    };
+    const parar = () => clearTimeout(timer);
 
     pontos.forEach((p, i) =>
       p.addEventListener('click', () => { parar(); mostrar(i); iniciar(); })
     );
     caixa.addEventListener('mouseenter', parar);
     caixa.addEventListener('mouseleave', iniciar);
+    caixa.addEventListener('focusin', parar);
+    caixa.addEventListener('focusout', () => setTimeout(iniciar, 0));
 
     // com a aba escondida o intervalo continuaria trocando slides à toa
     document.addEventListener('visibilitychange', () =>

@@ -9,6 +9,7 @@ db.sqlite3
 .env.bak.*
 CREDENCIAIS.txt
 staticfiles/
+backups/
 media/*
 !media/seed/
 mockup/

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% comment %}
   HOME — estilo "vitrine". Estrutura inspirada em lojas como a Terra dos
@@ -26,13 +26,13 @@
 {% endif %}
 
 {% if site.capa_slides_ativa %}
-<section class="vitrine-capa wrap" data-hero>
+<section class="vitrine-capa wrap {% if site.banners_padronizar %}banners--faixa{% else %}banners--livres{% endif %}" style="--banner-formato:{{ site.banners_formato }}" data-hero>
   <div class="vitrine-capa__quadro">
     {% for banner in slides %}
       {% if banner.video %}
         {# vídeo cadastrado em "Apresentação": entra como slide, mudo e em loop #}
         <{% if banner.destino %}a href="{{ banner.destino }}"{% else %}div{% endif %} class="vitrine-capa__slide vitrine-capa__slide--video"
-           data-hero-slide {% if not forloop.first %}hidden{% endif %} {% if banner.titulo %}aria-label="{{ banner.titulo }}"{% endif %}>
+           data-hero-slide data-tempo="{{ banner.tempo_exibicao|unlocalize }}" {% if not forloop.first %}hidden{% endif %} {% if banner.titulo %}aria-label="{{ banner.titulo }}"{% endif %}>
           <video autoplay muted loop playsinline preload="metadata"
                  {% if banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
             <source src="{{ banner.video.url }}">
@@ -54,7 +54,7 @@
           {% endif %}
         </{% if banner.destino %}a{% else %}div{% endif %}>
       {% elif banner.imagem %}
-        <a href="{{ banner.destino|default:'/catalogo/' }}" class="vitrine-capa__slide" data-hero-slide {% if not forloop.first %}hidden{% endif %}
+        <a href="{{ banner.destino|default:'/catalogo/' }}" class="vitrine-capa__slide" data-hero-slide data-tempo="{{ banner.tempo_exibicao|unlocalize }}" {% if not forloop.first %}hidden{% endif %}
            aria-label="{{ banner.titulo|default:'Banner' }}">
           <img src="{{ banner.imagem.url }}" alt="{{ banner.titulo }}" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
           {% comment %}
@@ -77,7 +77,7 @@
           {% endif %}
         </a>
       {% else %}
-        <div class="vitrine-capa__slide vitrine-capa__slide--texto" data-hero-slide {% if not forloop.first %}hidden{% endif %}
+        <div class="vitrine-capa__slide vitrine-capa__slide--texto" data-hero-slide data-tempo="{{ banner.tempo_exibicao|unlocalize }}" {% if not forloop.first %}hidden{% endif %}
              {% if banner.cor_fundo %}style="--hero-bg:{{ banner.cor_fundo }}"{% endif %}>
           <div class="hero__content">
             {% if banner.selo %}<span class="hero__badge">{{ banner.selo }}</span>{% endif %}

@@ -35,6 +35,17 @@ def catalogo(request, categoria=None, marca=None, especie=None):
     titulo = "Catálogo"
     contexto_extra = {}
 
+    if request.GET.get("banner"):
+        from apps.core.models import Banner
+
+        identificador = request.GET["banner"]
+        if not identificador.isascii() or not identificador.isdigit() or len(identificador) > 10:
+            from django.http import Http404
+            raise Http404
+        banner = get_object_or_404(Banner.objects.publicados(), pk=int(identificador), tipo_destino=Banner.TipoDestino.PRODUTOS)
+        produtos = produtos.filter(banners=banner)
+        titulo = banner.titulo or "Seleção de produtos"
+
     if categoria:
         produtos = produtos.filter(categoria_id__in=categoria.ramo_ids)
         titulo = categoria.nome

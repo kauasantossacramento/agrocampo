@@ -22,10 +22,9 @@
     <p class="small muted" style="margin:0">{{ secao_atual.descricao }}</p>
     {% if secao_atual.slug == 'banners' %}
       <ul class="small muted" style="margin:var(--s-3) 0 0;padding-left:var(--s-5);line-height:1.7">
-        <li><strong>Apresentação</strong> — vídeo ou foto ocupando o topo da home.
-            É o primeiro bloco no celular e substitui o banner clássico ali.</li>
-        <li><strong>Carrossel principal</strong> — o banner com texto e botões.
-            Sem apresentação cadastrada, ele aparece no celular em versão baixa.</li>
+        <li><strong>Apresentação</strong> — imagem ou vídeo com a arte pronta, sem texto sobreposto.</li>
+        <li><strong>Carrossel principal</strong> — imagem, vídeo ou chamada com texto e botão.
+            O tempo de cada slide é definido ao editar o banner.</li>
         <li><strong>Faixa de produtos</strong> — uma fita de fotos que rola com o
             dedo, cada uma levando ao produto.</li>
       </ul>
@@ -37,6 +36,22 @@
     + {{ secao_atual.artigo }} {{ secao_atual.singular }}
   </button>
 </div>
+
+{% if form_banners %}
+<form method="post" class="card" style="padding:var(--s-5);margin-bottom:var(--s-5)">
+  {% csrf_token %}
+  <h2 style="font-size:var(--fs-lg)">Exibição dos banners</h2>
+  <p class="small muted">Estas opções valem para imagens e vídeos do carrossel e da apresentação no estilo Vitrine. Sem padronização, a altura muda conforme cada arte.</p>
+  {% for campo in form_banners %}
+  <div class="field">
+    <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+    {{ campo }}{{ campo.errors }}
+    <span class="help">{{ campo.help_text }}</span>
+  </div>
+  {% endfor %}
+  <button class="btn btn--primary" type="submit">Salvar exibição</button>
+</form>
+{% endif %}
 
 {% if secao_atual.busca %}
   <form method="get" class="input-icon" style="margin-bottom:var(--s-5);max-width:420px">

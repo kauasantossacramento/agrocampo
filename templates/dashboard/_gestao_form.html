@@ -15,7 +15,9 @@
   <section class="wizard__tela is-atual" data-tela="1">
     {% for campo in form %}
       <div class="field" style="margin-bottom:var(--s-4)">
-        {% if campo.field.widget.input_type == 'checkbox' %}
+        {% if campo.name == 'produtos' and secao_atual.slug == 'banners' %}
+          <fieldset><legend>{{ campo.label }}</legend>{{ campo }}</fieldset>
+        {% elif campo.field.widget.input_type == 'checkbox' %}
           <label class="switch-row">{{ campo }} {{ campo.label }}</label>
         {% else %}
           <label for="{{ campo.id_for_label }}">

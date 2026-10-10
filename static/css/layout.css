@@ -1478,6 +1478,24 @@
 /* 16/9 é o formato em que o vídeo é gravado; no 16/7 de antes um terço da
    cena ficava de fora, e o que sobrava parecia um retângulo escuro. */
 .vitrine-capa__slide--video video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; }
+
+/* Cartazes trazem preços e texto nas bordas: a moldura uniforme deve mostrar
+   a peça inteira, inclusive no celular, em vez de ampliar e cortar a arte. */
+.banners--faixa .vitrine-capa__slide img,
+.banners--faixa .vitrine-capa__slide video,
+.banners--faixa .apresentacao__midia {
+  width: 100%; height: auto; max-height: none;
+  aspect-ratio: var(--banner-formato, 16 / 5); object-fit: contain;
+  background: var(--cream-warm);
+}
+.banners--livres .vitrine-capa__slide img,
+.banners--livres .vitrine-capa__slide video,
+.banners--livres .apresentacao__midia {
+  width: 100%; height: auto; max-height: none; aspect-ratio: auto; object-fit: contain;
+}
+.lista-produtos-banner { max-height: 280px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-md); }
+.lista-produtos-banner label { display: flex; gap: var(--s-3); align-items: center; min-height: 44px; padding: var(--s-2) var(--s-3); cursor: pointer; }
+.lista-produtos-banner input { flex: none; }
 @media (max-width: 620px) {
   .ofertas-grade { grid-template-columns: 1fr; gap: var(--s-3); }
   .ofertas-grade--1 .ofertas-grade__item img { aspect-ratio: 16 / 9; }

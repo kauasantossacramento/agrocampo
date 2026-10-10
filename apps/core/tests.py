@@ -5,12 +5,112 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.catalog.models import Categoria, Produto
 from apps.core.models import Banner, SiteConfig
 from apps.orders.models import ItemPedido, Pedido
 
 User = get_user_model()
+
+
+class ConfiguracaoBannersHomeTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.categoria = Categoria.objects.create(nome="Categoria dos banners")
+        cls.produtos = [Produto.objects.create(
+            nome=f"Produto banner {i}", sku=f"CONFIG-B-{i}",
+            categoria=cls.categoria, preco="30.00", publicado=True,
+        ) for i in range(3)]
+        cls.banner = Banner.objects.create(
+            titulo="Seleção da semana", imagem="banners/teste.png",
+            tipo_destino=Banner.TipoDestino.PRODUTOS, tempo_exibicao="12.5",
+        )
+        cls.banner.produtos.set(cls.produtos[:2])
+        cls.lojista = User.objects.create_user(
+            email="banners-config@exemplo.com", password="senha-teste",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def test_selecao_abre_so_os_produtos_vinculados_e_preserva_filtro(self):
+        resposta = self.client.get(self.banner.destino)
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(set(resposta.context["produtos"]), set(self.produtos[:2]))
+        self.assertContains(resposta, f'name="banner" value="{self.banner.pk}"')
+        self.produtos[0].excluido_em = timezone.now()
+        self.produtos[0].save()
+        resposta = self.client.get(reverse("catalog:catalogo"), {"banner": self.banner.pk})
+        self.assertEqual(list(resposta.context["produtos"]), [self.produtos[1]])
+        self.assertEqual(self.banner.destino, self.produtos[1].get_absolute_url())
+
+    def test_destinos_categoria_catalogo_e_link(self):
+        self.banner.tipo_destino = Banner.TipoDestino.CATEGORIA
+        self.banner.categoria_destino = self.categoria
+        self.assertEqual(self.banner.destino, self.categoria.get_absolute_url())
+        self.banner.tipo_destino = Banner.TipoDestino.CATALOGO
+        self.assertEqual(self.banner.destino, reverse("catalog:catalogo"))
+        self.banner.tipo_destino = Banner.TipoDestino.LINK
+        self.banner.link = "https://example.com/oferta"
+        self.assertEqual(self.banner.destino, self.banner.link)
+
+    def test_selecao_inativa_ou_identificador_invalido_nao_abre(self):
+        for identificador in ("abc", "9" * 30, "99999"):
+            self.assertEqual(self.client.get(reverse("catalog:catalogo"), {"banner": identificador}).status_code, 404)
+        self.banner.publicado = False
+        self.banner.save()
+        self.assertEqual(self.client.get(self.banner.destino).status_code, 404)
+
+    def test_painel_salva_sim_nao_e_formato_sem_mudar_banner(self):
+        self.client.force_login(self.lojista)
+        rota = reverse("dashboard:gestao", args=["banners"])
+        for escolha, esperado in (("sim", True), ("nao", False)):
+            resposta = self.client.post(rota, {"banners_padronizar": escolha, "banners_formato": "16/9"})
+            self.assertEqual(resposta.status_code, 302)
+            config = SiteConfig.load()
+            self.assertEqual(config.banners_padronizar, esperado)
+            self.assertEqual(config.banners_formato, "16/9")
+        self.banner.refresh_from_db()
+        self.assertEqual(str(self.banner.tempo_exibicao), "12.5")
+        resposta = self.client.post(rota, {"banners_padronizar": "sim", "banners_formato": "invalido"})
+        self.assertEqual(resposta.status_code, 200)
+        self.assertFalse(SiteConfig.load().banners_padronizar)
+
+    def test_home_expoe_tempo_sem_virgula_e_modo_escolhido(self):
+        config = SiteConfig.load()
+        config.layout_home = SiteConfig.LayoutHome.VITRINE
+        config.save()
+        resposta = self.client.get(reverse("core:home"))
+        self.assertContains(resposta, 'data-tempo="12.5"')
+        self.assertContains(resposta, 'banners--faixa')
+        config.banners_padronizar = False
+        config.save()
+        self.assertContains(self.client.get(reverse("core:home")), 'banners--livres')
+
+    def test_formulario_valida_tempo_destino_e_link(self):
+        from apps.dashboard.gestao import BannerForm
+
+        base = {"titulo": "Oferta", "posicao": "hero", "cor_fundo": "#D62B20", "ordem": 0}
+        for dados, campo in (({"tempo_exibicao": "0"}, "tempo_exibicao"),
+                             ({"tempo_exibicao": "301"}, "tempo_exibicao"),
+                             ({"tipo_destino": "produtos"}, "produtos"),
+                             ({"tipo_destino": "categoria"}, "categoria_destino"),
+                             ({"tipo_destino": "link"}, "link"),
+                             ({"link": "javascript:alert(1)"}, "link")):
+            form = BannerForm(data={**base, **dados})
+            self.assertFalse(form.is_valid())
+            self.assertIn(campo, form.errors)
+        form = BannerForm(data={**base, "tempo_exibicao": "25", "tipo_destino": "produtos", "produtos": [p.pk for p in self.produtos[:2]]})
+        self.assertTrue(form.is_valid(), form.errors)
+        banner = form.save()
+        self.assertIn(f"banner={banner.pk}", banner.destino)
+
+    def test_modal_mostra_produtos_em_caixas_marcaveis(self):
+        self.client.force_login(self.lojista)
+        resposta = self.client.get(reverse("dashboard:gestao_form", args=["banners", self.banner.pk]))
+        self.assertContains(resposta, "<fieldset>")
+        self.assertContains(resposta, 'type="checkbox" name="produtos"', count=3)
+        self.assertContains(resposta, 'value="%s"' % self.produtos[0].pk)
+        self.assertContains(resposta, "Produto banner 0")
 
 
 class PaginasPublicasTests(TestCase):
@@ -1231,7 +1331,7 @@ class EstiloDaHomeTests(TestCase):
         self.assertTemplateUsed(r, "core/home_vitrine.html")
         self.assertContains(r, 'class="tema-vitrine"')
         self.assertContains(r, "topbar__atalho")               # topbar fixa
-        self.assertContains(r, 'class="vitrine-capa wrap"')     # carrossel
+        self.assertContains(r, 'class="vitrine-capa wrap banners--faixa"')     # carrossel
         self.assertContains(r, 'class="secao-titulo"')          # seções divididas
         self.assertContains(r, "Navegue pelo seu animal")
         self.assertContains(r, "Por que comprar na")
@@ -1245,7 +1345,7 @@ class EstiloDaHomeTests(TestCase):
         self.assertTemplateUsed(r, "core/home.html")
         self.assertContains(r, 'class="tema-classico"')
         self.assertNotContains(r, "topbar__atalho")             # topbar só com mensagem
-        self.assertNotContains(r, 'class="vitrine-capa wrap"')
+        self.assertNotContains(r, 'class="vitrine-capa wrap ')
         self.assertContains(r, "Compre por categoria")
 
     def test_lojista_alterna_pelo_painel(self):
@@ -1380,7 +1480,7 @@ class RodadaDoisTests(TestCase):
         config = SiteConfig.load()
         config.capa_slides_ativa = False
         config.save()
-        self.assertNotContains(self.client.get("/"), 'class="vitrine-capa wrap"')
+        self.assertNotContains(self.client.get("/"), 'class="vitrine-capa wrap ')
 
 
 class RodadaTresTests(TestCase):

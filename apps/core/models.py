@@ -165,6 +165,18 @@ class SiteConfig(TimeStampedModel):
         help_text="O bloco grande de vídeo. Desligado, o carrossel abre a home sozinho.",
     )
 
+    banners_padronizar = models.BooleanField(
+        "padronizar tamanho (modo faixa)", default=True,
+        help_text="Sim: todos usam a mesma moldura, sem cortar a arte. Não: cada imagem ou vídeo mantém sua proporção original.",
+    )
+    banners_formato = models.CharField(
+        "tamanho da faixa", max_length=10, default="16/5",
+        choices=[("16/5", "Faixa — 1600 × 500 px (recomendado)"),
+                 ("16/9", "Paisagem — 1600 × 900 px"),
+                 ("2/1", "Intermediário — 1600 × 800 px")],
+        help_text="Medidas sugeridas para criar a arte. A faixa se adapta à largura do computador e do celular.",
+    )
+
     # ---------------------------------------------- ordem das seções da home
     # Chaves separadas por vírgula, na ordem em que os blocos aparecem. O
     # painel edita com setas; quem faltar aqui entra no fim, quem não existir
@@ -489,6 +501,13 @@ def validar_tamanho_imagem(arquivo):
 
 
 class Banner(TimeStampedModel):
+    class TipoDestino(models.TextChoices):
+        AUTOMATICO = "automatico", "Automático (link ou primeiro produto)"
+        LINK = "link", "Link informado"
+        PRODUTOS = "produtos", "Produtos selecionados do catálogo"
+        CATEGORIA = "categoria", "Categoria do catálogo"
+        CATALOGO = "catalogo", "Catálogo completo"
+
     class Posicao(models.TextChoices):
         HERO = "hero", "Carrossel principal"
         FAIXA = "faixa", "Faixa promocional"
@@ -520,6 +539,19 @@ class Banner(TimeStampedModel):
     cor_fundo = models.CharField(max_length=20, default="#D62B20")
     texto_botao = models.CharField(max_length=40, blank=True, default="Ver catálogo")
     link = models.CharField(max_length=300, blank=True)
+    tipo_destino = models.CharField(
+        "ao clicar, abrir", max_length=12, choices=TipoDestino.choices,
+        default=TipoDestino.AUTOMATICO,
+    )
+    categoria_destino = models.ForeignKey(
+        "catalog.Categoria", verbose_name="categoria de destino", null=True,
+        blank=True, on_delete=models.SET_NULL, related_name="banners_destino",
+    )
+    tempo_exibicao = models.DecimalField(
+        "tempo de exibição (segundos)", max_digits=5, decimal_places=1,
+        default=Decimal("6.5"), validators=[MinValueValidator(1), MaxValueValidator(300)],
+        help_text="De 1 a 300 segundos por imagem ou vídeo. O vídeo repete até terminar esse tempo.",
+    )
     posicao = models.CharField(max_length=20, choices=Posicao.choices, default=Posicao.HERO)
     produtos = models.ManyToManyField(
         "catalog.Produto",
@@ -557,15 +589,26 @@ class Banner(TimeStampedModel):
         a ordem de marcação não fica guardada em lugar nenhum, e deixar o
         banco decidir daria um destino diferente a cada consulta.
         """
+        if self.tipo_destino == self.TipoDestino.CATALOGO:
+            return reverse("catalog:catalogo")
+        if self.tipo_destino == self.TipoDestino.CATEGORIA:
+            return self.categoria_destino.get_absolute_url() if self.categoria_destino_id and self.categoria_destino.publicado else reverse("catalog:catalogo")
+        if self.tipo_destino == self.TipoDestino.PRODUTOS:
+            produtos = self.produtos_visiveis
+            if produtos.count() == 1:
+                return produtos.first().get_absolute_url()
+            return f'{reverse("catalog:catalogo")}?banner={self.pk}'
+        if self.tipo_destino == self.TipoDestino.LINK:
+            return self.link
         if self.link:
             return self.link
-        primeiro = self.produtos.filter(publicado=True).order_by("nome").first()
+        primeiro = self.produtos.publicados().order_by("nome").first()
         return primeiro.get_absolute_url() if primeiro else ""
 
     @property
     def produtos_visiveis(self):
         """Só produtos publicados: um link para produto fora do ar é um beco."""
-        return self.produtos.filter(publicado=True).prefetch_related("imagens")
+        return self.produtos.publicados().prefetch_related("imagens")
 
 
 class Diferencial(TimeStampedModel):

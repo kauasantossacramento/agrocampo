@@ -21,16 +21,33 @@ from .forms import CLASSE, _EstilizadoMixin
 
 
 # ══════════════════════════════════════════════════════════ formulários
+class ConfiguracaoBannersForm(_EstilizadoMixin, forms.ModelForm):
+    banners_padronizar = forms.TypedChoiceField(
+        label="Padronizar tamanho (modo faixa)", choices=(("sim", "Sim"), ("nao", "Não")),
+        coerce=lambda valor: valor == "sim",
+        help_text="Sim: moldura igual, com a arte inteira. Não: tamanhos variados, na proporção original.",
+    )
+
+    class Meta:
+        model = SiteConfig
+        fields = ("banners_padronizar", "banners_formato")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial["banners_padronizar"] = "sim" if self.instance.banners_padronizar else "nao"
+
+
 class BannerForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Banner
         fields = ("posicao", "selo", "titulo", "subtitulo", "imagem", "video",
-                  "cor_fundo", "texto_botao", "link", "produtos", "ordem", "publicado")
+                  "tempo_exibicao", "cor_fundo", "texto_botao", "tipo_destino", "link",
+                  "categoria_destino", "produtos", "ordem", "publicado")
         widgets = {
             "subtitulo": forms.Textarea(attrs={"rows": 2}),
             "cor_fundo": forms.TextInput(attrs={"type": "color"}),
             "link": forms.TextInput(attrs={"placeholder": "/catalogo/"}),
-            "produtos": forms.SelectMultiple(attrs={"size": 10}),
+            "produtos": forms.CheckboxSelectMultiple(attrs={"class": "lista-produtos-banner"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -38,19 +55,24 @@ class BannerForm(_EstilizadoMixin, forms.ModelForm):
 
         super().__init__(*args, **kwargs)
         self.fields["produtos"].queryset = (
-            Produto.objects.filter(publicado=True).order_by("nome")
+            Produto.objects.publicados().order_by("nome")
         )
         self.fields["produtos"].help_text = (
-            "Segure Ctrl (ou toque em vários no celular) para escolher mais de um. "
-            "Na faixa de produtos vira uma foto por produto. Na apresentação, "
-            "sem link escrito o slide leva ao primeiro em ordem alfabética — "
-            "para um destino certo, prefira preencher o link."
+            "Escolha os produtos do catálogo. Com destino ‘Produtos selecionados’, "
+            "um produto abre sua página; vários abrem uma seleção no catálogo. "
+            "Na faixa de produtos, cada foto tem seu próprio link."
         )
+        self.fields["produtos"].label = "Produtos selecionados"
+        self.fields["categoria_destino"].queryset = Categoria.objects.publicados().order_by("nome")
+        for campo in ("tempo_exibicao", "tipo_destino"):
+            self.fields[campo].required = False
         self.fields["posicao"].help_text = (
             "“Apresentação” é o bloco de vídeo/foto no topo da home — é o que "
             "o cliente vê primeiro no celular."
         )
         self.fields["imagem"].help_text = (
+            "Sugestão para modo faixa: 1600 × 500 px. Para paisagem: 1600 × 900 px. "
+            "Em tamanhos variados, a proporção original é preservada. "
             "Na apresentação com vídeo, esta imagem é o quadro que aparece "
             "enquanto o vídeo carrega."
         )
@@ -58,6 +80,16 @@ class BannerForm(_EstilizadoMixin, forms.ModelForm):
     def clean(self):
         dados = super().clean()
         posicao = dados.get("posicao")
+        for campo in ("tempo_exibicao", "tipo_destino"):
+            if dados.get(campo) in (None, ""):
+                dados[campo] = getattr(self.instance, campo)
+        destino = dados.get("tipo_destino")
+        if destino == Banner.TipoDestino.LINK and not dados.get("link"):
+            self.add_error("link", "Informe o link que o banner deve abrir.")
+        if destino == Banner.TipoDestino.PRODUTOS and not dados.get("produtos"):
+            self.add_error("produtos", "Escolha ao menos um produto do catálogo.")
+        if destino == Banner.TipoDestino.CATEGORIA and not dados.get("categoria_destino"):
+            self.add_error("categoria_destino", "Escolha a categoria que o banner deve abrir.")
 
         if posicao == Banner.Posicao.APRESENTACAO:
             # sem mídia o slide sairia como um retângulo preto
@@ -74,6 +106,20 @@ class BannerForm(_EstilizadoMixin, forms.ModelForm):
             self.add_error("produtos", "Escolha ao menos um produto para a faixa.")
 
         return dados
+
+    def clean_link(self):
+        from django.core.validators import URLValidator
+        from django.core.exceptions import ValidationError
+
+        link = self.cleaned_data.get("link", "").strip()
+        if any(ord(caractere) < 32 for caractere in link):
+            raise forms.ValidationError("O link não pode conter quebras de linha ou tabulações.")
+        if link and not (link.startswith("/") and not link.startswith("//") and "\\" not in link):
+            try:
+                URLValidator(schemes=["http", "https"])(link)
+            except ValidationError:
+                raise forms.ValidationError("Use um endereço https:// ou um caminho da loja, como /catalogo/.")
+        return link
 
 
 class DiferencialForm(_EstilizadoMixin, forms.ModelForm):
@@ -346,8 +392,8 @@ SECOES: dict[str, Secao] = {
         slug="banners", titulo="Banners da home", singular="banner",
         model=Banner, form=BannerForm, icone="i-imagem",
         descricao=(
-            "O topo da home. A “Apresentação” é o bloco de vídeo ou foto que "
-            "aparece primeiro no celular; sem ela, entra o banner clássico."
+            "Configure imagens, vídeos, tempo de exibição e destinos dos banners. "
+            "No estilo Vitrine, carrossel principal e apresentação entram na sequência de slides."
         ),
         ordenacao=("ordem", "-criado_em"),
         busca=("titulo", "subtitulo"),

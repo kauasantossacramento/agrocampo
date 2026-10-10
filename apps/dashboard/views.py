@@ -778,9 +778,19 @@ def gestao(request, slug):
     """Listagem genérica de uma seção de conteúdo."""
     from django.db.models import Q
 
-    from .gestao import secoes_agrupadas
+    from .gestao import ConfiguracaoBannersForm, secoes_agrupadas
+    from apps.core.models import SiteConfig
 
     secao = _secao_ou_404(slug)
+    form_banners = None
+    if slug == "banners":
+        form_banners = ConfiguracaoBannersForm(
+            request.POST if request.method == "POST" else None, instance=SiteConfig.load(),
+        )
+        if request.method == "POST" and form_banners.is_valid():
+            form_banners.save()
+            messages.success(request, "Exibição dos banners atualizada.")
+            return redirect("dashboard:gestao", slug=slug)
     qs = secao.queryset()
 
     busca = request.GET.get("q", "").strip()
@@ -803,6 +813,7 @@ def gestao(request, slug):
         "dashboard/gestao.html",
         {
             "secao_atual": secao,
+            "form_banners": form_banners,
             "grupos": secoes_agrupadas().items(),
             "colunas": [c[0] for c in secao.colunas],
             "linhas": linhas,

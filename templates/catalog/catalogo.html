@@ -27,6 +27,7 @@
       </button>
 
       <form method="get" id="form-filtros" class="accordion__panel filters__panel">
+        {% if request.GET.banner %}<input type="hidden" name="banner" value="{{ request.GET.banner }}">{% endif %}
         {% if busca %}<input type="hidden" name="q" value="{{ busca }}">{% endif %}
 
         <div class="filters__group">

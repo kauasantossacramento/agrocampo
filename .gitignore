@@ -13,6 +13,7 @@ CREDENCIAIS.txt
 
 # ---- gerados no build/deploy ----
 /staticfiles/
+/backups/
 
 # ---- mídia ----
 # `media/seed/` é fonte: as fotos que o comando `seed` usa para montar o

@@ -338,6 +338,29 @@ uma lista com busca e o botão "Novo…" que abre o formulário em modal.
 | **Cidades atendidas / Ilhas e localidades / Avisos de entrega** | ver a seção 9. |
 
 ![Banners](prints/painel-conteudo-banners-desktop.png)
+
+Em **Conteúdo › Banners da home › Exibição dos banners**, escolha **Padronizar
+tamanho (modo faixa): Sim ou Não**. No estilo Vitrine, Sim usa uma moldura igual
+para as imagens e os vídeos do carrossel e da apresentação, preservando a arte
+inteira. Não mantém a proporção de cada arquivo; a altura muda a cada slide.
+
+Os tamanhos sugeridos são **1600 × 500 px** (faixa), **1600 × 900 px** (paisagem)
+e **1600 × 800 px** (intermediário). As medidas orientam a criação da arte;
+a loja adapta a largura à tela. Para ficar legível no celular, use texto grande
+e poucos elementos. Artes com outra proporção podem ter espaço livre na moldura.
+
+Ao cadastrar ou editar um banner, ajuste o **tempo de exibição**, entre **1 e
+300 segundos**. Vale para imagem e vídeo; o vídeo toca em silêncio e repete até
+o tempo escolhido terminar. O padrão é **6,5 segundos**. A troca automática pausa
+quando o cliente passa o mouse ou mantém o foco nos controles.
+
+Em **Ao clicar, abrir**, escolha um link, o catálogo completo, uma categoria
+ou produtos selecionados. Marque os produtos nas caixas: um abre a página do
+produto; vários abrem uma seleção no catálogo. Produtos na lixeira ou fora do
+ar não aparecem. **Automático** mantém o comportamento anterior: link preenchido
+ou primeiro produto disponível em ordem alfabética. Na faixa de produtos,
+cada foto continua levando ao seu próprio produto.
+
 ![Formulário de banner](prints/painel-conteudo-banner-form-desktop.png)
 ![Promoções em destaque](prints/painel-conteudo-promocoes-desktop.png)
 ![Marcas](prints/painel-conteudo-marcas-desktop.png)

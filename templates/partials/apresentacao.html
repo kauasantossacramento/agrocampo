@@ -6,11 +6,12 @@
   O vídeo entra mudo, em loop e com `playsinline`: com som ou em tela cheia o
   iOS recusa o autoplay e o cliente vê um retângulo preto.
 {% endcomment %}
-<section class="apresentacao" data-apresentacao aria-label="Destaques">
+{% load l10n %}
+<section class="apresentacao {% if site.banners_padronizar %}banners--faixa{% else %}banners--livres{% endif %}" style="--banner-formato:{{ site.banners_formato }}" data-apresentacao aria-label="Destaques">
   <div class="apresentacao__pilha">
     {% for banner in apresentacao %}
         <{% if banner.destino %}a href="{{ banner.destino }}"{% else %}div{% endif %}
-           class="apresentacao__slide" data-apresentacao-slide
+           class="apresentacao__slide" data-apresentacao-slide data-tempo="{{ banner.tempo_exibicao|unlocalize }}"
            {% if not forloop.first %}hidden{% endif %}
            {% if banner.destino %}aria-label="{{ banner.titulo }}"{% endif %}>
 
