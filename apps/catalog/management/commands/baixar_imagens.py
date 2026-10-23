@@ -40,6 +40,9 @@ TITULO_PROIBIDO = (
     "illustration", "drawing", "plate", "lithograph", "engraving",
     "keulemans", "gould", "1800", "1900", "sketch", "painting",
     "feather", "pena", "cage", "gaiola", "aviary interior",
+    # o jumento aparece muito puxando carroça ou em charge: o card quer o
+    # bicho, não a cena
+    "cart", "carriage", "wagon", "caricature", "statue", "monument",
 )
 
 # Nome cientifico exibido no site. Separado do termo de busca porque o que
@@ -59,6 +62,29 @@ NOME_CIENTIFICO = {
     "Peixe": "Carassius auratus", "Roedor": "Mesocricetus auratus",
     "Bovino": "Bos indicus", "Equino": "Equus caballus",
     "Suíno": "Sus scrofa domesticus", "Galinha": "Gallus gallus domesticus",
+}
+
+# O mapa acima é pelo nome, e o nome mudou quando a loja trocou o termo
+# técnico pelo que o cliente fala (equino virou Cavalo). O slug não muda
+# nunca — é por ele que a busca encontra a espécie daqui para a frente.
+POR_SLUG = {
+    "cao": ("Labrador Retriever dog", "Canis lupus familiaris"),
+    "gato": ("Domestic cat portrait", "Felis catus"),
+    "peixe": ("Carassius auratus aquarium", "Carassius auratus"),
+    "roedor": ("Syrian hamster Mesocricetus auratus", "Mesocricetus auratus"),
+    "bovino": ("Zebu cattle Bos indicus", "Bos indicus"),
+    # "Horse portrait" trazia meia cara cortada com neve ao fundo — num
+    # círculo de 72px virava uma mancha laranja. O termo em português traz o
+    # animal inteiro no pasto, que é o que o cliente reconhece.
+    "equino": ("cavalo crioulo campo", "Equus caballus"),
+    "suino": ("Domestic pig piglet farm", "Sus scrofa domesticus"),
+    "galinha": ("Gallus gallus domesticus hen", "Gallus gallus domesticus"),
+    "aves": ("Sicalis flaveola", "Sicalis flaveola"),
+    # Burro, jumento e jegue são o mesmo bicho na boca do sertão. O termo em
+    # português é o que devolve o animal inteiro no pasto, que se reconhece
+    # num círculo de 72px; o nome científico trouxe retrato em preto e branco
+    # (barrado pelo filtro) e close de cabeça, que vira só um borrão marrom.
+    "burro": ("burro asno", "Equus asinus"),
 }
 
 # nome da especie -> termo de busca (nome cientifico da o melhor resultado)
@@ -111,6 +137,10 @@ class Command(BaseCommand):
     help = "Baixa imagens de licença livre do Wikimedia Commons."
 
     def add_arguments(self, parser):
+        parser.add_argument(
+            "--especie", default="",
+            help="Refaz só esta espécie, pelo slug (ex.: --especie burro).",
+        )
         parser.add_argument("--produtos", action="store_true",
                             help="Também tenta preencher produtos genéricos.")
         parser.add_argument("--refazer", action="store_true",
@@ -130,14 +160,18 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------
     def _especies(self, opcoes):
         qs = Especie.objects.all()
-        if not opcoes["refazer"]:
+        if opcoes.get("especie"):
+            # trocar a foto de uma espécie não pode exigir refazer as trinta
+            qs = qs.filter(slug=opcoes["especie"])
+        elif not opcoes["refazer"]:
             qs = qs.filter(imagem="")
         if opcoes["limite"]:
             qs = qs[: opcoes["limite"]]
 
         self.stdout.write(self.style.MIGRATE_HEADING(f"Espécies ({qs.count()})"))
         for especie in qs:
-            termo = BUSCA_ESPECIES.get(especie.nome)
+            por_slug = POR_SLUG.get(especie.slug)
+            termo = por_slug[0] if por_slug else BUSCA_ESPECIES.get(especie.nome)
             if not termo:
                 self.stdout.write(f"  - {especie.nome}: sem termo de busca mapeado")
                 continue
@@ -154,7 +188,9 @@ class Command(BaseCommand):
 
             especie.imagem.save(f"{especie.slug}.jpg", ContentFile(conteudo), save=False)
             especie.credito_imagem = achado["credito"][:250]
-            especie.nome_cientifico = NOME_CIENTIFICO.get(especie.nome, "")
+            especie.nome_cientifico = (
+                por_slug[1] if por_slug else NOME_CIENTIFICO.get(especie.nome, "")
+            )
             especie.save()
             self.stdout.write(self.style.SUCCESS(f"  ok {especie.nome} — {achado['licenca']}"))
             time.sleep(0.4)  # cortesia com a API
