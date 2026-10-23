@@ -48,8 +48,12 @@
           toast('Para sair, use o X ali em cima — o que você digitou fica guardado.');
         }
       });
+      // Esc também não fecha: a tecla é fácil de encostar no notebook e o
+      // cadastro ia embora junto. Quem quer sair clica no X ou em Cancelar.
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && modal.classList.contains('is-open')) fecharModal();
+        if (e.key !== 'Escape' || !modal.classList.contains('is-open')) return;
+        e.preventDefault();
+        toast('Para sair, use o X ali em cima — o que você digitou fica guardado.');
       });
     }
     $('[data-modal-titulo]', modal).textContent = titulo;
@@ -205,6 +209,60 @@
         incluir();
       });
       campo.addEventListener('input', function () { aviso(''); });
+    });
+  }
+
+  /* Barra de progresso do envio. Vive no rodapé do modal e some no fim —
+     com ou sem erro. */
+  function mostrarProgresso(wizard) {
+    const caixa = document.createElement('div');
+    caixa.className = 'progresso';
+    caixa.innerHTML =
+      '<div class="progresso__trilho"><div class="progresso__barra"></div></div>' +
+      '<span class="progresso__texto">Preparando o envio…</span>';
+    const rodape = $('.wizard__rodape', wizard) || wizard;
+    rodape.parentNode.insertBefore(caixa, rodape);
+
+    const barra = $('.progresso__barra', caixa);
+    const texto = $('.progresso__texto', caixa);
+    return {
+      andar(enviado, total) {
+        if (!total) return;
+        const pct = Math.round((enviado / total) * 100);
+        barra.style.width = pct + '%';
+        const mb = (total / 1024 / 1024).toFixed(1);
+        texto.textContent = pct < 100
+          ? 'Enviando… ' + pct + '% de ' + mb + ' MB'
+          : 'Recebido. O servidor está preparando o arquivo…';
+      },
+      remover() { caixa.remove(); },
+    };
+  }
+
+  /* XHR em vez de fetch só por causa do progresso; a resposta volta no mesmo
+     formato que o resto do código já espera. */
+  function enviarComProgresso(url, dados, barra) {
+    return new Promise(function (ok, falhou) {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('X-CSRFToken', csrf());
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+      xhr.upload.addEventListener('progress', function (e) {
+        if (e.lengthComputable) barra.andar(e.loaded, e.total);
+      });
+      xhr.addEventListener('load', function () {
+        ok({
+          status: xhr.status,
+          ok: xhr.status >= 200 && xhr.status < 300,
+          headers: { get: function (n) { return xhr.getResponseHeader(n); } },
+          json: function () { return Promise.resolve(JSON.parse(xhr.responseText)); },
+        });
+      });
+      xhr.addEventListener('error', function () { falhou(new Error('rede')); });
+      xhr.addEventListener('timeout', function () { falhou(new Error('tempo')); });
+      xhr.timeout = 30 * 60 * 1000;     // vídeo grande pelo 4G da loja
+      xhr.send(dados);
     });
   }
 
@@ -548,7 +606,8 @@
       let recarregado = false;
 
       // barra antes de gastar o 4G do lojista com um envio que vai falhar
-      const limites = { video: 60, imagem: 10, logo: 10, favicon: 10 };
+      // os mesmos números de apps/core/models.py — e o nginx fica acima dos dois
+      const limites = { video: 300, imagem: 25, imagem_movel: 25, logo: 10, favicon: 10 };
       const grande = $$('input[type=file]', wizard).find(function (campo) {
         const limite = limites[campo.name] || 10;
         return campo.files.length && campo.files[0].size > limite * 1024 * 1024;
@@ -557,8 +616,10 @@
         const limite = limites[grande.name] || 10;
         const mb = (grande.files[0].size / 1024 / 1024).toFixed(1);
         toast(
-          'O arquivo tem ' + mb + ' MB e o limite é ' + limite +
-          ' MB. Comprima e tente de novo.',
+          'O arquivo tem ' + mb + ' MB e o limite é ' + limite + ' MB. ' +
+          (grande.name === 'video'
+            ? 'Corte um trecho mais curto e envie de novo.'
+            : 'Reduza o arquivo e envie de novo.'),
           'error'
         );
         return;
@@ -602,17 +663,20 @@
       btSalvar.classList.add('is-loading');
       btSalvar.innerHTML = '<span class="spinner"></span> Salvando…';
 
+      /* Um vídeo de 300 MB pelo 4G da loja leva minutos. Sem barra, o lojista
+         acha que travou e clica de novo — por isso o envio é por XHR, que é
+         quem informa o andamento (o fetch não expõe o upload). */
+      const barra = mostrarProgresso(wizard);
+
       try {
-        const resposta = await fetch(wizard.dataset.acao, {
-          method: 'POST',
-          body: dados,
-          headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
-        });
+        const resposta = await enviarComProgresso(
+          wizard.dataset.acao, dados, barra
+        );
 
         // 413 vem do nginx como página HTML: tentar lê-la como JSON estourava
         // e o lojista via "verifique a conexão" para um arquivo grande demais
         if (resposta.status === 413) {
-          toast('Arquivo grande demais para enviar. Comprima e tente de novo.', 'error');
+          toast('Arquivo grande demais para o servidor aceitar.', 'error');
           return;
         }
         const tipo = resposta.headers.get('content-type') || '';
@@ -645,6 +709,7 @@
       } finally {
         btSalvar.classList.remove('is-loading');
         btSalvar.innerHTML = textoOriginal;
+        barra.remover();
       }
 
       if (recarregado) prepararWizard();

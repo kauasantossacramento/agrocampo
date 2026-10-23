@@ -55,7 +55,8 @@ def catalogo(request, categoria=None, marca=None, especie=None):
         titulo = marca.nome
         contexto_extra["marca_atual"] = marca
     if especie:
-        produtos = produtos.filter(especies=especie)
+        # a espécie-mãe traz junto o que está agrupado nela
+        produtos = produtos.filter(especies__in=especie.familia_ids).distinct()
         titulo = f"Para {especie.nome}"
         contexto_extra["especie_atual"] = especie
 
@@ -144,9 +145,12 @@ def por_marca(request, slug):
 
 
 def por_especie(request, slug):
-    return catalogo(
-        request, especie=get_object_or_404(Especie.objects.publicados(), slug=slug)
-    )
+    especie = get_object_or_404(Especie.objects.publicados(), slug=slug)
+    # link antigo de pássaro específico continua valendo: leva para o card
+    # que agora o representa, sem deixar ninguém numa página vazia
+    if especie.agrupada_em_id and especie.agrupada_em.publicado:
+        return redirect(especie.agrupada_em.get_absolute_url(), permanent=True)
+    return catalogo(request, especie=especie)
 
 
 def detalhe_produto(request, slug):
@@ -187,7 +191,7 @@ def marcas(request):
 def especies(request):
     grupos = []
     for valor, rotulo in Especie.Grupo.choices:
-        itens = Especie.objects.publicados().filter(grupo=valor)
+        itens = Especie.objects.navegaveis().filter(grupo=valor)
         if itens:
             grupos.append({"nome": rotulo, "itens": itens})
     return render(

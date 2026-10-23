@@ -141,6 +141,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
+# ------------------------------------------------------------------ uploads
+# Arquivo acima de 5 MB vai para o disco em vez da memória: três workers
+# segurando um vídeo de 300 MB na RAM derrubariam o container.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+# Vale para os campos de texto do formulário, não para o arquivo; fica
+# folgado para o multipart do wizard não esbarrar.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 32 * 1024 * 1024
+FILE_UPLOAD_PERMISSIONS = 0o644
+
 # ------------------------------------------------------------------- e-mail
 # Com EMAIL_HOST preenchido no .env a loja passa a enviar de verdade; sem ele,
 # as mensagens vão para o log do container (é o que acontece hoje) e ninguém

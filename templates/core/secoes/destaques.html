@@ -6,7 +6,7 @@
   <div class="ofertas-grade ofertas-grade--{{ banners_secundarios|length }}" data-stagger>
     {% for b in banners_secundarios %}
       <a href="{{ b.destino|default:'/catalogo/' }}" class="ofertas-grade__item" aria-label="{{ b.titulo }}">
-        <img src="{{ b.imagem.url }}" alt="{{ b.titulo }}" loading="lazy">
+        <img src="{{ b.foto.url }}" alt="{{ b.titulo }}" loading="lazy" decoding="async">
       </a>
     {% endfor %}
   </div>

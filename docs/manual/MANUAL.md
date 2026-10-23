@@ -278,6 +278,13 @@ duplicam, mesmo com maiúsculas diferentes. Em *animais* dá para listar vários
 separados por vírgula. A **unidade** também é livre: use as sugestões (un, kg,
 g, L, ml, pct) ou escreva a sua, como *fardo* ou *saco*.
 
+**Foto do produto (como em marketplace):** as miniaturas ficam em pé à
+esquerda e trocam a foto grande ao passar o mouse. Com o mouse sobre a foto
+aparece uma **lente**, e ao lado abre um painel com o pedaço ampliado em alta
+resolução — a foto não sai do lugar e o preço e o botão de comprar continuam
+onde estavam. No celular não há lente: o toque abre a foto em tela cheia, com
+pinça para ampliar e arrasto para trocar de foto.
+
 **Selo da linha:** produto com linha marcada ganha um selo sobre a foto. As
 linhas são cadastro seu em **Conteúdo › Linhas de produto**: nome, **imagem do
 selo (PNG)**, **tamanho do selo**, cor da medalha desenhada pelo site (usada
@@ -328,14 +335,40 @@ uma lista com busca e o botão "Novo…" que abre o formulário em modal.
 
 | Tela | Para quê |
 |---|---|
-| **Banners** | os slides do carrossel (*Carrossel principal* = cartaz 16:5 com link, título opcional; *Vídeo ou foto de apresentação* = mídia grande, entra no mesmo carrossel), as **Ofertas em destaque** (*Oferta em destaque (cartaz na home)* — 1 ocupa a largura toda, 2 lado a lado, 3+ em duas colunas; liga/desliga por *publicado*) e a *Faixa de produtos* (fotos de produtos com link). |
+| **Banners** | os slides do carrossel (*Carrossel principal* = cartaz 16:5 com link, título opcional; *Vídeo ou foto de apresentação* = mídia grande, entra no mesmo carrossel; *Fim da página* = faixa antes do rodapé), as **Ofertas em destaque** (*Oferta em destaque (cartaz na home)* — 1 ocupa a largura toda, 2 lado a lado, 3+ em duas colunas; liga/desliga por *publicado*) e a *Faixa de produtos* (fotos de produtos com link). |
 | **Promoções em destaque** | bloco com título, texto, imagem ou produto, **início e fim** e a seção depois da qual entra. |
 | **Faixa de garantias** | os quatro selos abaixo do carrossel (frete, Pix, assinatura, compra garantida). |
 | **Páginas institucionais** | Quem somos, Entregas e prazos, Trocas, Privacidade, FAQ (HTML simples). |
 | **Categorias / Marcas / Espécies** | a árvore do catálogo; marca tem o atalho de "Maiores sucessos"; espécie tem foto e destaque na home. |
+| **Vídeos do Instagram** | os vídeos que aparecem na home no lugar do blog. Suba como saiu do celular (até 300 MB): a loja comprime e tira a capa sozinha. Título, legenda, link do post, ordem e publicado. |
 | **Linhas de produto** | Premium, Super Premium, Especial… Nome, **PNG e tamanho do selo**, cor da medalha padrão, título da vitrine na home, ordem e liga/desliga. É o que o cadastro de produto oferece no campo *Linha*. |
 | **Cupons** | código, percentual/valor, validade, mínimo. |
 | **Cidades atendidas / Ilhas e localidades / Avisos de entrega** | ver a seção 9. |
+
+**Vídeo pesado pode subir direto do celular.** O limite é de **300 MB** — não
+precisa comprimir antes. Depois do envio, a própria loja gera a versão leve
+(H.264, até 1920 px de largura, sem som) e tira a capa do primeiro segundo.
+Enquanto isso a listagem mostra **“⏳ processando vídeo…”** e o banner **não
+aparece no site**: só entra no ar a versão comprimida, para a página não
+pesar no 4G de quem está no sítio. Um vídeo de 7 MB costuma virar menos de
+200 KB. Se der errado, a listagem mostra **“⚠ vídeo falhou”**.
+
+**Tempo de cada slide.** O padrão é de **5 segundos** por imagem. O vídeo
+manda no próprio tempo: o slide troca quando ele acaba, e o número do cadastro
+vira só o limite. O carrossel anda sozinho, pausa com o mouse em cima, para
+quando a aba sai da frente e respeita quem pediu menos animação no sistema.
+
+**Coluna “Destino”.** Se a listagem mostrar **“⚠ catálogo inteiro”**, aquele
+banner está sem destino escolhido: clicar nele abre a loja toda. Abra o banner
+e escolha em *Ao clicar, abrir* — categoria, produtos selecionados ou um link.
+
+**Imagem para o celular.** Cartaz largo vira uma tira ilegível em tela de
+celular. O campo *Imagem para o celular* aceita a versão vertical ou quadrada;
+vazio, o site usa a de computador.
+
+**Fim da página.** A posição *Fim da página* põe uma faixa logo antes do
+rodapé. Sem banner publicado nessa posição, a seção não aparece. Com mais de
+um, eles giram no mesmo carrossel do topo.
 
 ![Banners](prints/painel-conteudo-banners-desktop.png)
 
@@ -366,6 +399,47 @@ cada foto continua levando ao seu próprio produto.
 ![Marcas](prints/painel-conteudo-marcas-desktop.png)
 ![Cupons](prints/painel-conteudo-cupons-desktop.png)
 ![Conteúdo no celular](prints/painel-conteudo-celular.png)
+
+---
+
+### 7.1 Instagram na home
+
+A seção **“Siga a AgroCampo no Instagram”** ocupa o lugar que era do blog.
+São duas leituras da mesma lista: os círculos no topo, como stories, e a fita
+de vídeos verticais logo abaixo. Clicar em qualquer um abre o player em tela
+cheia, que avança sozinho e fecha no fim.
+
+- **Como alimentar hoje:** *Conteúdo › Vídeos do Instagram*. Suba o vídeo,
+  escreva a legenda e cole o link do post. Funciona sem depender de nada do
+  Instagram.
+- **O @ da loja** fica em *Configurações › Contato › @ do Instagram*; é ele
+  que o botão “Seguir no Instagram” usa.
+- **Busca automática (opcional):** com um token da Graph API e o ID da conta
+  comercial, a loja traz os reels sozinha. Exige conta Business ou Creator
+  ligada a uma Página do Facebook e um token que vence a cada 60 dias — por
+  isso o cadastro manual continua sendo o caminho principal. Stories sempre
+  somem em 24 h no Instagram; o que for subido aqui fica.
+
+### 7.2 Aves em um card só
+
+A navegação por animal mostra **Cão, Gato, Peixe, Roedor, Aves, Bovino,
+Galinha, Equino e Suíno**. Os vinte tipos de pássaro (canário, calopsita,
+curió, periquito…) ficam agrupados dentro de **Aves**: clicar no card traz a
+ração de todos eles de uma vez. **A galinha continua separada**, porque é
+criação, não passarinho.
+
+Nada foi apagado: cada espécie continua cadastrada, com os seus produtos, e
+os links antigos (`/especie/canario/`) levam para Aves automaticamente. Para
+desfazer num caso específico, abra a espécie em *Conteúdo › Espécies* e
+limpe o campo **Agrupada em** — ela volta a ter card próprio.
+
+### 7.3 Blog
+
+O blog está **desligado** por padrão: a loja publica no Instagram, e os
+textos antigos ficam guardados. Para trazê-lo de volta, marque *blog ativo*
+em **Configurações › Regras da loja** — ele reaparece no menu, no rodapé e
+na home. Post sem foto de capa agora mostra a cor da categoria em vez de um
+retângulo branco.
 
 ---
 

@@ -222,10 +222,17 @@ class Marca(TimeStampedModel, SluggedModel):
         return reverse("catalog:marca", args=[self.slug])
 
 
+class EspecieQuerySet(PublicadoQuerySet):
+    def navegaveis(self):
+        """As que ganham card: publicadas e não penduradas em outra."""
+        return self.publicados().filter(agrupada_em__isnull=True)
+
+
 class Especie(TimeStampedModel, SluggedModel):
     """Navegação por espécie/animal — canário, calopsita, bovino, cão..."""
 
     class Grupo(models.TextChoices):
+        AVES = "aves", "Aves"
         PASSERIFORME = "passeriforme", "Passeriformes"
         PSITACIDEO = "psitacideo", "Psitacídeos"
         PET = "pet", "Pets"
@@ -233,6 +240,16 @@ class Especie(TimeStampedModel, SluggedModel):
         OUTRO = "outro", "Outros"
 
     grupo = models.CharField(max_length=20, choices=Grupo.choices, default=Grupo.OUTRO)
+    # Treze espécies de pássaro viravam treze cards na home e ninguém achava
+    # a ração. Agora elas se penduram numa espécie-mãe ("Aves") e aparecem
+    # como um card só — sem apagar espécie nem a ligação com os produtos,
+    # porque o filtro fino ainda serve a quem procura ração de curió.
+    agrupada_em = models.ForeignKey(
+        "self", verbose_name="agrupada em", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="agrupadas",
+        help_text="Deixe vazio para a espécie ter card próprio. Preenchido, "
+                  "ela some da navegação e entra na espécie escolhida.",
+    )
     imagem = models.ImageField(upload_to="especies/", blank=True)
     credito_imagem = models.CharField(
         "crédito da imagem",
@@ -247,7 +264,7 @@ class Especie(TimeStampedModel, SluggedModel):
     destaque_home = models.BooleanField(default=False)
     publicado = models.BooleanField(default=True)
 
-    objects = PublicadoQuerySet.as_manager()
+    objects = EspecieQuerySet.as_manager()
 
     class Meta:
         ordering = ["ordem", "nome"]
@@ -265,6 +282,17 @@ class Especie(TimeStampedModel, SluggedModel):
         Grupo.RURAL: "rural",
         Grupo.OUTRO: "pata",
     }
+
+    @property
+    def familia_ids(self):
+        """Esta espécie e as que foram agrupadas nela.
+
+        É o que faz o card "Aves" trazer ração de canário, de calopsita e de
+        periquito na mesma listagem.
+        """
+        ids = [self.pk]
+        ids += list(self.agrupadas.values_list("pk", flat=True))
+        return ids
 
     @property
     def icone_svg(self) -> str:

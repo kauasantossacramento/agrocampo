@@ -16,51 +16,81 @@
   <div class="pdp">
 
     {# ------------------------------------------------------- GALERIA #}
-    <div data-reveal="left">
-      {% comment %}
-        A moldura é um botão: clicar na foto abre a imagem em tela cheia, do
-        tamanho que a tela permitir — quem quer ver a embalagem precisa ler o
-        rótulo, e dentro da moldura a letra fica pequena.
-      {% endcomment %}
-      <div class="gallery__main" data-ampliar role="button" tabindex="0"
-           aria-label="Ampliar a foto de {{ produto.nome }}">
-        {% with principal=produto.imagem_principal %}
-          {% if principal %}
-            <img src="{{ principal.imagem.url }}" alt="{{ produto.nome }}" data-gallery-main>
-          {% else %}
-            <span class="product__placeholder" style="border-radius:var(--r-xl)">
-            <svg width="90" height="90" aria-hidden="true"><use href="#c-{{ produto.categoria.icone_svg }}"></use></svg>
-          </span>
+    {% comment %}
+      Galeria no formato que o cliente conhece de marketplace: miniaturas
+      em pé à esquerda, foto grande presa no quadro e, no hover, uma lente
+      sobre a foto com o pedaço ampliado num painel ao lado.
+
+      O painel é `position:absolute` dentro da coluna e só aparece no hover,
+      então ele passa por cima da coluna de preço sem empurrar nada — o bug
+      antigo era a própria imagem crescendo e cobrindo o botão de comprar.
+
+      No celular não existe hover: lá o toque abre a foto em tela cheia, com
+      pinça para ampliar e arrasto para trocar de foto.
+    {% endcomment %}
+    <div class="pdp__galeria" data-reveal="left">
+      {% if produto.imagens.count > 1 %}
+        <div class="gallery__thumbs" role="tablist" aria-label="Fotos do produto">
+          {% for img in produto.imagens.all %}
+            <button class="gallery__thumb {% if forloop.first %}is-active{% endif %}"
+                    type="button" role="tab"
+                    data-gallery-thumb="{{ img.imagem.url }}"
+                    aria-label="{{ img.legenda|default:'Ver imagem' }}"
+                    aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+              <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}" loading="lazy">
+            </button>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="gallery__palco">
+        <div class="gallery__main" data-ampliar role="button" tabindex="0"
+             aria-label="Ampliar a foto de {{ produto.nome }}">
+          {% with principal=produto.imagem_principal %}
+            {% if principal %}
+              <img src="{{ principal.imagem.url }}" alt="{{ produto.nome }}" data-gallery-main>
+            {% else %}
+              <span class="product__placeholder" style="border-radius:var(--r-xl)">
+                <svg width="90" height="90" aria-hidden="true"><use href="#c-{{ produto.categoria.icone_svg }}"></use></svg>
+              </span>
+            {% endif %}
+          {% endwith %}
+
+          {# a lente segue o ponteiro; o JS a posiciona e a mostra #}
+          <span class="gallery__lente" data-lente hidden aria-hidden="true"></span>
+
+          {% if produto.promocao_vigente %}
+            <span class="badge badge--sale" style="position:absolute;top:var(--s-4);left:var(--s-4);font-size:var(--fs-sm);padding:.4rem .8rem">−{{ produto.percentual_desconto }}%</span>
           {% endif %}
-        {% endwith %}
-        {% if produto.promocao_vigente %}
-          <span class="badge badge--sale" style="position:absolute;top:var(--s-4);left:var(--s-4);font-size:var(--fs-sm);padding:.4rem .8rem">−{{ produto.percentual_desconto }}%</span>
-        {% endif %}
-        {% if produto.proteina %}
-          <span class="faixa-proteina faixa-proteina--grande" aria-label="{{ produto.proteina }} por cento de proteína">
-            <strong>{{ produto.proteina }}%</strong><span>de proteína</span>
-          </span>
-        {% endif %}
-        {% include 'partials/selo_linha.html' %}
+          {% if produto.proteina %}
+            <span class="faixa-proteina faixa-proteina--grande" aria-label="{{ produto.proteina }} por cento de proteína">
+              <strong>{{ produto.proteina }}%</strong><span>de proteína</span>
+            </span>
+          {% endif %}
+          {% include 'partials/selo_linha.html' %}
+        </div>
+
+        {# painel do zoom: nasce vazio e some ao tirar o mouse #}
+        <div class="gallery__zoom" data-zoom hidden aria-hidden="true"></div>
       </div>
+
+      {% comment %}
+        A dica muda com o aparelho: quem está no celular não tem mouse para
+        passar. Quem decide é o CSS (@media hover), não o JS — assim a frase
+        certa já vem na primeira pintura.
+      {% endcomment %}
+      <p class="xs muted gallery__dica">
+        <span class="gallery__dica--mouse">Passe o mouse para ampliar · clique para ver em tela cheia</span>
+        <span class="gallery__dica--toque">Toque na foto para ver em tela cheia</span>
+      </p>
 
       <div class="lupa" data-lupa hidden>
         <button type="button" class="lupa__fechar" data-lupa-fechar aria-label="Fechar">
           <svg width="20" height="20"><use href="#i-x"></use></svg>
         </button>
         <img data-lupa-img src="" alt="{{ produto.nome }}">
+        <div class="lupa__passos" data-lupa-passos hidden></div>
       </div>
-
-      {% if produto.imagens.count > 1 %}
-        <div class="gallery__thumbs">
-          {% for img in produto.imagens.all %}
-            <button class="gallery__thumb {% if forloop.first %}is-active{% endif %}"
-                    data-gallery-thumb="{{ img.imagem.url }}" aria-label="{{ img.legenda|default:'Ver imagem' }}">
-              <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}" loading="lazy">
-            </button>
-          {% endfor %}
-        </div>
-      {% endif %}
     </div>
 
     {# ------------------------------------------------------- COMPRA #}

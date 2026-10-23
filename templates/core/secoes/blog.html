@@ -7,8 +7,17 @@
   <div class="grid grid--3" data-stagger>
     {% for post in posts %}
       <a href="{{ post.get_absolute_url }}" class="card card--hover post-card" style="color:inherit;overflow:hidden">
-        <div class="post-card__media">
-          {% if post.capa %}<img src="{{ post.capa.url }}" alt="{{ post.titulo }}" loading="lazy">{% endif %}
+        {% comment %}
+          Post sem capa deixava um retângulo branco no card, parecendo imagem
+          quebrada. Sem foto, entra a marca d'água da categoria.
+        {% endcomment %}
+        <div class="post-card__media {% if not post.capa %}post-card__media--vazia{% endif %}"
+             {% if not post.capa and post.categoria %}style="--cor-post:{{ post.categoria.cor }}"{% endif %}>
+          {% if post.capa %}
+            <img src="{{ post.capa.url }}" alt="{{ post.titulo }}" loading="lazy" decoding="async">
+          {% else %}
+            <svg width="44" height="44" aria-hidden="true"><use href="#i-lapis"></use></svg>
+          {% endif %}
         </div>
         <div style="padding:var(--s-5)">
           {% if post.categoria %}<span class="badge" style="background:{{ post.categoria.cor }};color:#fff">{{ post.categoria.nome }}</span>{% endif %}

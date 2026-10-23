@@ -33,9 +33,15 @@
         {# vídeo cadastrado em "Apresentação": entra como slide, mudo e em loop #}
         <{% if banner.destino %}a href="{{ banner.destino }}"{% else %}div{% endif %} class="vitrine-capa__slide vitrine-capa__slide--video"
            data-hero-slide data-tempo="{{ banner.tempo_exibicao|unlocalize }}" {% if not forloop.first %}hidden{% endif %} {% if banner.titulo %}aria-label="{{ banner.titulo }}"{% endif %}>
-          <video autoplay muted loop playsinline preload="metadata"
-                 {% if banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
-            <source src="{{ banner.video.url }}">
+          {% comment %}
+            Sempre a versão comprimida pela loja (`video_no_ar`): o arquivo que
+            o lojista enviou pode ter centenas de MB. A capa é o quadro que o
+            próprio servidor extraiu, para o quadro não ficar preto carregando.
+          {% endcomment %}
+          <video autoplay muted playsinline preload="metadata"
+                 {% if banner.video_poster %}poster="{{ banner.video_poster.url }}"
+                 {% elif banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
+            <source src="{{ banner.video_no_ar.url }}" type="video/mp4">
           </video>
           {% comment %}
             Quem cadastra em "apresentação" sobe a peça já pronta, com o texto
@@ -56,7 +62,13 @@
       {% elif banner.imagem %}
         <a href="{{ banner.destino|default:'/catalogo/' }}" class="vitrine-capa__slide" data-hero-slide data-tempo="{{ banner.tempo_exibicao|unlocalize }}" {% if not forloop.first %}hidden{% endif %}
            aria-label="{{ banner.titulo|default:'Banner' }}">
-          <img src="{{ banner.imagem.url }}" alt="{{ banner.titulo }}" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+          <picture>
+            {% if banner.imagem_movel %}
+              <source media="(max-width: 640px)" srcset="{{ banner.foto_movel.url }}">
+            {% endif %}
+            <img src="{{ banner.foto.url }}" alt="{{ banner.titulo }}"
+                 {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy" decoding="async"{% endif %}>
+          </picture>
           {% comment %}
             Texto opcional sobre o cartaz: entra pela esquerda, sobre um
             gradiente escuro que some para a direita — a arte continua
@@ -147,5 +159,8 @@
   {% include caminho %}
   {% include 'core/secoes/_promocoes.html' with chave=caminho %}
 {% endfor %}
+
+{# a faixa do fim fecha a página, sempre depois de todas as seções #}
+{% include 'core/secoes/rodape_banner.html' %}
 
 {% endblock %}

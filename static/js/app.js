@@ -191,11 +191,24 @@
 
   /* ------------------------------------------------- carrossel do hero */
   function iniciarHero() {
-    const hero = $('[data-hero]');
-    if (!hero) return;
+    // a home tem dois carrosséis: o do topo e o do fim da página. O mesmo
+    // comportamento serve aos dois, cada um com o seu próprio relógio.
+    $$('[data-hero]').forEach(montarHero);
+  }
+
+  function montarHero(hero) {
     const slides = $$('[data-hero-slide]', hero);
     const pontos = $$('[data-hero-dot]', hero);
-    if (slides.length < 2) return;
+    if (!slides.length) return;
+
+    // um slide só não gira, mas o vídeo precisa tocar assim mesmo
+    if (slides.length < 2) {
+      $$('video', hero).forEach((video) => {
+        const talvez = video.play();
+        if (talvez && talvez.catch) talvez.catch(() => { video.controls = true; });
+      });
+      return;
+    }
 
     let atual = 0;
     let timer = null;
@@ -213,6 +226,7 @@
         const video = s.querySelector('video');
         if (!video) return;
         if (visivel) {
+          video.currentTime = 0;
           const talvez = video.play();
           // navegador que recusa o autoplay deixaria um retângulo preto sem
           // saída; com os controles à mostra o cliente dá o play
@@ -242,6 +256,16 @@
     const anterior = () => mostrar((atual - 1 + slides.length) % slides.length);
     $$('[data-hero-prev]', hero).forEach(b => b.addEventListener('click', () => { parar(); anterior(); iniciar(); }));
     $$('[data-hero-next]', hero).forEach(b => b.addEventListener('click', () => { parar(); proximo(); iniciar(); }));
+    /* Vídeo manda no próprio tempo: cortar no meio da fala é pior do que
+       esperar, e deixar parado no último quadro depois do fim é pior ainda.
+       O tempo do cadastro continua valendo como teto, lá no `iniciar()`. */
+    $$('video', hero).forEach((video) => {
+      video.loop = false;
+      video.addEventListener('ended', () => {
+        if (!video.closest('[data-hero-slide]').hidden) proximo();
+      });
+    });
+
     hero.addEventListener('mouseenter', parar);
     hero.addEventListener('mouseleave', iniciar);
     hero.addEventListener('focusin', parar);
@@ -513,32 +537,190 @@
     });
   }
 
+  /* ----------------------------------- player dos vídeos do Instagram */
+  function iniciarStories() {
+    const player = $('[data-stories-player]');
+    if (!player) return;
+
+    const gatilhos = $$('[data-story]');
+    const fontes = $$('.reels__item').map((item) => ({
+      video: item.dataset.video,
+      link: item.dataset.link,
+      legenda: item.dataset.legenda,
+    }));
+    if (!fontes.length) return;
+
+    const video = $('[data-stories-video]', player);
+    const barras = $('[data-stories-barras]', player);
+    const legenda = $('[data-stories-legenda]', player);
+    const link = $('[data-stories-link]', player);
+    let atual = 0;
+
+    // o player vive solto no <body>: dentro da seção, qualquer `transform`
+    // de animação faria o `fixed` medir a caixa errada
+    if (player.parentElement !== document.body) document.body.appendChild(player);
+
+    function desenharBarras() {
+      barras.innerHTML = fontes.map(() => '<i><span></span></i>').join('');
+    }
+
+    function andarBarra() {
+      const partes = $$('span', barras);
+      partes.forEach((p, i) => {
+        p.style.transition = 'none';
+        p.style.width = i < atual ? '100%' : '0';
+      });
+      const ativa = partes[atual];
+      if (!ativa || !video.duration || !isFinite(video.duration)) return;
+      ativa.style.transition = 'width ' + video.duration + 's linear';
+      // o navegador precisa pintar o 0% antes de animar até 100%
+      requestAnimationFrame(() => { ativa.style.width = '100%'; });
+    }
+
+    function mostrar(indice) {
+      atual = (indice + fontes.length) % fontes.length;
+      const dados = fontes[atual];
+      video.src = dados.video;
+      video.muted = false;
+      video.play().catch(() => {
+        // autoplay com som costuma ser recusado: tenta mudo, como o Instagram
+        video.muted = true;
+        video.play().catch(() => {});
+      });
+      legenda.textContent = dados.legenda || '';
+      if (dados.link) { link.href = dados.link; link.hidden = false; }
+      else { link.hidden = true; }
+    }
+
+    function abrir(indice) {
+      desenharBarras();
+      player.hidden = false;
+      document.body.style.overflow = 'hidden';
+      mostrar(indice);
+    }
+
+    function fechar() {
+      player.hidden = true;
+      video.pause();
+      video.removeAttribute('src');
+      document.body.style.overflow = '';
+    }
+
+    gatilhos.forEach((g) => {
+      g.addEventListener('click', () => abrir(Number(g.dataset.story) || 0));
+    });
+    video.addEventListener('loadedmetadata', andarBarra);
+    video.addEventListener('ended', () => {
+      // no último, fecha: seguir girando sem fim prende quem já viu tudo
+      if (atual === fontes.length - 1) fechar();
+      else mostrar(atual + 1);
+    });
+
+    $('[data-stories-fechar]', player).addEventListener('click', fechar);
+    $('[data-stories-proximo]', player).addEventListener('click', () => mostrar(atual + 1));
+    $('[data-stories-anterior]', player).addEventListener('click', () => mostrar(atual - 1));
+    document.addEventListener('keydown', (e) => {
+      if (player.hidden) return;
+      if (e.key === 'Escape') fechar();
+      if (e.key === 'ArrowRight') mostrar(atual + 1);
+      if (e.key === 'ArrowLeft') mostrar(atual - 1);
+    });
+
+    // no celular: toque na metade direita avança, na esquerda volta
+    video.addEventListener('click', (e) => {
+      const r = video.getBoundingClientRect();
+      mostrar(atual + (e.clientX - r.left > r.width / 2 ? 1 : -1));
+    });
+  }
+
   /* -------------------------------------------- galeria da página de produto */
   function iniciarGaleria() {
     const principal = $('[data-gallery-main]');
     if (!principal) return;
-    $$('[data-gallery-thumb]').forEach((miniatura) => {
-      miniatura.addEventListener('click', () => {
-        const src = miniatura.dataset.galleryThumb;
-        if (!src) return;
-        principal.style.opacity = '0';
-        setTimeout(() => {
-          principal.src = src;
-          principal.style.opacity = '1';
-        }, 130);
-        $$('[data-gallery-thumb]').forEach((m) => m.classList.remove('is-active'));
-        miniatura.classList.add('is-active');
-      });
-    });
-    principal.style.transition = 'opacity .13s ease';
 
-    /* Clicar na foto abre o visor com a imagem no tamanho da tela — e é
-       sempre a foto que está em cena, inclusive depois de trocar o tamanho
-       ou a miniatura. */
     const moldura = $('[data-ampliar]');
+    const lente = $('[data-lente]');
+    const painel = $('[data-zoom]');
     const lupa = $('[data-lupa]');
     const lupaImg = $('[data-lupa-img]');
-    if (!moldura || !lupa || !lupaImg) return;
+    const passos = $('[data-lupa-passos]');
+    const miniaturas = $$('[data-gallery-thumb]');
+    const temMouse = window.matchMedia('(hover: hover)').matches;
+
+    // as fotos na ordem em que estão na galeria: serve ao arrasto da tela cheia
+    const fotos = miniaturas.length
+      ? miniaturas.map((m) => m.dataset.galleryThumb)
+      : [principal.currentSrc || principal.src];
+    let atual = 0;
+
+    /* ------------------------------------------------ troca de foto */
+    function trocar(indice, vindoDaMiniatura) {
+      atual = (indice + fotos.length) % fotos.length;
+      principal.style.opacity = '0';
+      setTimeout(() => {
+        principal.src = fotos[atual];
+        principal.style.opacity = '1';
+      }, 120);
+      miniaturas.forEach((m, i) => {
+        m.classList.toggle('is-active', i === atual);
+        m.setAttribute('aria-selected', i === atual ? 'true' : 'false');
+      });
+      if (!lupa.hidden) mostrarNaLupa();
+      if (!vindoDaMiniatura && miniaturas[atual]) {
+        miniaturas[atual].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    }
+    principal.style.transition = 'opacity .12s ease';
+
+    miniaturas.forEach((miniatura, i) => {
+      miniatura.addEventListener('click', () => trocar(i, true));
+      // passar o mouse já troca: é como o cliente espera de marketplace
+      if (temMouse) miniatura.addEventListener('mouseenter', () => trocar(i, true));
+    });
+
+    /* ------------------------------- lente + painel (só com mouse)
+       A foto fica parada no quadro. O que se move é a lente; o painel ao
+       lado mostra o mesmo pedaço ampliado, usando a imagem em tamanho
+       original — esticar a miniatura daria uma mancha borrada. */
+    const AMPLIACAO = 2.4;
+
+    function posicionarZoom(e) {
+      const r = moldura.getBoundingClientRect();
+      const larguraLente = r.width / AMPLIACAO;
+      const alturaLente = r.height / AMPLIACAO;
+
+      let x = e.clientX - r.left - larguraLente / 2;
+      let y = e.clientY - r.top - alturaLente / 2;
+      x = Math.max(0, Math.min(x, r.width - larguraLente));
+      y = Math.max(0, Math.min(y, r.height - alturaLente));
+
+      lente.style.width = larguraLente + 'px';
+      lente.style.height = alturaLente + 'px';
+      lente.style.left = x + 'px';
+      lente.style.top = y + 'px';
+      lente.hidden = false;
+
+      painel.hidden = false;
+      painel.style.backgroundImage = 'url("' + (principal.currentSrc || principal.src) + '")';
+      painel.style.backgroundSize =
+        (r.width * AMPLIACAO) + 'px ' + (r.height * AMPLIACAO) + 'px';
+      painel.style.backgroundPosition = (-x * AMPLIACAO) + 'px ' + (-y * AMPLIACAO) + 'px';
+    }
+
+    function esconderZoom() {
+      if (lente) lente.hidden = true;
+      if (painel) { painel.hidden = true; painel.style.backgroundImage = ''; }
+    }
+
+    if (temMouse && lente && painel && !reduzido) {
+      moldura.addEventListener('mousemove', posicionarZoom);
+      moldura.addEventListener('mouseleave', esconderZoom);
+      // trocar de foto com o painel aberto não pode deixar a anterior nele
+      moldura.addEventListener('mouseenter', esconderZoom);
+    }
+
+    /* ------------------------------------------- tela cheia (toque) */
+    if (!lupa || !lupaImg) return;
 
     /* O visor é `position: fixed`, mas a galeria entra na tela com uma
        animação de `transform` — e elemento transformado vira o novo
@@ -547,8 +729,18 @@
        volta a medir a tela inteira. */
     if (lupa.parentElement !== document.body) document.body.appendChild(lupa);
 
+    function mostrarNaLupa() {
+      lupaImg.src = fotos[atual];
+      if (!passos) return;
+      passos.hidden = fotos.length < 2;
+      passos.innerHTML = fotos
+        .map((_, i) => '<i class="' + (i === atual ? 'is-ativo' : '') + '"></i>')
+        .join('');
+    }
+
     const abrir = () => {
-      lupaImg.src = principal.currentSrc || principal.src;
+      esconderZoom();
+      mostrarNaLupa();
       lupa.hidden = false;
       document.body.style.overflow = 'hidden';
     };
@@ -557,31 +749,40 @@
       document.body.style.overflow = '';
     };
 
-    /* Zoom seguindo o ponteiro: a imagem cresce e o ponto sob o mouse fica
-       no lugar, que é como se lê o rótulo de uma embalagem. No celular não
-       existe hover — lá vale o toque, que abre o visor. */
-    if (window.matchMedia('(hover: hover)').matches && !reduzido) {
-      moldura.addEventListener('mousemove', (e) => {
-        const r = moldura.getBoundingClientRect();
-        const x = ((e.clientX - r.left) / r.width) * 100;
-        const y = ((e.clientY - r.top) / r.height) * 100;
-        principal.style.transformOrigin = x + '% ' + y + '%';
-        moldura.classList.add('is-zoom');
-      });
-      moldura.addEventListener('mouseleave', () => {
-        moldura.classList.remove('is-zoom');
-        principal.style.transformOrigin = '';
-      });
-    }
-
     moldura.addEventListener('click', abrir);
     moldura.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); }
     });
-    lupa.addEventListener('click', fechar);   // clicar em qualquer lugar fecha
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !lupa.hidden) fechar();
+
+    // clicar no fundo fecha; na foto, não — senão a pinça fecharia sozinha
+    lupa.addEventListener('click', (e) => {
+      if (e.target === lupaImg) return;
+      fechar();
     });
+    document.addEventListener('keydown', (e) => {
+      if (lupa.hidden) return;
+      if (e.key === 'Escape') fechar();
+      if (e.key === 'ArrowRight') trocar(atual + 1);
+      if (e.key === 'ArrowLeft') trocar(atual - 1);
+    });
+
+    /* Arrasto para trocar de foto. Só conta o gesto de um dedo: com dois, o
+       cliente está dando pinça para ampliar, e trocar a foto no meio disso
+       seria o contrário do que ele pediu. */
+    let origemX = 0;
+    let dedos = 0;
+    lupa.addEventListener('touchstart', (e) => {
+      dedos = e.touches.length;
+      origemX = e.touches[0].clientX;
+    }, { passive: true });
+    lupa.addEventListener('touchend', (e) => {
+      if (dedos !== 1 || fotos.length < 2) return;
+      const fim = (e.changedTouches[0] || {}).clientX || origemX;
+      const distancia = fim - origemX;
+      if (Math.abs(distancia) < 50) return;
+      trocar(atual + (distancia < 0 ? 1 : -1));
+      mostrarNaLupa();
+    }, { passive: true });
   }
 
   /* --------------------------------- tamanhos (variações) do produto */
@@ -844,6 +1045,7 @@
     iniciarOpcoes();
     iniciarApresentacao();
     iniciarGaleria();
+    iniciarStories();
     iniciarHoverGaleria();
     iniciarCadastro();
     iniciarTamanhos();

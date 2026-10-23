@@ -13,7 +13,8 @@ from typing import Callable
 from django import forms
 
 from apps.catalog.models import Categoria, Especie, LinhaProduto, Marca
-from apps.core.models import Banner, Diferencial, Pagina, PromocaoDestaque, SiteConfig
+from apps.core.models import (Banner, Diferencial, Pagina, PromocaoDestaque,
+                              SiteConfig, VideoInstagram)
 from apps.orders.models import Cupom
 from apps.shipping.models import DIAS_SEMANA, Cidade, Localidade, RegraEntrega
 
@@ -40,7 +41,7 @@ class ConfiguracaoBannersForm(_EstilizadoMixin, forms.ModelForm):
 class BannerForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = Banner
-        fields = ("posicao", "selo", "titulo", "subtitulo", "imagem", "video",
+        fields = ("posicao", "selo", "titulo", "subtitulo", "imagem", "imagem_movel", "video",
                   "tempo_exibicao", "cor_fundo", "texto_botao", "tipo_destino", "link",
                   "categoria_destino", "produtos", "ordem", "publicado")
         widgets = {
@@ -120,6 +121,22 @@ class BannerForm(_EstilizadoMixin, forms.ModelForm):
             except ValidationError:
                 raise forms.ValidationError("Use um endereço https:// ou um caminho da loja, como /catalogo/.")
         return link
+
+
+class VideoInstagramForm(_EstilizadoMixin, forms.ModelForm):
+    """Cadastro manual dos vídeos — funciona sem token nenhum."""
+
+    class Meta:
+        model = VideoInstagram
+        fields = ("titulo", "legenda", "video", "capa", "link", "ordem", "publicado")
+        widgets = {
+            "link": forms.TextInput(attrs={"placeholder": "https://instagram.com/p/..."}),
+            "legenda": forms.TextInput(attrs={"placeholder": "Uma linha sobre o vídeo"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["titulo"].help_text = "Aparece embaixo do círculo, como o @ de um story."
 
 
 class DiferencialForm(_EstilizadoMixin, forms.ModelForm):
@@ -402,7 +419,33 @@ SECOES: dict[str, Secao] = {
             ("Selo", lambda o: o.selo or "—"),
             ("Posição", lambda o: o.get_posicao_display()),
             ("Produtos", lambda o: o.produtos.count() or "—"),
-            ("Mídia", lambda o: ("vídeo" if o.video else "foto" if o.imagem else "—")),
+            ("Mídia", lambda o: (
+                "⏳ processando vídeo…" if o.video_pendente
+                else "⚠ vídeo falhou" if o.video_status == o.Processamento.FALHOU
+                else "vídeo" if o.video else "foto" if o.imagem else "—"
+            )),
+            ("Destino", lambda o: "⚠ catálogo inteiro" if o.destino_vago else "ok"),
+            ("Ordem", lambda o: o.ordem),
+            ("No ar", lambda o: o.publicado),
+        ],
+    ),
+    "instagram": Secao(
+        slug="instagram", titulo="Vídeos do Instagram", singular="vídeo",
+        model=VideoInstagram, form=VideoInstagramForm, icone="i-instagram",
+        descricao=(
+            "Os vídeos que aparecem na home no lugar do blog. Suba como saiu do "
+            "celular: a loja comprime e tira a capa sozinha."
+        ),
+        ordenacao=("ordem", "-criado_em"),
+        busca=("titulo", "legenda"),
+        colunas=[
+            ("Título", lambda o: o.titulo or "—"),
+            ("Legenda", lambda o: o.legenda[:40] or "—"),
+            ("Vídeo", lambda o: (
+                "⏳ processando…" if o.video_pendente
+                else "⚠ falhou" if o.video_status == o.Processamento.FALHOU
+                else "pronto" if o.video_otimizado else "—"
+            )),
             ("Ordem", lambda o: o.ordem),
             ("No ar", lambda o: o.publicado),
         ],

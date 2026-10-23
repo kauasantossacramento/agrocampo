@@ -161,6 +161,21 @@
 }
 
 
+/* barra de progresso do envio de arquivo (modal do painel) */
+.progresso { padding: var(--s-3) 0; }
+.progresso__trilho {
+  height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--cream-warm);
+}
+.progresso__barra {
+  height: 100%; width: 0; border-radius: 999px;
+  background: var(--red); transition: width .2s linear;
+}
+.progresso__texto {
+  display: block; margin-top: var(--s-2);
+  font-size: var(--fs-xs); color: var(--muted);
+}
+
 /* aviso de rascunho recuperável, no topo do wizard de produto */
 .rascunho-aviso {
   display: flex; align-items: center; gap: var(--s-3);
@@ -499,23 +514,87 @@
 
 /* ============================================================ página de produto */
 .pdp { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-12); align-items: start; }
+/* ─────────────────────────────────── galeria do produto
+   Miniaturas em pé à esquerda, foto grande no meio e, no hover, o painel de
+   zoom sobrepondo a coluna de informação. A foto nunca sai do quadro: era o
+   bug antigo — a imagem crescia e cobria o preço e o botão de comprar. */
+.pdp__galeria {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: start;
+  /* a coluna da foto sobe inteira acima da de informação: sem isso o painel
+     de zoom passava por baixo do botão de comprar e do cartão de frete */
+  position: relative; z-index: 5;
+}
+.pdp__galeria > .gallery__palco { grid-column: 2; }
+.pdp__galeria > .gallery__dica,
+.pdp__galeria > .lupa { grid-column: 1 / -1; }
+/* produto com uma foto só não tem coluna de miniaturas */
+.pdp__galeria:not(:has(.gallery__thumbs)) { grid-template-columns: minmax(0, 1fr); }
+.pdp__galeria:not(:has(.gallery__thumbs)) > .gallery__palco { grid-column: 1; }
+
+.gallery__palco { position: relative; }
+
 .gallery__main {
   aspect-ratio: 1; border-radius: var(--r-xl); overflow: hidden;
   background: var(--surface); border: 1px solid var(--line);
   display: grid; place-items: center; position: relative;
 }
-/* a foto do produto é o argumento de venda: moldura com pouca folga e a
-   imagem ocupando tudo o que couber dentro dela */
-.gallery__main img { width: 100%; height: 100%; object-fit: contain; padding: var(--s-3); transition: transform .4s var(--ease-out); }
-.gallery__main:hover img { transform: scale(1.06); }
-/* o zoom do ponteiro vem depois do :hover de propósito — mesma força de
-   seletor, quem está escrito por último manda. A transição some para a
-   imagem acompanhar o mouse sem atraso. */
-.gallery__main.is-zoom img { transform: scale(2.2); transition: none; }
+.gallery__main img {
+  width: 100%; height: 100%; object-fit: contain; padding: var(--s-3);
+  transition: transform .4s var(--ease-out);
+}
 .gallery__main[data-ampliar] { cursor: zoom-in; }
 
-/* Visor da foto ampliada: fundo escuro, imagem do tamanho da tela. É o lugar
-   onde o cliente lê o rótulo da embalagem. */
+/* a lente: um retângulo claro que segue o ponteiro sobre a foto */
+.gallery__lente {
+  position: absolute; z-index: 4; pointer-events: none;
+  border: 2px solid rgba(255, 255, 255, .9);
+  background: rgba(255, 255, 255, .22);
+  box-shadow: 0 0 0 9999px rgba(20, 10, 6, .12);
+  border-radius: 4px;
+}
+.gallery__lente[hidden] { display: none; }
+
+/* o painel ampliado nasce ao lado e passa por cima da coluna de informação;
+   `position:absolute` é o que impede o empurrão no layout */
+.gallery__zoom {
+  position: absolute; top: 0; left: calc(100% + var(--s-5));
+  width: 460px; height: 100%; z-index: 60;
+  border-radius: var(--r-lg); border: 1px solid var(--line);
+  background-color: #fff; background-repeat: no-repeat;
+  box-shadow: var(--sh-2);
+}
+.gallery__zoom[hidden] { display: none; }
+
+.gallery__dica { margin-top: var(--s-2); text-align: center; }
+.gallery__dica--toque { display: none; }
+@media (hover: none) {
+  .gallery__dica--mouse { display: none; }
+  .gallery__dica--toque { display: inline; }
+}
+
+/* miniaturas na vertical, à esquerda */
+.gallery__thumbs {
+  grid-column: 1; grid-row: 1;
+  display: flex; flex-direction: column; gap: var(--s-2);
+  max-height: 520px; overflow-y: auto; scrollbar-width: thin;
+}
+.gallery__thumb {
+  flex: none; width: 72px; height: 72px;
+  border-radius: var(--r-md); overflow: hidden;
+  border: 2px solid var(--line); background: var(--surface); padding: 4px;
+  transition: border-color .2s ease, transform .2s var(--ease-out);
+  cursor: pointer;
+}
+.gallery__thumb img { width: 100%; height: 100%; object-fit: contain; }
+.gallery__thumb:hover { transform: translateY(-2px); border-color: var(--muted-2); }
+.gallery__thumb.is-active { border-color: var(--red); }
+
+/* Visor da foto em tela cheia: fundo escuro, imagem do tamanho da tela. É
+   onde o cliente lê o rótulo da embalagem — e, no celular, é o que substitui
+   a lente: toque para abrir, pinça para ampliar, arrasto para trocar de foto. */
 .lupa {
   position: fixed; inset: 0; z-index: 90;
   display: grid; place-items: center; padding: var(--s-5);
@@ -525,6 +604,7 @@
   max-width: min(96vw, 1200px); max-height: 92vh;
   width: auto; height: auto; object-fit: contain;
   border-radius: var(--r-md); background: #fff;
+  touch-action: pinch-zoom;
 }
 .lupa__fechar {
   position: absolute; top: var(--s-4); right: var(--s-4);
@@ -532,6 +612,17 @@
   display: grid; place-items: center; cursor: pointer;
   background: #fff; color: var(--ink); border: 0; box-shadow: var(--sh-2);
 }
+/* pontinhos: dizem quantas fotos existem e em qual o cliente está */
+.lupa__passos {
+  position: absolute; bottom: var(--s-5); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; z-index: 2;
+}
+.lupa__passos[hidden] { display: none; }
+.lupa__passos i {
+  width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .45);
+}
+.lupa__passos i.is-ativo { background: #fff; }
+
 @media (max-width: 640px) {
   /* no celular a foto usa a tela toda; o botão de fechar fica no alto,
      fora da imagem, onde o polegar alcança sem tapar o rótulo */
@@ -540,15 +631,18 @@
   .lupa__fechar { top: var(--s-2); right: var(--s-2); width: 40px; height: 40px; }
 }
 
-.gallery__thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-3); margin-top: var(--s-3); }
-.gallery__thumb {
-  aspect-ratio: 1; border-radius: var(--r-md); overflow: hidden;
-  border: 2px solid var(--line); background: var(--surface); padding: var(--s-2);
-  transition: border-color .2s ease, transform .2s var(--ease-out);
+/* telas estreitas: miniaturas deitadas embaixo e nada de lente */
+@media (max-width: 900px) {
+  .pdp__galeria { grid-template-columns: minmax(0, 1fr); }
+  .pdp__galeria > .gallery__palco { grid-column: 1; }
+  .gallery__thumbs {
+    grid-column: 1; grid-row: 2;
+    flex-direction: row; max-height: none; overflow-x: auto;
+    padding-bottom: var(--s-2);
+  }
+  .gallery__zoom, .gallery__lente { display: none !important; }
+  .gallery__main[data-ampliar] { cursor: pointer; }
 }
-.gallery__thumb img { width: 100%; height: 100%; object-fit: contain; }
-.gallery__thumb:hover { transform: translateY(-2px); border-color: var(--muted-2); }
-.gallery__thumb.is-active { border-color: var(--red); }
 
 .pdp__price { font-family: var(--font-display); font-size: var(--fs-3xl); font-weight: 800; color: var(--ink); line-height: 1; }
 .pdp__price-old { font-size: var(--fs-md); color: var(--muted); text-decoration: line-through; }
@@ -1276,6 +1370,141 @@
 .vitrine-capa .hero__dots { bottom: var(--s-4); }
 .vitrine-capa .hero__dot { background: rgba(255,255,255,.7); box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
 .vitrine-capa .hero__dot.is-active { background: var(--red); }
+
+/* card de post sem capa: em vez do retângulo branco que parecia imagem
+   quebrada, a cor da categoria com o ícone do blog */
+.post-card__media--vazia {
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--cor-post, var(--red)) 12%, var(--cream-warm));
+  color: var(--cor-post, var(--red));
+}
+
+/* ─────────────────────────────── Instagram da loja (vídeos)
+   Dois jeitos de ver a mesma lista: os círculos de story, para quem conhece
+   o formato, e a fita de vídeos verticais, que mostra a peça inteira. */
+.stories {
+  display: flex; gap: var(--s-4); overflow-x: auto;
+  padding-bottom: var(--s-3); scrollbar-width: none;
+}
+.stories::-webkit-scrollbar { display: none; }
+.stories__item {
+  flex: none; width: 76px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: none; border: 0; padding: 0; color: inherit;
+}
+.stories__anel {
+  width: 72px; height: 72px; border-radius: 50%; padding: 3px;
+  /* o anel do Instagram, nas cores da loja */
+  background: conic-gradient(from 210deg, var(--yellow), var(--red), var(--yellow));
+  display: grid; place-items: center;
+}
+.stories__foto {
+  width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+  background: var(--cream-warm); border: 2px solid var(--surface);
+  display: grid; place-items: center;
+}
+.stories__foto img { width: 100%; height: 100%; object-fit: cover; }
+.stories__nome {
+  font-size: var(--fs-xs); color: var(--muted);
+  max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.stories__item:hover .stories__anel { transform: scale(1.04); }
+.stories__anel { transition: transform .2s var(--ease-out); }
+
+.reels {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 190px;
+  gap: var(--s-4); overflow-x: auto; margin-top: var(--s-5);
+  padding-bottom: var(--s-3); scroll-snap-type: x mandatory;
+}
+.reels__item {
+  position: relative; scroll-snap-align: start; cursor: pointer;
+  aspect-ratio: 9 / 16; border-radius: var(--r-lg); overflow: hidden;
+  border: 1px solid var(--line); background: var(--cream-warm);
+  padding: 0; color: #fff;
+}
+.reels__item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.reels__play {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.45));
+  color: #fff;
+}
+.reels__legenda {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: var(--s-3);
+  font-size: var(--fs-xs); text-align: left; line-height: 1.3;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.75));
+}
+
+/* player em tela cheia, no formato stories */
+.stories-player {
+  position: fixed; inset: 0; z-index: 95;
+  display: grid; place-items: center;
+  background: rgba(8, 6, 4, .94);
+}
+.stories-player[hidden] { display: none; }
+.stories-player__video {
+  width: min(94vw, 420px); max-height: 82vh;
+  aspect-ratio: 9 / 16; object-fit: contain;
+  border-radius: var(--r-lg); background: #000;
+}
+.stories-player__barras {
+  position: absolute; top: var(--s-4); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 4px; width: min(94vw, 420px);
+}
+.stories-player__barras i {
+  flex: 1; height: 3px; border-radius: 999px; background: rgba(255,255,255,.3);
+  overflow: hidden;
+}
+.stories-player__barras i span {
+  display: block; height: 100%; width: 0; background: #fff;
+}
+.stories-player__fechar {
+  position: absolute; top: var(--s-6); right: var(--s-5);
+  width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center; background: rgba(255,255,255,.92); color: var(--ink);
+}
+.stories-player__seta {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.85); color: var(--ink);
+}
+.stories-player__seta--esq { left: var(--s-5); }
+.stories-player__seta--dir { right: var(--s-5); }
+.stories-player__rodape {
+  position: absolute; bottom: var(--s-6); left: 50%; transform: translateX(-50%);
+  width: min(94vw, 420px); color: #fff; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+  font-size: var(--fs-sm);
+}
+@media (max-width: 640px) {
+  /* no celular as setas roubam a tela: o toque nas laterais do vídeo navega */
+  .stories-player__seta { display: none; }
+  .stories-player__video { width: 100vw; max-height: 100vh; border-radius: 0; }
+  .reels { grid-auto-columns: 150px; }
+}
+
+/* ───────────────────────────── faixa de banners do fim da página
+   A proporção fica reservada no quadro: sem isso a página dá um pulo quando
+   a imagem termina de carregar, logo acima do rodapé. */
+.rodape-banner { position: relative; }
+.rodape-banner__quadro {
+  position: relative; overflow: hidden;
+  border-radius: var(--r-lg); box-shadow: var(--sh-1);
+  background: var(--cream-warm);
+  aspect-ratio: 16 / 5;
+}
+.rodape-banner__slide { display: block; width: 100%; height: 100%; }
+.rodape-banner__slide[hidden] { display: none; }
+.rodape-banner__slide img {
+  display: block; width: 100%; height: 100%; object-fit: cover;
+}
+.rodape-banner .hero__dots { bottom: var(--s-3); }
+@media (max-width: 640px) {
+  /* no celular o cartaz largo vira tira: a proporção abre e, se o lojista
+     subiu a arte vertical, é ela que entra pelo <picture> */
+  .rodape-banner__quadro { aspect-ratio: 4 / 3; }
+  .rodape-banner .vitrine-capa__seta { display: none; }
+}
 
 /* --- faixa de garantias em cartão flutuante, como o topo das vitrines */
 .trust--cartao {

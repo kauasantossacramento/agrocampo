@@ -26,8 +26,9 @@ ENV PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=config.settings
 
 # libpq5 é o runtime do Postgres; curl serve ao healthcheck
+# ffmpeg comprime os vídeos de banner enviados pelo painel (apps/core/midia.py)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      libpq5 curl \
+      libpq5 curl ffmpeg \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --create-home --uid 1000 agrocampo
 

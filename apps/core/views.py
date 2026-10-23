@@ -9,7 +9,13 @@ from django.views.decorators.http import require_POST
 from apps.blog.models import Post
 from apps.catalog.models import Categoria, Especie, Marca, Produto
 
-from .models import PromocaoDestaque, AssinanteNewsletter, Banner, Diferencial, Pagina, SiteConfig
+from .models import (PromocaoDestaque, AssinanteNewsletter, Banner, Diferencial,
+                     Pagina, SiteConfig, VideoInstagram)
+
+
+def _prontos(consulta):
+    """Tira da lista o banner cujo vídeo ainda está sendo comprimido."""
+    return [b for b in consulta if b.pronto_para_o_ar]
 
 
 def _promocoes_por_secao():
@@ -77,9 +83,18 @@ def home(request):
             ],
             "vitrines_linha": vitrines,
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
+            # faixa do fim da página: só entra o que tem arte, senão a seção
+            # apareceria como um buraco antes do rodapé
+            "banners_rodape": [
+                b for b in Banner.objects.publicados()
+                .filter(posicao=Banner.Posicao.RODAPE)
+                .order_by("ordem", "-criado_em") if b.imagem and b.pronto_para_o_ar
+            ],
             # carrossel do estilo vitrine: cartazes + vídeos/fotos de apresentação,
             # numa fita só, na ordem de cadastro
-            "slides": list(
+            # vídeo ainda comprimindo não entra: publicar o original de
+            # 200 MB derrubaria a página de quem abre no 4G
+            "slides": _prontos(
                 Banner.objects.publicados()
                 .filter(posicao__in=[Banner.Posicao.HERO, Banner.Posicao.APRESENTACAO])
                 .prefetch_related("produtos")
@@ -94,7 +109,7 @@ def home(request):
                 for b in Banner.objects.publicados()
                 .filter(posicao=Banner.Posicao.APRESENTACAO)
                 .prefetch_related("produtos")
-                if b.tem_midia
+                if b.tem_midia and b.pronto_para_o_ar
             ],
             "faixas_produto": (
                 Banner.objects.publicados()
@@ -114,9 +129,15 @@ def home(request):
             "assinaveis": produtos.filter(permite_assinatura=True)[:4],
             "ofertas": ofertas,
             "oferta_relampago": oferta_relampago,
-            "especies": Especie.objects.publicados().filter(destaque_home=True)[:24],
+            "especies": Especie.objects.navegaveis().filter(destaque_home=True)[:24],
             "marcas": Marca.objects.publicados().filter(destaque=True)[:18],
             "posts": Post.objects.visiveis()[:3] if config.blog_ativo else [],
+            # só vídeo já comprimido entra: o arquivo cru do celular deixaria
+            # a home pesada para quem abre no 4G do sítio
+            "videos_instagram": (
+                [v for v in VideoInstagram.objects.publicados()[:12] if v.pronto_para_o_ar]
+                if config.instagram_secao_ativa else []
+            ),
         },
     )
 

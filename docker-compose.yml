@@ -134,13 +134,16 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        echo "[cron] ativo — processa assinaturas todo dia às 06:00 (America/Sao_Paulo)"
+        echo "[cron] ativo — assinaturas às 06:00 e vídeos de banner a cada minuto"
         while true; do
           agora=$$(TZ=America/Sao_Paulo date +%H%M)
           if [ "$$agora" = "0600" ]; then
             python manage.py processar_assinaturas || echo "[cron] falhou"
             sleep 3600
           fi
+          # a compressão roda numa thread do site; se o container reiniciar no
+          # meio, o banner fica preso em "processando" e é aqui que ele volta
+          python manage.py reprocessar_midia >/dev/null 2>&1 || true
           sleep 30
         done
     deploy:

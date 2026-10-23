@@ -262,3 +262,67 @@ class LixeiraDeProdutosTests(TestCase):
         self.produto.refresh_from_db()
         self.assertNotEqual(resposta.status_code, 200)
         self.assertFalse(self.produto.na_lixeira)
+
+
+class AvesAgrupadasTests(TestCase):
+    """Treze pássaros viram um card só — sem perder cadastro nem ligação."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Categoria, Especie, Produto
+
+        self.Especie, self.Produto = Especie, Produto
+        self.aves = Especie.objects.create(nome="Aves", slug="aves", grupo="aves",
+                                           destaque_home=True)
+        self.canario = Especie.objects.create(nome="Canário", grupo="passeriforme",
+                                              agrupada_em=self.aves)
+        self.galinha = Especie.objects.create(nome="Galinha", grupo="rural",
+                                              destaque_home=True)
+
+        categoria = Categoria.objects.create(nome="Ração")
+        self.racao_canario = Produto.objects.create(
+            sku="AV-1", nome="Mistura para Canário", categoria=categoria,
+            preco=Decimal("30"), publicado=True,
+        )
+        self.racao_canario.especies.add(self.canario)
+        self.racao_galinha = Produto.objects.create(
+            sku="GL-1", nome="Ração Postura", categoria=categoria,
+            preco=Decimal("90"), publicado=True,
+        )
+        self.racao_galinha.especies.add(self.galinha)
+
+    def test_so_a_mae_aparece_na_navegacao(self):
+        navegaveis = list(self.Especie.objects.navegaveis().values_list("nome", flat=True))
+        self.assertIn("Aves", navegaveis)
+        self.assertIn("Galinha", navegaveis)      # criação continua separada
+        self.assertNotIn("Canário", navegaveis)
+
+    def test_o_canario_continua_no_banco_com_o_produto(self):
+        self.canario.refresh_from_db()
+        self.assertTrue(self.Especie.objects.filter(nome="Canário").exists())
+        self.assertIn(self.racao_canario, self.canario.produtos.all())
+
+    def test_card_de_aves_lista_o_que_e_de_passaro(self):
+        html = self.client.get(self.aves.get_absolute_url()).content.decode()
+        self.assertIn("Mistura para Canário", html)
+        self.assertNotIn("Ração Postura", html)   # galinha não entra em Aves
+
+    def test_link_antigo_do_canario_redireciona(self):
+        resposta = self.client.get(self.canario.get_absolute_url())
+        self.assertEqual(resposta.status_code, 301)
+        self.assertEqual(resposta["Location"], self.aves.get_absolute_url())
+
+    def test_pagina_de_especies_nao_lista_cada_passaro(self):
+        html = self.client.get("/especies/").content.decode()
+        self.assertIn("Aves", html)
+        self.assertNotIn(">Canário<", html)
+
+    def test_home_mostra_aves_como_um_card(self):
+        html = self.client.get("/").content.decode()
+        if "Navegue pelo seu animal" not in html:
+            self.skipTest("a home está sem a seção de espécies")
+        bloco = html[html.index("Navegue pelo seu animal"):]
+        bloco = bloco[:bloco.index("</section>")]
+        self.assertIn("Aves", bloco)
+        self.assertNotIn("Canário", bloco)

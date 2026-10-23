@@ -18,8 +18,8 @@
           {% if banner.video %}
             <video class="apresentacao__midia" autoplay muted loop playsinline
                    preload="metadata"
-                   {% if banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
-              <source src="{{ banner.video.url }}">
+                   {% if banner.video_poster %}poster="{{ banner.video_poster.url }}"{% elif banner.imagem %}poster="{{ banner.imagem.url }}"{% endif %}>
+              <source src="{{ banner.video_no_ar.url }}" type="video/mp4">
             </video>
           {% else %}
             <img class="apresentacao__midia" src="{{ banner.imagem.url }}"

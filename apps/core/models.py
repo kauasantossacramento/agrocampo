@@ -116,6 +116,22 @@ class SiteConfig(TimeStampedModel):
     )
 
     instagram = models.URLField(blank=True)
+    # ------------------------------------------- seção do Instagram na home
+    instagram_usuario = models.CharField(
+        "@ do Instagram", max_length=60, blank=True,
+        help_text="Só o nome, sem @. Usado no botão “Seguir no Instagram”.",
+    )
+    instagram_secao_ativa = models.BooleanField(
+        "mostrar os vídeos do Instagram na home", default=True,
+    )
+    instagram_token = models.CharField(
+        "token da Graph API", max_length=400, blank=True,
+        help_text="Opcional. Com ele a loja busca os reels sozinha; sem ele, "
+                  "valem os vídeos cadastrados à mão.",
+    )
+    instagram_conta_id = models.CharField(
+        "ID da conta comercial", max_length=60, blank=True,
+    )
     facebook = models.URLField(blank=True)
     youtube = models.URLField(blank=True)
 
@@ -184,7 +200,8 @@ class SiteConfig(TimeStampedModel):
     home_ordem = models.CharField(
         "ordem das seções da home", max_length=400, blank=True,
         default="sucessos,linhas,especies,categorias,faixas,oferta,"
-                "promocoes,destaques,lancamentos,assinatura,porque,blog,newsletter,marcas",
+                "promocoes,destaques,lancamentos,assinatura,porque,instagram,"
+                "newsletter,marcas,blog",
     )
 
     # ------------------------------------------------------- entrega
@@ -320,9 +337,11 @@ class SiteConfig(TimeStampedModel):
 
     blog_ativo = models.BooleanField(
         "blog ativo",
-        default=True,
-        help_text="Desmarque para esconder o blog do menu, do rodapé e da home. "
-                  "As URLs passam a responder 404.",
+        default=False,
+        help_text="Começa desligado: a loja posta no Instagram, e o blog ficou "
+                  "parado. Marque para trazer de volta ao menu, ao rodapé e à "
+                  "home — desmarcado, as URLs respondem 404 e os textos ficam "
+                  "guardados, sem se perder.",
     )
     frete_valor = models.DecimalField(
         "valor do frete",
@@ -435,6 +454,7 @@ class SiteConfig(TimeStampedModel):
         ("lancamentos", "Lançamentos do mês"),
         ("assinatura", "Assinatura"),
         ("porque", "Por que comprar"),
+        ("instagram", "Instagram da loja (vídeos)"),
         ("blog", "Blog"),
         ("newsletter", "Newsletter"),
         ("marcas", "Nossas marcas"),
@@ -476,12 +496,17 @@ class SiteConfig(TimeStampedModel):
         ]
 
 
-# O nginx corta em 80 MB e devolve uma página HTML de erro, que o painel não
-# consegue interpretar — vira "erro de conexão". Barrar antes, aqui e no
-# navegador, é o que dá uma mensagem útil ao lojista.
-LIMITE_VIDEO_MB = 60
+# O nginx corta e devolve uma página HTML de erro, que o painel não consegue
+# interpretar — vira "erro de conexão". Barrar antes, aqui e no navegador, é o
+# que dá uma mensagem útil ao lojista. O teto do nginx mora em
+# deploy/nginx.conf (client_max_body_size) e precisa ficar acima deste.
+#
+# O lojista filma no celular: 226 MB é um vídeo de meio minuto em 4K. Em vez
+# de mandá-lo comprimir, a loja aceita o arquivo e comprime sozinha
+# (apps/core/midia.py). Só a versão leve vai ao ar.
+LIMITE_VIDEO_MB = 300
 ALERTA_VIDEO_MB = 8
-LIMITE_IMAGEM_MB = 10
+LIMITE_IMAGEM_MB = 25
 
 
 def _validar_tamanho(arquivo, limite_mb, tipo):
@@ -514,6 +539,7 @@ class Banner(TimeStampedModel):
         SECUNDARIO = "secundario", "Oferta em destaque (cartaz na home)"
         PRODUTOS = "produtos", "Faixa de produtos (fotos com link)"
         APRESENTACAO = "apresentacao", "Vídeo ou foto de apresentação (entra no carrossel)"
+        RODAPE = "rodape", "Fim da página (faixa antes do rodapé)"
 
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=220, blank=True)
@@ -522,6 +548,16 @@ class Banner(TimeStampedModel):
         upload_to="banners/", blank=True,
         validators=[validar_tamanho_imagem],
     )
+    imagem_movel = models.ImageField(
+        "imagem para o celular", upload_to="banners/", blank=True,
+        validators=[validar_tamanho_imagem],
+        help_text="Opcional. Um cartaz largo vira uma tira ilegível no celular; "
+                  "aqui entra a versão vertical ou quadrada. Vazio usa a de cima.",
+    )
+    # versões leves em WebP, geradas pela loja. O original fica onde está:
+    # é dele que se parte se um dia for preciso reexportar.
+    imagem_web = models.ImageField(upload_to="banners/web/", blank=True, editable=False)
+    imagem_movel_web = models.ImageField(upload_to="banners/web/", blank=True, editable=False)
     video = models.FileField(
         "vídeo",
         upload_to="banners/video/",
@@ -532,10 +568,33 @@ class Banner(TimeStampedModel):
         ],
         help_text=(
             f"MP4 ou WebM, curto e sem som — ele toca sozinho e em silêncio. "
-            f"Até {LIMITE_VIDEO_MB} MB; acima de {ALERTA_VIDEO_MB} MB a página "
-            f"fica lenta para quem abre no 4G."
+            f"Até {LIMITE_VIDEO_MB} MB: pode mandar o arquivo direto do celular, "
+            f"que a loja comprime sozinha antes de publicar."
         ),
     )
+
+    # ---------------------------------------------- versão leve, feita aqui
+    class Processamento(models.TextChoices):
+        SEM_VIDEO = "sem_video", "Sem vídeo"
+        NA_FILA = "na_fila", "Na fila"
+        PROCESSANDO = "processando", "Processando"
+        PRONTO = "pronto", "Pronto"
+        FALHOU = "falhou", "Falhou"
+
+    video_otimizado = models.FileField(
+        "vídeo comprimido", upload_to="banners/video/leve/", blank=True,
+        editable=False,
+        help_text="Gerado pela loja a partir do arquivo enviado. É este que vai ao ar.",
+    )
+    video_poster = models.ImageField(
+        "capa do vídeo", upload_to="banners/video/capa/", blank=True, editable=False,
+        help_text="Primeiro quadro do vídeo, mostrado enquanto ele carrega.",
+    )
+    video_status = models.CharField(
+        "estado do vídeo", max_length=12, choices=Processamento.choices,
+        default=Processamento.SEM_VIDEO, editable=False, db_index=True,
+    )
+    video_erro = models.CharField(max_length=300, blank=True, editable=False)
     cor_fundo = models.CharField(max_length=20, default="#D62B20")
     texto_botao = models.CharField(max_length=40, blank=True, default="Ver catálogo")
     link = models.CharField(max_length=300, blank=True)
@@ -549,8 +608,9 @@ class Banner(TimeStampedModel):
     )
     tempo_exibicao = models.DecimalField(
         "tempo de exibição (segundos)", max_digits=5, decimal_places=1,
-        default=Decimal("6.5"), validators=[MinValueValidator(1), MaxValueValidator(300)],
-        help_text="De 1 a 300 segundos por imagem ou vídeo. O vídeo repete até terminar esse tempo.",
+        default=Decimal("5"), validators=[MinValueValidator(1), MaxValueValidator(300)],
+        help_text="De 1 a 300 segundos por imagem. O vídeo manda no próprio tempo: "
+                  "o slide troca quando ele acaba, e este número vira só o limite.",
     )
     posicao = models.CharField(max_length=20, choices=Posicao.choices, default=Posicao.HERO)
     produtos = models.ManyToManyField(
@@ -576,9 +636,67 @@ class Banner(TimeStampedModel):
     def __str__(self):
         return self.titulo
 
+    def save(self, *args, **kwargs):
+        """Guarda o banner e põe a mídia nova na fila de compressão.
+
+        A comparação é com o que está no banco: salvar o banner de novo sem
+        trocar o arquivo não refaz um trabalho de minutos à toa.
+        """
+        anterior = None
+        if self.pk:
+            anterior = Banner.objects.filter(pk=self.pk).values(
+                "video", "imagem", "imagem_movel",
+            ).first()
+
+        video_novo = bool(self.video) and (
+            anterior is None or anterior["video"] != self.video.name
+        )
+        imagem_nova = (
+            anterior is None
+            or anterior["imagem"] != (self.imagem.name if self.imagem else "")
+            or anterior["imagem_movel"] != (self.imagem_movel.name if self.imagem_movel else "")
+        )
+
+        if video_novo:
+            self.video_status = self.Processamento.NA_FILA
+            self.video_otimizado = ""
+            self.video_poster = ""
+            self.video_erro = ""
+        elif not self.video:
+            self.video_status = self.Processamento.SEM_VIDEO
+
+        super().save(*args, **kwargs)
+
+        if video_novo or (imagem_nova and (self.imagem or self.imagem_movel)):
+            from apps.core.midia import agendar_processamento
+
+            agendar_processamento(self.pk, com_video=video_novo)
+
     @property
     def tem_midia(self) -> bool:
         return bool(self.video or self.imagem)
+
+    @property
+    def video_no_ar(self):
+        """O arquivo que o site serve: sempre a versão comprimida.
+
+        Enquanto ela não fica pronta o banner não entra — publicar o original
+        de 226 MB derrubaria a página de quem abre no 4G.
+        """
+        return self.video_otimizado or None
+
+    @property
+    def video_pendente(self) -> bool:
+        return bool(self.video) and self.video_status in (
+            self.Processamento.NA_FILA, self.Processamento.PROCESSANDO,
+        )
+
+    @property
+    def pronto_para_o_ar(self) -> bool:
+        """Banner de vídeo só aparece com a versão leve pronta."""
+        if not self.video:
+            return True
+        return bool(self.video_otimizado)
 
     @property
     def destino(self) -> str:
@@ -606,9 +724,135 @@ class Banner(TimeStampedModel):
         return primeiro.get_absolute_url() if primeiro else ""
 
     @property
+    def destino_vago(self) -> bool:
+        """Clicar neste banner abre o catálogo inteiro?
+
+        Foi a reclamação do lojista: ele montou o cartaz de um produto e o
+        clique levava para a loja toda. A causa quase sempre é esta — ficou
+        em "automático" sem link, sem categoria e sem produto marcado.
+        """
+        if self.tipo_destino == self.TipoDestino.CATALOGO:
+            return False          # aí é escolha dele, e está certo
+        return self.destino in ("", reverse("catalog:catalogo"))
+
+    @property
+    def foto(self):
+        """A arte que vai à tela: a leve, se já foi gerada."""
+        return self.imagem_web or self.imagem
+
+    @property
+    def foto_movel(self):
+        """A arte do celular, caindo na do computador quando não há."""
+        return self.imagem_movel_web or self.imagem_movel or self.foto
+
+    @property
     def produtos_visiveis(self):
         """Só produtos publicados: um link para produto fora do ar é um beco."""
         return self.produtos.publicados().prefetch_related("imagens")
+
+
+class VideoInstagram(TimeStampedModel):
+    """Um vídeo vertical da loja, no estilo stories.
+
+    A loja posta no Instagram todo dia e o blog ficou parado. Esta seção
+    troca um pelo outro na home. São duas formas de alimentar:
+
+    * **manual** — o lojista sobe o vídeo aqui, com capa e legenda. Funciona
+      hoje, sem depender de token nenhum;
+    * **automática** — a Graph API traz os reels da conta (exige conta
+      comercial ligada a uma Página do Facebook e um token de longa duração).
+
+    O vídeo passa pela mesma compressão dos banners: o que vai ao ar é a
+    versão leve. Stories somem do Instagram em 24 h; o que for subido aqui
+    fica, que é a razão de existir o cadastro manual.
+    """
+
+    class Processamento(models.TextChoices):
+        SEM_VIDEO = "sem_video", "Sem vídeo"
+        NA_FILA = "na_fila", "Na fila"
+        PROCESSANDO = "processando", "Processando"
+        PRONTO = "pronto", "Pronto"
+        FALHOU = "falhou", "Falhou"
+
+    titulo = models.CharField("título", max_length=120, blank=True)
+    legenda = models.CharField(max_length=220, blank=True)
+    video = models.FileField(
+        "vídeo", upload_to="instagram/", blank=True,
+        validators=[FileExtensionValidator(["mp4", "webm", "mov"]), validar_tamanho_video],
+        help_text=f"Vertical (9:16), como sai do Instagram. Até {LIMITE_VIDEO_MB} MB — "
+                  f"a loja comprime sozinha.",
+    )
+    capa = models.ImageField(
+        upload_to="instagram/capa/", blank=True,
+        validators=[validar_tamanho_imagem],
+        help_text="Opcional. Vazio, a loja tira um quadro do próprio vídeo.",
+    )
+    link = models.URLField(
+        "link do post", blank=True,
+        help_text="Endereço do post no Instagram, para quem quiser ver lá.",
+    )
+    ordem = models.PositiveIntegerField(default=0, help_text="Menor aparece primeiro.")
+    publicado = models.BooleanField(default=True)
+
+    # mesmos campos de compressão dos banners
+    video_otimizado = models.FileField(upload_to="instagram/leve/", blank=True, editable=False)
+    video_poster = models.ImageField(upload_to="instagram/capa/", blank=True, editable=False)
+    video_status = models.CharField(
+        max_length=12, choices=Processamento.choices,
+        default=Processamento.SEM_VIDEO, editable=False, db_index=True,
+    )
+    video_erro = models.CharField(max_length=300, blank=True, editable=False)
+
+    objects = PublicadoQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["ordem", "-criado_em"]
+        verbose_name = "vídeo do Instagram"
+        verbose_name_plural = "vídeos do Instagram"
+
+    def __str__(self):
+        return self.titulo or self.legenda[:40] or f"vídeo {self.pk}"
+
+    def save(self, *args, **kwargs):
+        anterior = None
+        if self.pk:
+            anterior = VideoInstagram.objects.filter(pk=self.pk).values("video").first()
+        novo_video = bool(self.video) and (
+            anterior is None or anterior["video"] != self.video.name
+        )
+        if novo_video:
+            self.video_status = self.Processamento.NA_FILA
+            self.video_otimizado = ""
+            self.video_poster = ""
+            self.video_erro = ""
+        elif not self.video:
+            self.video_status = self.Processamento.SEM_VIDEO
+
+        super().save(*args, **kwargs)
+
+        if novo_video:
+            from apps.core.midia import agendar_video
+
+            agendar_video(self)
+
+    @property
+    def video_no_ar(self):
+        return self.video_otimizado or None
+
+    @property
+    def pronto_para_o_ar(self) -> bool:
+        return bool(self.video_otimizado)
+
+    @property
+    def video_pendente(self) -> bool:
+        return bool(self.video) and self.video_status in (
+            self.Processamento.NA_FILA, self.Processamento.PROCESSANDO,
+        )
+
+    @property
+    def foto(self):
+        """A capa que o lojista subiu ou o quadro tirado do vídeo."""
+        return self.capa or self.video_poster or None
 
 
 class Diferencial(TimeStampedModel):

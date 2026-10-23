@@ -1,0 +1,54 @@
+{% load l10n %}
+{% comment %}
+  Faixa de banners do fim da página (Posição “Fim da página”, no cadastro de
+  banners). Sem banner publicado nessa posição, a seção inteira não existe —
+  nada de espaço vazio no fim do site.
+
+  O quadro tem proporção reservada (`aspect-ratio` no CSS), então a página não
+  dá o pulo de layout quando a imagem termina de carregar. Vindo mais de um
+  banner, o mesmo carrossel do topo assume: `data-hero` e `data-hero-slide`
+  são os mesmos ganchos, e o JS já cuida de tempo, pausa e setas.
+{% endcomment %}
+{% if banners_rodape %}
+<section class="section section--tight wrap" aria-label="Destaques">
+  <div class="rodape-banner" data-hero>
+    <div class="rodape-banner__quadro">
+      {% for banner in banners_rodape %}
+        <a href="{{ banner.destino|default:'/catalogo/' }}"
+           class="rodape-banner__slide" data-hero-slide
+           data-tempo="{{ banner.tempo_exibicao|unlocalize }}"
+           {% if not forloop.first %}hidden{% endif %}
+           aria-label="{{ banner.titulo|default:'Destaque' }}">
+          {% comment %}
+            Duas artes: a larga no computador e, se o lojista subiu, a do
+            celular. `<picture>` escolhe sem JS e sem baixar as duas.
+          {% endcomment %}
+          <picture>
+            {% if banner.imagem_movel %}
+              <source media="(max-width: 640px)" srcset="{{ banner.foto_movel.url }}">
+            {% endif %}
+            <img src="{{ banner.foto.url }}" alt="{{ banner.titulo }}" loading="lazy" decoding="async">
+          </picture>
+        </a>
+      {% endfor %}
+    </div>
+
+    {% if banners_rodape|length > 1 %}
+      <button type="button" class="vitrine-capa__seta vitrine-capa__seta--esq" data-hero-prev
+              aria-label="Anterior">
+        <svg width="18" height="18"><use href="#i-seta-esq"></use></svg>
+      </button>
+      <button type="button" class="vitrine-capa__seta vitrine-capa__seta--dir" data-hero-next
+              aria-label="Próximo">
+        <svg width="18" height="18"><use href="#i-seta-dir"></use></svg>
+      </button>
+      <div class="hero__dots">
+        {% for banner in banners_rodape %}
+          <button type="button" class="hero__dot {% if forloop.first %}is-active{% endif %}"
+                  data-hero-dot aria-label="Destaque {{ forloop.counter }}"></button>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

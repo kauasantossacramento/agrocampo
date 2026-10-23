@@ -1,0 +1,100 @@
+{% comment %}
+  Seção do Instagram — entra no lugar que era do blog na home.
+
+  São duas leituras da mesma lista: os círculos no topo, no formato que todo
+  mundo reconhece de stories, e a fita de vídeos verticais logo abaixo. Clicar
+  em qualquer um abre o player em tela cheia, que avança sozinho.
+
+  Só entram vídeos já comprimidos pela loja (`pronto_para_o_ar`): publicar o
+  arquivo como saiu do celular deixaria a home pesada no 4G.
+{% endcomment %}
+{% if videos_instagram %}
+<section class="section section--tight wrap" aria-label="Instagram da loja">
+  <div class="secao-titulo" data-reveal>
+    <h2>
+      <span class="secao-titulo__icone"><svg width="18" height="18"><use href="#i-instagram"></use></svg></span>
+      Siga a AgroCampo no Instagram
+    </h2>
+    {% if site.instagram_usuario %}
+      <a href="https://instagram.com/{{ site.instagram_usuario }}" class="secao-titulo__link"
+         target="_blank" rel="noopener">@{{ site.instagram_usuario }} →</a>
+    {% endif %}
+  </div>
+
+  <div class="card card--pad" data-reveal>
+    {# círculos de stories: a leitura rápida de quem já conhece o formato #}
+    <div class="stories">
+      {% for video in videos_instagram %}
+        <button type="button" class="stories__item" data-story="{{ forloop.counter0 }}"
+                aria-label="Ver {{ video.titulo|default:'vídeo da loja' }}">
+          <span class="stories__anel">
+            <span class="stories__foto">
+              {% if video.foto %}
+                <img src="{{ video.foto.url }}" alt="" loading="lazy" decoding="async">
+              {% endif %}
+            </span>
+          </span>
+          <span class="stories__nome">{{ video.titulo|default:"AgroCampo"|truncatechars:14 }}</span>
+        </button>
+      {% endfor %}
+    </div>
+
+    {# fita de vídeos verticais: mostra a peça inteira a quem rola a home #}
+    <div class="reels" data-reveal>
+      {% for video in videos_instagram %}
+        <button type="button" class="reels__item" data-story="{{ forloop.counter0 }}"
+                data-video="{{ video.video_no_ar.url }}"
+                data-link="{{ video.link }}"
+                data-legenda="{{ video.legenda }}"
+                aria-label="Ver {{ video.titulo|default:'vídeo da loja' }}">
+          {% if video.foto %}
+            <img src="{{ video.foto.url }}" alt="{{ video.titulo }}" loading="lazy" decoding="async">
+          {% endif %}
+          <span class="reels__play" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"></path>
+            </svg>
+          </span>
+          {% if video.legenda %}<span class="reels__legenda">{{ video.legenda|truncatechars:48 }}</span>{% endif %}
+        </button>
+      {% endfor %}
+    </div>
+
+    {% if site.instagram_usuario %}
+      <p class="center" style="margin-top:var(--s-5)">
+        <a class="btn btn--primary" href="https://instagram.com/{{ site.instagram_usuario }}"
+           target="_blank" rel="noopener">
+          <svg width="16" height="16"><use href="#i-instagram"></use></svg>
+          Seguir no Instagram
+        </a>
+      </p>
+    {% endif %}
+  </div>
+</section>
+
+{% comment %}
+  Player em tela cheia, no formato stories: barra de progresso em cima, toque
+  nas laterais para avançar e voltar. Nasce vazio e é preenchido pelo JS.
+{% endcomment %}
+<div class="stories-player" data-stories-player hidden>
+  <div class="stories-player__barras" data-stories-barras></div>
+  <button type="button" class="stories-player__fechar" data-stories-fechar aria-label="Fechar">
+    <svg width="20" height="20"><use href="#i-x"></use></svg>
+  </button>
+  <button type="button" class="stories-player__seta stories-player__seta--esq"
+          data-stories-anterior aria-label="Anterior">
+    <svg width="20" height="20"><use href="#i-seta-esq"></use></svg>
+  </button>
+  <video class="stories-player__video" data-stories-video playsinline></video>
+  <button type="button" class="stories-player__seta stories-player__seta--dir"
+          data-stories-proximo aria-label="Próximo">
+    <svg width="20" height="20"><use href="#i-seta-dir"></use></svg>
+  </button>
+  <div class="stories-player__rodape">
+    <span data-stories-legenda></span>
+    <a href="#" data-stories-link class="btn btn--accent btn--sm" target="_blank" rel="noopener" hidden>
+      Ver no Instagram
+    </a>
+  </div>
+</div>
+{% endif %}

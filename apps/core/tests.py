@@ -140,6 +140,12 @@ class PaginasPublicasTests(TestCase):
         self.assertContains(resposta, "Ver todos os produtos")    # e oferece a saída
 
     def test_paginas_de_navegacao(self):
+        # o blog vem desligado de fábrica; aqui o que se verifica é que a
+        # página responde quando a loja o liga
+        config = SiteConfig.load()
+        config.blog_ativo = True
+        config.save()
+
         rotas = [
             reverse("catalog:marcas"),
             reverse("catalog:especies"),
@@ -160,7 +166,15 @@ class PaginasPublicasTests(TestCase):
         from apps.core.models import Pagina
 
         self.assertEqual(self.client.get(Pagina.objects.first().get_absolute_url()).status_code, 200)
-        self.assertEqual(self.client.get(Post.objects.first().get_absolute_url()).status_code, 200)
+
+        post = Post.objects.first()
+        # desligado (o padrão de hoje), o post some do ar sem ser apagado
+        self.assertEqual(self.client.get(post.get_absolute_url()).status_code, 404)
+
+        config = SiteConfig.load()
+        config.blog_ativo = True
+        config.save()
+        self.assertEqual(self.client.get(post.get_absolute_url()).status_code, 200)
 
     def test_newsletter_aceita_cadastro(self):
         from apps.core.models import AssinanteNewsletter
@@ -1534,10 +1548,20 @@ class RodadaTresTests(TestCase):
 
         Banner.objects.filter(posicao__in=["hero", "apresentacao"]).delete()
         Banner.objects.create(titulo="Cartaz", posicao=Banner.Posicao.HERO, imagem=self.png, ordem=2)
-        Banner.objects.create(
+        video = Banner.objects.create(
             titulo="", posicao=Banner.Posicao.APRESENTACAO, ordem=1,
             video=SimpleUploadedFile("loja.mp4", b"\x00\x00\x00\x18ftypmp42", content_type="video/mp4"),
         )
+        # o que vai ao ar é a versão comprimida pela loja; aqui ela é
+        # simulada, porque o ffmpeg não roda dentro do teste
+        video.video_otimizado.save(
+            "loja-leve.mp4",
+            SimpleUploadedFile("loja-leve.mp4", b"\x00\x00\x00\x18ftypmp42"),
+            save=False,
+        )
+        video.video_status = Banner.Processamento.PRONTO
+        video.save(update_fields=["video_otimizado", "video_status"])
+
         html = self.client.get("/").content.decode()
         self.assertIn("vitrine-capa__slide--video", html)
         self.assertLess(html.index("vitrine-capa__slide--video"), html.index('class="vitrine-capa__slide" data-hero-slide'))
@@ -1917,3 +1941,220 @@ class BannerSemTituloNaArteTests(TestCase):
         banner = self._banner(self.Banner.Posicao.APRESENTACAO, "Peça de setembro")
         banner.refresh_from_db()
         self.assertEqual(banner.titulo, "Peça de setembro")
+
+
+class MidiaDoBannerTests(TestCase):
+    """Vídeo grande entra, a loja comprime e só a versão leve vai ao ar."""
+
+    def setUp(self):
+        from apps.core.models import Banner
+
+        self.Banner = Banner
+
+    def _banner_com_video(self, **extra):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return self.Banner.objects.create(
+            titulo="Peça em vídeo",
+            posicao=self.Banner.Posicao.APRESENTACAO,
+            video=SimpleUploadedFile("peca.mp4", b"nao-e-video-de-verdade",
+                                     content_type="video/mp4"),
+            **extra,
+        )
+
+    def test_limite_subiu_para_300_mb(self):
+        from apps.core.models import LIMITE_VIDEO_MB, validar_tamanho_video
+        from django.core.exceptions import ValidationError
+
+        self.assertGreaterEqual(LIMITE_VIDEO_MB, 300)
+
+        class Fake:
+            size = 290 * 1024 * 1024
+
+        validar_tamanho_video(Fake())            # 290 MB passa
+
+        class Enorme:
+            size = 310 * 1024 * 1024
+
+        with self.assertRaises(ValidationError):
+            validar_tamanho_video(Enorme())
+
+    def test_video_novo_entra_na_fila(self):
+        banner = self._banner_com_video()
+        banner.refresh_from_db()
+        # a thread pode já ter rodado e falhado (o arquivo é falso); o que
+        # importa é que o estado saiu de "sem vídeo"
+        self.assertNotEqual(banner.video_status, self.Banner.Processamento.SEM_VIDEO)
+
+    def test_sem_versao_leve_o_banner_nao_vai_ao_ar(self):
+        banner = self._banner_com_video()
+        self.assertFalse(banner.pronto_para_o_ar)
+        self.assertIsNone(banner.video_no_ar)
+
+    def test_banner_sem_video_esta_sempre_pronto(self):
+        banner = self.Banner.objects.create(titulo="Só foto")
+        self.assertTrue(banner.pronto_para_o_ar)
+        self.assertEqual(banner.video_status, self.Banner.Processamento.SEM_VIDEO)
+
+    def test_home_segura_o_banner_ate_a_compressao_terminar(self):
+        self._banner_com_video()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("peca.mp4", html)
+
+    def test_salvar_de_novo_nao_refaz_a_compressao(self):
+        """Mexer no título não pode jogar fora minutos de trabalho."""
+        banner = self._banner_com_video()
+        self.Banner.objects.filter(pk=banner.pk).update(
+            video_status=self.Banner.Processamento.PRONTO,
+        )
+        banner.refresh_from_db()
+        banner.titulo = "Outro título"
+        banner.save()
+        banner.refresh_from_db()
+        self.assertEqual(banner.video_status, self.Banner.Processamento.PRONTO)
+
+
+class BannerDoRodapeTests(TestCase):
+    """A faixa do fim da página só existe quando há banner publicado nela."""
+
+    def setUp(self):
+        from apps.core.models import Banner
+
+        self.Banner = Banner
+        config = SiteConfig.load()
+        config.layout_home = SiteConfig.LayoutHome.VITRINE
+        config.save()
+
+    def _no_rodape(self, **extra):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return self.Banner.objects.create(
+            titulo="Chamada do fim", posicao=self.Banner.Posicao.RODAPE,
+            imagem=SimpleUploadedFile("fim.jpg", b"fake", content_type="image/jpeg"),
+            **extra,
+        )
+
+    def test_sem_banner_a_secao_nao_aparece(self):
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("rodape-banner", html)
+
+    def test_com_banner_a_secao_entra(self):
+        self._no_rodape()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn("rodape-banner", html)
+        self.assertIn("Chamada do fim", html)
+
+    def test_despublicado_nao_entra(self):
+        self._no_rodape(publicado=False)
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("rodape-banner", html)
+
+    def test_destino_vago_avisa_no_painel(self):
+        """Era a queixa: o clique no banner abria o catálogo inteiro."""
+        banner = self._no_rodape()
+        self.assertTrue(banner.destino_vago)
+
+        from apps.catalog.models import Categoria
+
+        banner.tipo_destino = self.Banner.TipoDestino.CATEGORIA
+        banner.categoria_destino = Categoria.objects.create(nome="Ração")
+        banner.save()
+        self.assertFalse(banner.destino_vago)
+        self.assertIn("/categoria/", banner.destino)
+
+
+class InstagramNaHomeTests(TestCase):
+    """Os vídeos da loja entram no lugar que era do blog."""
+
+    def setUp(self):
+        from apps.core.models import VideoInstagram
+
+        self.Video = VideoInstagram
+        config = SiteConfig.load()
+        config.layout_home = SiteConfig.LayoutHome.VITRINE
+        config.instagram_usuario = "veterinariaagrocampo"
+        config.instagram_secao_ativa = True
+        config.save()
+
+    def _video(self, pronto=True, **extra):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        video = self.Video.objects.create(
+            titulo="Chegou ração", legenda="Novidade da semana",
+            video=SimpleUploadedFile("reels.mp4", b"\x00\x00\x00\x18ftypmp42",
+                                     content_type="video/mp4"),
+            **extra,
+        )
+        if pronto:
+            video.video_otimizado.save(
+                "reels-leve.mp4",
+                SimpleUploadedFile("reels-leve.mp4", b"\x00\x00\x00\x18ftypmp42"),
+                save=False,
+            )
+            video.video_status = self.Video.Processamento.PRONTO
+            video.save(update_fields=["video_otimizado", "video_status"])
+        return video
+
+    def test_secao_entra_na_home(self):
+        self._video()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn("Siga a AgroCampo no Instagram", html)
+        self.assertIn("stories__item", html)
+        self.assertIn("reels__item", html)
+        self.assertIn("instagram.com/veterinariaagrocampo", html)
+
+    def test_sem_video_nao_aparece_secao_vazia(self):
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("Siga a AgroCampo no Instagram", html)
+
+    def test_video_ainda_comprimindo_nao_entra(self):
+        self._video(pronto=False)
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("reels__item", html)
+
+    def test_interruptor_desliga_a_secao(self):
+        self._video()
+        config = SiteConfig.load()
+        config.instagram_secao_ativa = False
+        config.save()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("Siga a AgroCampo no Instagram", html)
+
+    def test_video_despublicado_fica_de_fora(self):
+        self._video(publicado=False)
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("reels__item", html)
+
+    def test_api_sem_token_devolve_vazio(self):
+        """Sem credencial a loja não tenta nada — e não quebra."""
+        from apps.core.instagram import buscar_midias
+
+        self.assertEqual(buscar_midias(SiteConfig.load()), [])
+
+
+class BlogDesligadoTests(TestCase):
+    """O blog sai do ar por padrão, sem perder nenhum texto."""
+
+    def test_vem_desligado_de_fabrica(self):
+        self.assertFalse(SiteConfig.load().blog_ativo)
+
+    def test_desligado_some_do_menu_e_do_rodape(self):
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn('href="/blog/"', html)
+
+    def test_religar_traz_de_volta(self):
+        config = SiteConfig.load()
+        config.blog_ativo = True
+        config.save()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn('href="/blog/"', html)
+
+    def test_os_posts_continuam_no_banco(self):
+        """Desligar é esconder, não apagar."""
+        from apps.blog.models import Post
+
+        antes = Post.objects.count()
+        config = SiteConfig.load()
+        config.blog_ativo = False
+        config.save()
+        self.assertEqual(Post.objects.count(), antes)
