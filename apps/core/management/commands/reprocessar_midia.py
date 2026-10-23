@@ -11,8 +11,9 @@ versão leve.
 """
 from django.core.management.base import BaseCommand
 
-from apps.core.midia import ffmpeg_disponivel, processar_video_do_banner
-from apps.core.models import Banner
+from apps.core.midia import (ffmpeg_disponivel, processar_video_de,
+                             processar_video_do_banner)
+from apps.core.models import Banner, VideoInstagram
 
 
 class Command(BaseCommand):
@@ -29,17 +30,28 @@ class Command(BaseCommand):
             self.stderr.write("ffmpeg não está instalado — nada a fazer.")
             return
 
-        estados = [Banner.Processamento.NA_FILA, Banner.Processamento.PROCESSANDO]
-        if opcoes["todos"]:
-            estados.append(Banner.Processamento.FALHOU)
-
+        # A condição que importa é esta: tem vídeo e não tem versão leve.
+        # Olhar só o estado deixava de fora os banners que já existiam antes
+        # da compressão virar regra — eles ficaram marcados como "sem vídeo"
+        # e sumiram do site sem ninguém entender por quê.
         pendentes = (
-            Banner.objects.exclude(video="")
-            .filter(video_status__in=estados)
+            Banner.objects.exclude(video="").filter(video_otimizado="").order_by("pk")
+        )
+        if not opcoes["todos"]:
+            # numa passada normal, quem já falhou fica de fora: o cron tentaria
+            # de novo a cada minuto, de graça, para sempre
+            pendentes = pendentes.exclude(video_status=Banner.Processamento.FALHOU)
+
+        reels = (
+            VideoInstagram.objects.exclude(video="").filter(video_otimizado="")
             .order_by("pk")
         )
-        if not pendentes:
-            return
+        if not opcoes["todos"]:
+            reels = reels.exclude(video_status=VideoInstagram.Processamento.FALHOU)
+
+        for video in reels:
+            self.stdout.write(f"comprimindo vídeo do Instagram {video.pk}")
+            processar_video_de("core.videoinstagram", video.pk)
 
         for banner in pendentes:
             self.stdout.write(f"comprimindo banner {banner.pk} — {banner.titulo}")
