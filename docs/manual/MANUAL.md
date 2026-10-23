@@ -340,6 +340,7 @@ uma lista com busca e o botão "Novo…" que abre o formulário em modal.
 | **Faixa de garantias** | os quatro selos abaixo do carrossel (frete, Pix, assinatura, compra garantida). |
 | **Páginas institucionais** | Quem somos, Entregas e prazos, Trocas, Privacidade, FAQ (HTML simples). |
 | **Categorias / Marcas / Espécies** | a árvore do catálogo; marca tem o atalho de "Maiores sucessos"; espécie tem foto e destaque na home. |
+| **Destaques da busca** | o que aparece primeiro quando o cliente procura. Escreva os termos (ex.: *ração para cachorro, racao cachorro, cão*) e escolha os produtos, a marca ou a linha inteira que devem vir na frente. |
 | **Vídeos do Instagram** | os vídeos que aparecem na home no lugar do blog. Suba como saiu do celular (até 300 MB): a loja comprime e tira a capa sozinha. Título, legenda, link do post, ordem e publicado. |
 | **Linhas de produto** | Premium, Super Premium, Especial… Nome, **PNG e tamanho do selo**, cor da medalha padrão, título da vitrine na home, ordem e liga/desliga. É o que o cadastro de produto oferece no campo *Linha*. |
 | **Cupons** | código, percentual/valor, validade, mínimo. |
@@ -443,6 +444,17 @@ Os cards usam o nome que o cliente fala, não o termo técnico: **Cavalo** (era
 Equino), **Boi e vaca** (era Bovino), **Porco** (era Suíno), e **Burro**
 entrou na lista (serve jumento, jegue e mula). Os endereços antigos
 continuam valendo — `/especie/equino/` ainda abre Cavalo.
+
+A busca entende a **frase inteira**: quem digita *ração para cachorro* acha a
+ração de cão, porque cada palavra é procurada separadamente e as palavras de
+ligação (*para*, *de*, *com*) são ignoradas.
+
+**Quem aparece primeiro você decide.** Em *Conteúdo › Destaques da busca*,
+escreva os termos e escolha os produtos — ou a marca, ou a linha inteira.
+Exemplo: buscou *ração para cachorro*, a linha Special Care vem na frente.
+Vale sem acento e por pedaço do termo. Se o cliente escolher uma ordenação
+(menor preço, mais vendidos), ela manda mais que o destaque — ninguém fura
+a fila que o cliente pediu.
 
 Cada espécie tem o campo **“como o cliente também chama”** (em *Conteúdo ›
 Espécies*): ali entram os apelidos que o cliente digita. Por isso buscar

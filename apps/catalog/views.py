@@ -57,6 +57,52 @@ def _especies_por_apelido(termo: str):
     return achadas
 
 
+PALAVRAS_SEM_PESO = {
+    "para", "pra", "de", "da", "do", "das", "dos", "com", "sem", "e", "em",
+    "no", "na", "nos", "nas", "a", "o", "as", "os", "um", "uma", "meu", "minha",
+}
+
+
+def _condicao_de_busca(busca: str):
+    """Monta o filtro da busca a partir da frase digitada.
+
+    Cada palavra precisa aparecer em algum lugar do produto — assim "ração
+    para cachorro" acha a ração de cão, em vez de procurar a frase inteira
+    dentro de um nome que nunca a contém. Palavras de ligação são ignoradas:
+    exigir "para" só tiraria resultado bom da frente do cliente.
+    """
+    palavras = [
+        p for p in _sem_acento(busca).split()
+        if len(p) >= 2 and p not in PALAVRAS_SEM_PESO
+    ] or [_sem_acento(busca)]
+
+    condicao = Q()
+    for palavra in palavras:
+        especies = _especies_por_apelido(palavra)
+        desta_palavra = (
+            Q(busca_normalizada__icontains=palavra)
+            | Q(categoria__nome__icontains=palavra)
+            | Q(marca__nome__icontains=palavra)
+            | Q(especies__nome__icontains=palavra)
+        )
+        if especies:
+            # "cachorro" não aparece no cadastro — a espécie se chama "Cão"
+            desta_palavra |= Q(especies__in=especies)
+        condicao &= desta_palavra
+    return condicao
+
+
+def _produtos_em_destaque(busca: str):
+    """ids dos produtos que o lojista mandou mostrar primeiro para esta busca."""
+    from apps.catalog.models import DestaqueBusca
+
+    ids = []
+    for destaque in DestaqueBusca.objects.filter(ativo=True).prefetch_related("produtos"):
+        if destaque.atende(busca):
+            ids.extend(destaque.produtos_alvo().values_list("pk", flat=True))
+    return ids
+
+
 def catalogo(request, categoria=None, marca=None, especie=None):
     """Listagem única que atende /catalogo, /categoria/, /marca/ e /especie/."""
     produtos = Produto.objects.vitrine()
@@ -89,25 +135,10 @@ def catalogo(request, categoria=None, marca=None, especie=None):
         contexto_extra["especie_atual"] = especie
 
     busca = request.GET.get("q", "").strip()
+    destacados = []
     if busca:
-        sem_acento = _sem_acento(busca)
-        condicao = (
-            Q(busca_normalizada__icontains=sem_acento)
-            | Q(nome__icontains=busca)
-            | Q(descricao__icontains=busca)
-            | Q(resumo__icontains=busca)
-            | Q(sku__icontains=busca)
-            | Q(categoria__nome__icontains=busca)
-            | Q(marca__nome__icontains=busca)
-            | Q(especies__nome__icontains=busca)
-        )
-        # "cachorro" não aparece em lugar nenhum do cadastro — a espécie se
-        # chama "Cão". A comparação por apelido, e sem acento, é o que leva
-        # quem digitou "cachorro" ou "cao" até a ração certa.
-        especies_achadas = _especies_por_apelido(busca)
-        if especies_achadas:
-            condicao |= Q(especies__in=especies_achadas)
-        produtos = produtos.filter(condicao).distinct()
+        produtos = produtos.filter(_condicao_de_busca(busca)).distinct()
+        destacados = _produtos_em_destaque(busca)
 
     faixa = produtos.aggregate(minimo=Min("preco"), maximo=Max("preco"))
     preco_min = _decimal(request.GET.get("preco_min"))
@@ -136,6 +167,18 @@ def catalogo(request, categoria=None, marca=None, especie=None):
 
     ordem = request.GET.get("ordem", "relevancia")
     produtos = produtos.order_by(*ORDENACOES.get(ordem, ORDENACOES["relevancia"]))
+
+    # Os destaques só mandam na relevância: quem pediu "menor preço" quer
+    # menor preço, e furar essa fila seria enganar o cliente.
+    if destacados and ordem == "relevancia":
+        from django.db.models import Case, IntegerField, Value, When
+
+        produtos = produtos.annotate(
+            _destaque=Case(
+                When(pk__in=destacados, then=Value(0)),
+                default=Value(1), output_field=IntegerField(),
+            )
+        ).order_by("_destaque", *ORDENACOES["relevancia"])
 
     paginator = Paginator(produtos, 24)
     pagina = paginator.get_page(request.GET.get("pagina"))

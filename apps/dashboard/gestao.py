@@ -12,7 +12,8 @@ from typing import Callable
 
 from django import forms
 
-from apps.catalog.models import Categoria, Especie, LinhaProduto, Marca
+from apps.catalog.models import (Categoria, DestaqueBusca, Especie,
+                                 LinhaProduto, Marca)
 from apps.core.models import (Banner, Diferencial, Pagina, PromocaoDestaque,
                               SiteConfig, VideoInstagram)
 from apps.orders.models import Cupom
@@ -307,6 +308,45 @@ class RegraEntregaForm(_EstilizadoMixin, forms.ModelForm):
         self.fields["cidade"].empty_label = "Todas as cidades"
 
 
+class DestaqueBuscaForm(_EstilizadoMixin, forms.ModelForm):
+    """Quais produtos sobem para o topo quando o cliente busca certos termos."""
+
+    class Meta:
+        model = DestaqueBusca
+        fields = ("termos", "produtos", "marca", "linha", "ordem", "ativo")
+        widgets = {
+            "termos": forms.TextInput(attrs={
+                "placeholder": "ração para cachorro, racao cachorro, cão",
+            }),
+            "produtos": forms.CheckboxSelectMultiple(attrs={"class": "lista-produtos-banner"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        from apps.catalog.models import Produto
+
+        super().__init__(*args, **kwargs)
+        self.fields["produtos"].queryset = Produto.objects.publicados().order_by("nome")
+        self.fields["produtos"].required = False
+        self.fields["produtos"].help_text = (
+            "Escolha os produtos que devem aparecer primeiro. Se preferir, "
+            "deixe vazio e use a marca ou a linha inteira abaixo."
+        )
+        self.fields["marca"].queryset = Marca.objects.publicados().order_by("nome")
+        self.fields["linha"].queryset = LinhaProduto.objects.filter(ativo=True)
+        self.fields["linha"].help_text = (
+            "Ex.: a linha Special Care inteira na frente de quem busca ração de cachorro."
+        )
+
+    def clean(self):
+        dados = super().clean()
+        if not (dados.get("produtos") or dados.get("marca") or dados.get("linha")):
+            raise forms.ValidationError(
+                "Escolha ao menos um produto, uma marca ou uma linha — senão o "
+                "destaque não tem o que mostrar."
+            )
+        return dados
+
+
 class LinhaProdutoForm(_EstilizadoMixin, forms.ModelForm):
     """As linhas da loja — nome, cor do selo e vitrine — editáveis aqui.
 
@@ -527,6 +567,24 @@ SECOES: dict[str, Secao] = {
             ("Produtos", lambda o: o.produtos.count()),
             ("Na vitrine", lambda o: o.destaque),
             ("No ar", lambda o: o.publicado),
+        ],
+    ),
+    "destaques-busca": Secao(
+        slug="destaques-busca", titulo="Destaques da busca", singular="destaque",
+        model=DestaqueBusca, form=DestaqueBuscaForm, icone="i-busca",
+        descricao=(
+            "O que aparece primeiro quando o cliente procura. Ex.: buscou "
+            "“ração para cachorro”, a linha Special Care vem na frente."
+        ),
+        ordenacao=("ordem", "-criado_em"),
+        busca=("termos",),
+        colunas=[
+            ("Quando buscar", lambda o: o.termos[:50]),
+            ("Produtos", lambda o: o.produtos.count() or "—"),
+            ("Marca", lambda o: o.marca.nome if o.marca_id else "—"),
+            ("Linha", lambda o: o.linha.nome if o.linha_id else "—"),
+            ("Ordem", lambda o: o.ordem),
+            ("No ar", lambda o: o.ativo),
         ],
     ),
     "linhas": Secao(

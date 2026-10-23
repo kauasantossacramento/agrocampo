@@ -206,6 +206,77 @@ class LinhaProduto(TimeStampedModel, SluggedModel):
         return f"/catalogo/?linha={self.slug}"
 
 
+class DestaqueBusca(TimeStampedModel):
+    """Produtos que sobem para o topo quando alguém busca certos termos.
+
+    É a vitrine dentro da busca: o lojista decide que, para "ração para
+    cachorro", a linha Special Care aparece primeiro. Sem isso a ordem é a
+    relevância do catálogo, que não sabe o que a loja quer empurrar hoje.
+
+    Vale por produto escolhido a dedo, por marca inteira ou por linha — na
+    prática é assim que a conversa acontece: "quando pedirem ração de
+    cachorro, mostra a Special Care primeiro".
+    """
+
+    termos = models.CharField(
+        "quando o cliente buscar", max_length=300,
+        help_text="Separe por vírgula: ração para cachorro, racao cachorro, cão. "
+                  "Acento e maiúscula não importam, e basta o termo aparecer na "
+                  "busca para o destaque valer.",
+    )
+    produtos = models.ManyToManyField(
+        "catalog.Produto", blank=True, related_name="destaques_busca",
+        verbose_name="produtos em destaque",
+    )
+    marca = models.ForeignKey(
+        "catalog.Marca", null=True, blank=True, on_delete=models.CASCADE,
+        related_name="destaques_busca", verbose_name="ou a marca inteira",
+    )
+    linha = models.ForeignKey(
+        "catalog.LinhaProduto", null=True, blank=True, on_delete=models.CASCADE,
+        related_name="destaques_busca", verbose_name="ou a linha inteira",
+    )
+    ordem = models.PositiveIntegerField(default=0, help_text="Menor aparece primeiro.")
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["ordem", "-criado_em"]
+        verbose_name = "destaque da busca"
+        verbose_name_plural = "destaques da busca"
+
+    def __str__(self):
+        return self.termos[:60]
+
+    @property
+    def lista_de_termos(self) -> list[str]:
+        return [t.strip() for t in self.termos.split(",") if t.strip()]
+
+    def atende(self, busca: str) -> bool:
+        """O que foi digitado casa com algum termo cadastrado?
+
+        Compara nos dois sentidos: o cadastro pode ser mais específico que a
+        busca ("ração para cachorro" × "cachorro") ou mais genérico.
+        """
+        alvo = texto_sem_acento(busca)
+        if not alvo:
+            return False
+        return any(
+            texto_sem_acento(termo) in alvo or alvo in texto_sem_acento(termo)
+            for termo in self.lista_de_termos
+        )
+
+    def produtos_alvo(self):
+        """Os produtos que este destaque empurra para o topo."""
+        from django.db.models import Q as _Q
+
+        condicoes = _Q(pk__in=self.produtos.values_list("pk", flat=True))
+        if self.marca_id:
+            condicoes |= _Q(marca_id=self.marca_id)
+        if self.linha_id:
+            condicoes |= _Q(linha_id=self.linha_id)
+        return Produto.objects.publicados().filter(condicoes)
+
+
 class Marca(TimeStampedModel, SluggedModel):
     logo = models.ImageField(upload_to="marcas/", blank=True)
     descricao = models.TextField(blank=True)

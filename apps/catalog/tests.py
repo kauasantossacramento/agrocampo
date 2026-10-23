@@ -395,3 +395,82 @@ class BuscaPorApelidoTests(TestCase):
         self.racao.save()
         self.racao.refresh_from_db()
         self.assertIn("racao super premium", self.racao.busca_normalizada)
+
+
+class DestaqueDaBuscaTests(TestCase):
+    """O lojista decide o que aparece primeiro em cada busca."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import (Categoria, DestaqueBusca, Especie,
+                                         Marca, Produto)
+
+        self.DestaqueBusca = DestaqueBusca
+        categoria = Categoria.objects.create(nome="Ração")
+        cao = Especie.objects.create(nome="Cão", sinonimos="cachorro, dog", grupo="pet")
+        self.special = Marca.objects.create(nome="Special Care")
+
+        self.destacado = Produto.objects.create(
+            sku="D-1", nome="Ração Special Care Cães Adultos", categoria=categoria,
+            marca=self.special, preco=Decimal("150"), publicado=True, vendas=0,
+        )
+        self.comum = Produto.objects.create(
+            sku="D-2", nome="Ração Comum para Cães", categoria=categoria,
+            preco=Decimal("90"), publicado=True, vendas=99,     # venderia mais
+        )
+        for p in (self.destacado, self.comum):
+            p.especies.add(cao)
+
+    def _buscar(self, termo, **extra):
+        import re
+
+        html = self.client.get("/catalogo/", {"q": termo, **extra}).content.decode()
+        return [n.strip() for n in re.findall(r'class="product__name"[^>]*>([^<]+)<', html)]
+
+    def test_frase_inteira_encontra(self):
+        """"ração para cachorro" não existe em nome nenhum — e precisa achar."""
+        achados = self._buscar("ração para cachorro")
+        self.assertIn("Ração Comum para Cães", achados)
+        self.assertIn("Ração Special Care Cães Adultos", achados)
+
+    def test_sem_destaque_manda_a_relevancia(self):
+        self.assertEqual(self._buscar("ração para cachorro")[0], "Ração Comum para Cães")
+
+    def test_destaque_por_marca_vai_para_o_topo(self):
+        self.DestaqueBusca.objects.create(
+            termos="ração para cachorro, racao cachorro", marca=self.special,
+        )
+        self.assertEqual(
+            self._buscar("ração para cachorro")[0], "Ração Special Care Cães Adultos"
+        )
+
+    def test_destaque_vale_sem_acento_e_por_pedaco(self):
+        self.DestaqueBusca.objects.create(termos="cachorro", marca=self.special)
+        self.assertEqual(self._buscar("racao cachorro")[0], "Ração Special Care Cães Adultos")
+
+    def test_destaque_desligado_nao_vale(self):
+        self.DestaqueBusca.objects.create(
+            termos="cachorro", marca=self.special, ativo=False,
+        )
+        self.assertEqual(self._buscar("ração para cachorro")[0], "Ração Comum para Cães")
+
+    def test_ordem_pedida_pelo_cliente_manda_mais_que_o_destaque(self):
+        """Pediu menor preço, recebe menor preço — destaque não fura fila."""
+        self.DestaqueBusca.objects.create(termos="cachorro", marca=self.special)
+        achados = self._buscar("ração para cachorro", ordem="menor-preco")
+        self.assertEqual(achados[0], "Ração Comum para Cães")
+
+    def test_destaque_por_produto_escolhido(self):
+        destaque = self.DestaqueBusca.objects.create(termos="cachorro")
+        destaque.produtos.add(self.destacado)
+        self.assertEqual(self._buscar("cachorro")[0], "Ração Special Care Cães Adultos")
+
+    def test_palavras_de_ligacao_nao_estreitam_a_busca(self):
+        """Exigir "para" tiraria resultado bom da frente do cliente."""
+        from apps.catalog.views import _condicao_de_busca
+
+        with_para = self._buscar("ração para cachorro")
+        sem_para = self._buscar("ração cachorro")
+        self.assertEqual(sorted(with_para), sorted(sem_para))
+        self.assertTrue(_condicao_de_busca("ração para cachorro"))
