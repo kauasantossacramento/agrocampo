@@ -474,3 +474,98 @@ class DestaqueDaBuscaTests(TestCase):
         sem_para = self._buscar("ração cachorro")
         self.assertEqual(sorted(with_para), sorted(sem_para))
         self.assertTrue(_condicao_de_busca("ração para cachorro"))
+
+
+class BuscaPluralTagsEPrioridadeTests(TestCase):
+    """Plural, palavras-chave, prioridade e a prévia achando o mesmo."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Categoria, Especie, Marca, Produto
+
+        categoria = Categoria.objects.create(nome="Ração")
+        cao = Especie.objects.create(nome="Cão", sinonimos="cachorro, dog", grupo="pet")
+        marca = Marca.objects.create(nome="Special care")
+
+        self.especial = Produto.objects.create(
+            sku="P-1", nome="Special Care Cães Adultos", categoria=categoria,
+            marca=marca, preco=Decimal("180"), publicado=True,
+            palavras_chave="ração, cachorro", prioridade_busca=10, vendas=0,
+        )
+        self.comum = Produto.objects.create(
+            sku="P-2", nome="Ração Golden Fórmula 15kg", categoria=categoria,
+            preco=Decimal("120"), publicado=True, vendas=99,
+        )
+        for p in (self.especial, self.comum):
+            p.especies.add(cao)
+
+    def _itens(self, termo):
+        import re
+
+        html = self.client.get("/catalogo/", {"q": termo}).content.decode()
+        return [n.strip() for n in re.findall(r'class="product__name"[^>]*>([^<]+)<', html)]
+
+    def _previa(self, termo):
+        import json
+
+        dados = json.loads(self.client.get("/busca/sugestoes/", {"q": termo}).content)
+        return [i["rotulo"] for g in dados["grupos"] if g.get("produtos") for i in g["itens"]]
+
+    def test_plural_acha_o_singular(self):
+        """"rações" é como o cliente digita; o produto se chama "Ração"."""
+        self.assertIn("Ração Golden Fórmula 15kg", self._itens("rações"))
+        self.assertIn("Ração Golden Fórmula 15kg", self._itens("racoes"))
+
+    def test_singular_acha_o_plural(self):
+        from apps.catalog.models import Produto
+
+        Produto.objects.create(
+            sku="P-3", nome="Coleiras de couro", categoria=self.especial.categoria,
+            preco=10, publicado=True,
+        )
+        self.assertIn("Coleiras de couro", self._itens("coleira"))
+
+    def test_palavra_chave_acha_o_que_nao_esta_no_nome(self):
+        """"ração" não aparece no nome do Special Care — está na tag."""
+        self.assertNotIn("ração", self.especial.nome.lower())
+        self.assertIn("Special Care Cães Adultos", self._itens("ração"))
+
+    def test_prioridade_coloca_na_frente(self):
+        """Mesmo vendendo menos, a prioridade põe o produto no topo."""
+        self.assertEqual(self._itens("ração")[0], "Special Care Cães Adultos")
+        self.assertEqual(self._itens("ração para cachorro")[0], "Special Care Cães Adultos")
+
+    def test_sem_prioridade_manda_quem_vende_mais(self):
+        self.especial.prioridade_busca = 0
+        self.especial.save()
+        self.assertEqual(self._itens("ração")[0], "Ração Golden Fórmula 15kg")
+
+    def test_previa_acha_a_frase_inteira(self):
+        """Era a queixa: a caixa de sugestões não mostrava nada."""
+        self.assertTrue(self._previa("ração para cachorro"))
+        self.assertEqual(self._previa("ração para cachorro")[0], "Special Care Cães Adultos")
+
+    def test_nome_do_produto_vem_antes_de_quem_so_bate_por_tabela(self):
+        """Buscou "ração": ração no topo, não a coleira que caiu na categoria."""
+        from apps.catalog.models import Produto
+
+        Produto.objects.create(
+            sku="P-4", nome="Coleira Antipulgas", categoria=self.especial.categoria,
+            preco=50, publicado=True, vendas=500,     # venderia muito mais
+        )
+        achados = self._itens("ração")
+        self.assertIn("Coleira Antipulgas", achados)           # entrou pela categoria
+        self.assertLess(                                        # mas atrás do nome
+            achados.index("Ração Golden Fórmula 15kg"),
+            achados.index("Coleira Antipulgas"),
+        )
+
+    def test_ordenacao_pedida_continua_mandando(self):
+        achados = self.client.get(
+            "/catalogo/", {"q": "ração", "ordem": "menor-preco"}
+        ).content.decode()
+        import re
+
+        nomes = [n.strip() for n in re.findall(r'class="product__name"[^>]*>([^<]+)<', achados)]
+        self.assertEqual(nomes[0], "Ração Golden Fórmula 15kg")   # o mais barato

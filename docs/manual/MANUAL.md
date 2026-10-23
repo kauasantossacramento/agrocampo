@@ -449,6 +449,20 @@ A busca entende a **frase inteira**: quem digita *ração para cachorro* acha a
 ração de cão, porque cada palavra é procurada separadamente e as palavras de
 ligação (*para*, *de*, *com*) são ignoradas.
 
+**A busca entende plural e palavras-chave.** *rações* acha *Ração* e
+*coleira* acha *Coleiras*. Em cada produto há dois campos no cadastro:
+
+- **Palavras-chave da busca** — termos que o cliente usa e que não estão no
+  nome (*cachorro, filhote, castrado*). Só servem para a busca; não aparecem
+  na loja.
+- **Prioridade na busca** — 0 é o normal. Quanto maior, mais na frente o
+  produto aparece **entre os que bateram na busca**. Use 10 na linha que a
+  loja quer empurrar: marque *ração, cachorro* nas palavras-chave dos Special
+  Care e ponha prioridade 10, que eles passam a liderar quem procura ração.
+
+**Produto com o nome certo vem antes.** Quem busca *ração* vê as rações
+primeiro, e só depois o que entrou na lista pela categoria ou pela marca.
+
 **Quem aparece primeiro você decide.** Em *Conteúdo › Destaques da busca*,
 escreva os termos e escolha os produtos — ou a marca, ou a linha inteira.
 Exemplo: buscou *ração para cachorro*, a linha Special Care vem na frente.

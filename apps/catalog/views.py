@@ -37,6 +37,22 @@ def _sem_acento(texto: str) -> str:
     return "".join(c for c in normalizado if unicodedata.category(c) != "Mn").lower().strip()
 
 
+def _por_nome_sem_acento(modelo, termo: str):
+    """pks do modelo cujo nome contém o termo, ignorando acento e caixa.
+
+    O `icontains` do banco compara acento: "racao" não casa com a categoria
+    "Ração". São poucas dezenas de categorias e marcas, então a comparação
+    sai em Python e funciona igual no SQLite e no Postgres.
+    """
+    alvo = _sem_acento(termo)
+    if len(alvo) < 2:
+        return []
+    return [
+        pk for pk, nome in modelo.objects.values_list("pk", "nome")
+        if alvo in _sem_acento(nome)
+    ]
+
+
 def _especies_por_apelido(termo: str):
     """Espécies cujo nome ou apelido contém o termo digitado.
 
@@ -63,6 +79,15 @@ PALAVRAS_SEM_PESO = {
 }
 
 
+def _palavras_da_busca(busca: str) -> list[str]:
+    """As palavras que valem na busca, já sem acento e sem as de ligação."""
+    palavras = [
+        p for p in _sem_acento(busca).split()
+        if len(p) >= 2 and p not in PALAVRAS_SEM_PESO
+    ]
+    return palavras or [_sem_acento(busca)]
+
+
 def _condicao_de_busca(busca: str):
     """Monta o filtro da busca a partir da frase digitada.
 
@@ -71,23 +96,40 @@ def _condicao_de_busca(busca: str):
     dentro de um nome que nunca a contém. Palavras de ligação são ignoradas:
     exigir "para" só tiraria resultado bom da frente do cliente.
     """
-    palavras = [
-        p for p in _sem_acento(busca).split()
-        if len(p) >= 2 and p not in PALAVRAS_SEM_PESO
-    ] or [_sem_acento(busca)]
+    from apps.catalog.models import singular
 
     condicao = Q()
-    for palavra in palavras:
+    for palavra in _palavras_da_busca(busca):
+        # o produto guarda as duas formas, então procurar pelas duas acha
+        # tanto quem digitou "ração" quanto quem digitou "rações"
+        formas = {palavra, singular(palavra)}
+        desta_palavra = Q()
+        for forma in formas:
+            desta_palavra |= Q(busca_normalizada__icontains=forma)
+            categorias = _por_nome_sem_acento(Categoria, forma)
+            if categorias:
+                desta_palavra |= Q(categoria__in=categorias)
+            marcas = _por_nome_sem_acento(Marca, forma)
+            if marcas:
+                desta_palavra |= Q(marca__in=marcas)
         especies = _especies_por_apelido(palavra)
-        desta_palavra = (
-            Q(busca_normalizada__icontains=palavra)
-            | Q(categoria__nome__icontains=palavra)
-            | Q(marca__nome__icontains=palavra)
-            | Q(especies__nome__icontains=palavra)
-        )
         if especies:
             # "cachorro" não aparece no cadastro — a espécie se chama "Cão"
             desta_palavra |= Q(especies__in=especies)
+        condicao &= desta_palavra
+    return condicao
+
+
+def _condicao_no_nome(busca: str):
+    """Só o que bate no nome do produto — serve para ordenar, não para filtrar."""
+    from apps.catalog.models import singular
+
+    condicao = Q()
+    for palavra in _palavras_da_busca(busca):
+        formas = {palavra, singular(palavra)}
+        desta_palavra = Q()
+        for forma in formas:
+            desta_palavra |= Q(nome_normalizado__icontains=forma)
         condicao &= desta_palavra
     return condicao
 
@@ -168,17 +210,24 @@ def catalogo(request, categoria=None, marca=None, especie=None):
     ordem = request.GET.get("ordem", "relevancia")
     produtos = produtos.order_by(*ORDENACOES.get(ordem, ORDENACOES["relevancia"]))
 
-    # Os destaques só mandam na relevância: quem pediu "menor preço" quer
-    # menor preço, e furar essa fila seria enganar o cliente.
-    if destacados and ordem == "relevancia":
+    # Quem buscou "ração" espera ver ração no topo, não um acessório que caiu
+    # ali porque a linha dele se chama assim. A ordem na relevância é:
+    # destaque escolhido pelo lojista, depois o que bate no nome do produto,
+    # depois o resto. Com ordenação pedida pelo cliente (menor preço, mais
+    # vendidos) nada disso vale: furar a fila que ele escolheu seria enganá-lo.
+    if busca and ordem == "relevancia":
         from django.db.models import Case, IntegerField, Value, When
 
         produtos = produtos.annotate(
             _destaque=Case(
                 When(pk__in=destacados, then=Value(0)),
                 default=Value(1), output_field=IntegerField(),
-            )
-        ).order_by("_destaque", *ORDENACOES["relevancia"])
+            ),
+            _no_nome=Case(
+                When(_condicao_no_nome(busca), then=Value(0)),
+                default=Value(1), output_field=IntegerField(),
+            ),
+        ).order_by("_destaque", "-prioridade_busca", "_no_nome", *ORDENACOES["relevancia"])
 
     paginator = Paginator(produtos, 24)
     pagina = paginator.get_page(request.GET.get("pagina"))
@@ -337,7 +386,7 @@ def sugestoes(request):
     "buscas populares" — categorias e espécies em destaque — para a caixa não
     abrir vazia.
     """
-    from django.db.models import Q
+    from django.db.models import Case, IntegerField, Q, Value, When
     from django.http import JsonResponse
 
     termo = (request.GET.get("q") or "").strip()[:60]
@@ -356,10 +405,14 @@ def sugestoes(request):
         return JsonResponse({"grupos": grupos, "termo": termo})
 
     atalhos = []
-    for c in Categoria.objects.publicados().filter(nome__icontains=termo)[:3]:
+    for c in Categoria.objects.publicados().filter(
+        Q(nome__icontains=termo) | Q(pk__in=_por_nome_sem_acento(Categoria, termo))
+    )[:3]:
         atalhos.append({"rotulo": c.nome, "url": c.get_absolute_url(), "icone": "pacote",
                         "extra": f"{c.produtos.filter(publicado=True).count()} produtos"})
-    for m in Marca.objects.publicados().filter(nome__icontains=termo)[:2]:
+    for m in Marca.objects.publicados().filter(
+        Q(nome__icontains=termo) | Q(pk__in=_por_nome_sem_acento(Marca, termo))
+    )[:2]:
         atalhos.append({"rotulo": m.nome, "url": m.get_absolute_url(), "icone": "medalha", "extra": "marca"})
     # a espécie também entra pelo apelido: quem digita "cachorro" vê o atalho
     # de Cão, que é como ela está cadastrada
@@ -371,22 +424,27 @@ def sugestoes(request):
     if atalhos:
         grupos.append({"titulo": "Categorias, marcas e espécies", "itens": atalhos})
 
-    condicao = (
-        Q(busca_normalizada__icontains=_sem_acento(termo))
-        | Q(nome__icontains=termo)
-        | Q(sku__iexact=termo)
-        | Q(marca__nome__icontains=termo)
-    )
-    if achadas:
-        condicao |= Q(especies__in=achadas)
+    # a prévia precisa achar o mesmo que o catálogo: quem digita "ração para
+    # cachorro" e não vê nada na caixa acha que a loja não tem
+    condicao = _condicao_de_busca(termo) | Q(sku__iexact=termo)
 
     produtos = (
         Produto.objects.vitrine()
         .filter(condicao)
         .distinct()
+        .annotate(
+            _destaque=Case(
+                When(pk__in=_produtos_em_destaque(termo), then=Value(0)),
+                default=Value(1), output_field=IntegerField(),
+            ),
+            _no_nome=Case(
+                When(_condicao_no_nome(termo), then=Value(0)),
+                default=Value(1), output_field=IntegerField(),
+            ),
+        )
         .select_related("marca")
         .prefetch_related("imagens")
-        .order_by("-vendas", "nome")[:6]
+        .order_by("_destaque", "-prioridade_busca", "_no_nome", "-vendas", "nome")[:6]
     )
     itens = []
     for p in produtos:

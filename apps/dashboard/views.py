@@ -391,6 +391,8 @@ def salvar_produto_rapido(request, produto_id):
     try:
         if (preco := request.POST.get("preco")) not in (None, ""):
             produto.preco = Decimal(preco.replace(",", "."))
+        if (prioridade := request.POST.get("prioridade_busca")) not in (None, ""):
+            produto.prioridade_busca = max(0, min(100, int(prioridade)))
         if (estoque := request.POST.get("estoque")) not in (None, ""):
             novo = int(estoque)
             if novo != produto.estoque:

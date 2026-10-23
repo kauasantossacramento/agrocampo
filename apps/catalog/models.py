@@ -20,6 +20,47 @@ def texto_sem_acento(texto: str) -> str:
     return "".join(c for c in normalizado if unicodedata.category(c) != "Mn").lower()
 
 
+# Plural do português, do jeito que aparece numa loja de ração: "rações",
+# "cães", "animais". Não é um lematizador — é a lista curta que resolve o
+# que o cliente digita de verdade, sem trazer dependência nova.
+FINAIS_PLURAL = (
+    ("oes", "ao"),      # rações  -> racao
+    ("aes", "ao"),      # cães    -> cao
+    ("ais", "al"),      # animais -> animal
+    ("eis", "el"),      # papéis  -> papel
+    ("ois", "ol"),      # lençóis -> lencol
+    ("ns", "m"),        # homens  -> homem
+    ("res", "r"),       # colares -> colar
+    ("zes", "z"),       # raízes  -> raiz
+    ("ses", "s"),       # meses   -> mes
+)
+
+
+def singular(palavra: str) -> str:
+    """Devolve a forma singular aproximada de uma palavra já sem acento."""
+    if len(palavra) < 4:
+        return palavra
+    for final, troca in FINAIS_PLURAL:
+        if palavra.endswith(final):
+            return palavra[: -len(final)] + troca
+    if palavra.endswith("s"):
+        return palavra[:-1]
+    return palavra
+
+
+def normalizar_busca(texto: str) -> str:
+    """Texto sem acento mais a versão no singular de cada palavra.
+
+    Guardar as duas formas é o que faz "rações" achar "Ração" e vice-versa,
+    sem precisar de extensão do banco nem de biblioteca de stemming: na hora
+    da busca basta comparar a palavra digitada e o singular dela.
+    """
+    limpo = texto_sem_acento(texto)
+    palavras = {p for p in limpo.replace("/", " ").split() if p}
+    singulares = {singular(p) for p in palavras}
+    return " ".join([limpo, *sorted(singulares - palavras)])
+
+
 class CategoriaQuerySet(PublicadoQuerySet):
     def raizes(self):
         return self.filter(pai__isnull=True)
@@ -457,6 +498,28 @@ class Produto(TimeStampedModel, SluggedModel):
     # "ração" — e é assim que meio mundo digita no celular. Guardar a cópia
     # resolve igual no SQLite e no Postgres, sem depender de extensão.
     busca_normalizada = models.TextField(blank=True, editable=False)
+    # Só o nome e as palavras-chave, na forma sem acento. Separado da coluna
+    # de cima porque é por ele que a ordem se decide: quem busca "ração"
+    # quer ração no topo, não o que caiu na lista pela categoria.
+    nome_normalizado = models.TextField(blank=True, editable=False)
+    # O cliente procura por palavra que não está no nome: "filhote", "sem
+    # corante", "castrado", "cachorro". Aqui o lojista escreve esses termos
+    # e eles passam a achar o produto, sem poluir o que aparece na vitrine.
+    palavras_chave = models.CharField(
+        "palavras-chave da busca", max_length=300, blank=True,
+        help_text="Separe por vírgula: cachorro, filhote, castrado. Só servem "
+                  "para a busca — não aparecem para o cliente.",
+    )
+    # A loja quer empurrar certos produtos: "quando pesquisarem ração, quero a
+    # Special Care na frente". O número decide a ordem entre os que bateram na
+    # busca; não inventa resultado, só muda quem aparece primeiro.
+    prioridade_busca = models.PositiveSmallIntegerField(
+        "prioridade na busca", default=0,
+        validators=[MaxValueValidator(100)],
+        help_text="0 é o normal. Quanto maior, mais na frente o produto aparece "
+                  "entre os resultados — use 10 para a linha que a loja quer "
+                  "empurrar hoje.",
+    )
     categoria = models.ForeignKey(
         Categoria, on_delete=models.PROTECT, related_name="produtos"
     )
@@ -718,8 +781,13 @@ class Produto(TimeStampedModel, SluggedModel):
 
     def save(self, *args, **kwargs):
         """Atualiza a cópia sem acento antes de gravar."""
-        self.busca_normalizada = texto_sem_acento(
-            " ".join(filter(None, [self.nome, self.resumo, self.sku, self.descricao]))
+        self.nome_normalizado = normalizar_busca(
+            " ".join(filter(None, [self.nome, self.palavras_chave]))
+        )
+        self.busca_normalizada = normalizar_busca(
+            " ".join(filter(None, [
+                self.nome, self.resumo, self.sku, self.palavras_chave, self.descricao,
+            ]))
         )
         super().save(*args, **kwargs)
 

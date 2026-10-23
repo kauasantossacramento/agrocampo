@@ -60,6 +60,7 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             "resumo", "descricao",
             "preco", "preco_promocional", "promocao_ate",
             "sem_controle_estoque", "estoque", "estoque_minimo", "unidade", "peso_kg", "proteina",
+            "palavras_chave", "prioridade_busca",
             "permite_assinatura", "desconto_assinatura_proprio",
             "destaque", "lancamento", "publicado",
         )
@@ -82,6 +83,10 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             "estoque_minimo": forms.NumberInput(attrs={"inputmode": "numeric"}),
             "peso_kg": forms.NumberInput(attrs={"step": "0.001", "inputmode": "decimal"}),
             "proteina": forms.NumberInput(attrs={"inputmode": "numeric", "placeholder": "ex.: 26"}),
+            "palavras_chave": forms.TextInput(attrs={
+                "placeholder": "cachorro, filhote, castrado",
+            }),
+            "prioridade_busca": forms.NumberInput(attrs={"inputmode": "numeric"}),
             "desconto_assinatura_proprio": forms.NumberInput(attrs={
                 "inputmode": "numeric", "placeholder": "vazio = usa o global",
             }),
@@ -125,6 +130,9 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
             "placeholder": "un, kg, g, L…",
         })
         self.fields["unidade"].required = False
+        # tem padrão no modelo: quem não mexer na prioridade não precisa
+        # preencher — e o cadastro rápido no celular continua curto
+        self.fields["prioridade_busca"].required = False
         if self.is_bound or not self.instance:
             return
         if self.instance.marca_id:
@@ -163,6 +171,9 @@ class ProdutoForm(_EstilizadoMixin, forms.ModelForm):
         nomes = (self.cleaned_data.get("especies_nomes") or "").split(",")
         achados = (self._obter_ou_criar(Especie, nome) for nome in nomes)
         return [especie for especie in achados if especie]
+
+    def clean_prioridade_busca(self):
+        return self.cleaned_data.get("prioridade_busca") or 0
 
     def clean_unidade(self):
         return (self.cleaned_data.get("unidade") or "un").strip().lower()[:5] or "un"

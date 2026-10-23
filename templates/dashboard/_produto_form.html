@@ -96,6 +96,24 @@
       </span>
     </div>
 
+    {% comment %}
+      Palavras-chave e prioridade são as duas alavancas da busca: a primeira
+      ensina o site a achar o produto por termos que não estão no nome; a
+      segunda decide quem aparece primeiro entre os que bateram.
+    {% endcomment %}
+    <div class="grid grid--2" style="gap:var(--s-4);margin-top:var(--s-4)">
+      <div class="field">
+        <label for="{{ form.palavras_chave.id_for_label }}">Palavras-chave da busca</label>
+        {{ form.palavras_chave }}
+        <span class="help">{{ form.palavras_chave.help_text }}</span>
+      </div>
+      <div class="field">
+        <label for="{{ form.prioridade_busca.id_for_label }}">Prioridade na busca</label>
+        {{ form.prioridade_busca }}
+        <span class="help">{{ form.prioridade_busca.help_text }}</span>
+      </div>
+    </div>
+
     <div class="field" style="margin-top:var(--s-4)">
       <label for="{{ form.sku.id_for_label }}">Código (SKU)</label>
       {{ form.sku }}
