@@ -362,12 +362,17 @@ quando a aba sai da frente e respeita quem pediu menos animação no sistema.
 banner está sem destino escolhido: clicar nele abre a loja toda. Abra o banner
 e escolha em *Ao clicar, abrir* — categoria, produtos selecionados ou um link.
 
-**Como a arte ocupa a moldura.** Em *Conteúdo › Banners da home › Exibição*:
-**Preencher** (padrão) faz a arte cobrir a moldura inteira, sem sobra de
-fundo — pode cortar um pouco das bordas. **Mostrar a arte inteira** garante
-que nada seja cortado, ao custo de sobrar fundo nas laterais quando a arte
-tem proporção diferente da moldura. Use a segunda quando o cartaz tiver preço
-escrito rente à borda.
+**Moldura única (padrão).** Todos os banners entram no mesmo tamanho, para o
+carrossel não mudar de altura a cada slide. Em *Conteúdo › Banners da home ›
+Exibição* você escolhe como a arte ocupa essa moldura: **Preencher** (padrão)
+cobre tudo, sem sobra de fundo — pode cortar um pouco das bordas;
+**Mostrar a arte inteira** garante que nada seja cortado, ao custo de sobrar
+fundo nas laterais. Use a segunda quando o cartaz tiver preço escrito rente à
+borda. Desligando *padronizar*, cada arte sai no próprio tamanho — preenche
+sempre, mas a altura varia de um banner para o outro.
+
+**Para a arte não ser cortada, exporte na medida da moldura** (o formato fica
+logo acima: 1600 × 500 px na faixa). Assim ela preenche sem perder nada.
 
 **No celular a moldura é mais alta.** Uma faixa 16/5 numa tela de 390 px vira
 uma tira de 120 px e o banner some no meio da página; no celular ele passa a

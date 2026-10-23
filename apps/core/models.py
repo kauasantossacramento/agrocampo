@@ -182,11 +182,12 @@ class SiteConfig(TimeStampedModel):
     )
 
     banners_padronizar = models.BooleanField(
-        "padronizar tamanho (modo faixa)", default=False,
-        help_text="Não (padrão): cada arte sai no próprio tamanho, ocupando a "
-                  "largura toda — preenche sem cortar e sem sobrar fundo. "
-                  "Sim: todos entram numa moldura única, e aí a escolha abaixo "
-                  "decide se a arte preenche (cortando) ou aparece inteira.",
+        "padronizar tamanho (modo faixa)", default=True,
+        help_text="Sim (padrão): todos os banners entram na mesma moldura, do "
+                  "mesmo tamanho — o carrossel não muda de altura a cada slide. "
+                  "Não: cada arte sai no próprio tamanho, e a altura varia "
+                  "conforme a peça. A escolha abaixo decide se a arte preenche "
+                  "a moldura ou aparece inteira.",
     )
     banners_ajuste = models.CharField(
         "como a arte ocupa a moldura", max_length=10, default="preencher",
