@@ -610,6 +610,42 @@ Stone devolve (é ele que permite a cobrança automática da assinatura).
 
 ---
 
+### 12.2 Cielo ou Stone/Pagar.me
+
+A loja fala com **um** adquirente por vez, e quem escolhe é você em
+*Configurações › Pagamentos › Driver*:
+
+| Driver | Quando usar |
+|---|---|
+| **Simulado** | hoje. Aceita pedidos e não movimenta dinheiro. |
+| **Stone / Pagar.me** | com as credenciais da Stone preenchidas. |
+| **Cielo** | com MerchantId e MerchantKey da Cielo preenchidos. |
+
+**Trocar é só mudar o driver e salvar** — nada precisa ser reinstalado, e as
+credenciais do outro adquirente continuam guardadas, então dá para voltar
+atrás na mesma tela. Se o driver escolhido estiver sem credencial, a loja
+**volta sozinha para o simulado**: é melhor o checkout seguir fingindo do que
+quebrar na frente do cliente.
+
+**Para ligar a Cielo:**
+
+1. Pegue **MerchantId** e **MerchantKey** no portal da Cielo (para testar sem
+   risco, use as credenciais do cadastro de sandbox).
+2. Preencha os dois em *Configurações › Pagamentos › Credenciais Cielo*.
+3. Deixe **Ambiente** em *Sandbox*, troque o **Driver** para *Cielo* e salve.
+4. No portal da Cielo, cadastre a **URL de notificação** mostrada na mesma
+   tela (`/pagamentos/webhook/cielo/`). Sem ela o Pix e o cartão não viram
+   “pago” sozinhos no painel.
+5. Faça um pedido de teste, confira o status mudando sozinho, e só então
+   troque o ambiente para **Produção** com as credenciais de produção.
+
+A Cielo usa dois endereços — um para o que mexe em dinheiro, outro só para
+consulta — e os dois já vêm preenchidos. O aviso que ela manda traz apenas o
+número do pagamento; a loja consulta o estado real com as suas credenciais
+antes de dar o pedido por pago.
+
+---
+
 ## 12.1 E-mail (SMTP) — **ainda não configurado**
 
 Hoje a loja **não envia e-mail**. Sem servidor de envio, as mensagens de

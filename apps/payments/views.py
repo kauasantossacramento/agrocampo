@@ -154,6 +154,33 @@ def webhook(request):
     return JsonResponse({"recebido": True, "evento": evento.pk})
 
 
+@csrf_exempt
+@require_POST
+def webhook_cielo(request):
+    """Recebe o Post de Notificação da Cielo.
+
+    A Cielo manda só `PaymentId` e `ChangeType` — ela avisa que algo mudou,
+    não o que ficou. Quem descobre o estado real é o driver, consultando a
+    API com as credenciais da loja; por isso não há assinatura para conferir
+    aqui, e confiar no aviso sem consultar é que seria inseguro.
+
+    A Cielo aceita JSON ou formulário, dependendo de como a conta foi
+    configurada no portal — então os dois formatos são lidos.
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        payload = request.POST.dict()
+
+    if not payload.get("PaymentId"):
+        return HttpResponse("sem PaymentId", status=400)
+
+    evento = registrar_webhook(request.body, payload, assinatura="")
+    processar_webhook(evento)
+    # a Cielo reenvia enquanto não receber 200
+    return JsonResponse({"recebido": True, "evento": evento.pk})
+
+
 @login_required
 @require_POST
 def simular_pix(request, pagamento_id):

@@ -1,10 +1,12 @@
 """Fábrica de drivers de pagamento."""
 from .base import DadosCartao, ErroGateway, GatewayBase, ResultadoPagamento
+from .cielo import CieloGateway
 from .simulado import SimuladoGateway
 from .stone import StoneGateway
 
 DRIVERS = {
     "stone": StoneGateway,
+    "cielo": CieloGateway,
     "simulado": SimuladoGateway,
 }
 
@@ -20,12 +22,16 @@ def get_gateway(provedor=None):
 
     provedor = provedor or ProvedorPagamento.ativo_padrao()
     driver = provedor.driver
-    if driver == ProvedorPagamento.Driver.STONE and not provedor.credenciais_completas:
+    de_verdade = {ProvedorPagamento.Driver.STONE, ProvedorPagamento.Driver.CIELO}
+    if driver in de_verdade and not provedor.credenciais_completas:
+        # escolher o adquirente sem preencher a credencial é meio caminho:
+        # a loja segue no simulado até o cadastro ficar completo
         driver = ProvedorPagamento.Driver.SIMULADO
     return DRIVERS.get(driver, SimuladoGateway)(provedor)
 
 
 __all__ = [
+    "CieloGateway",
     "DadosCartao",
     "ErroGateway",
     "GatewayBase",

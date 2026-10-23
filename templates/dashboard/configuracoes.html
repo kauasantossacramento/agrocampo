@@ -244,6 +244,55 @@
             <div class="field"><label>Produção</label>{{ form_provedor.stone_base_url_producao }}</div>
           </div>
         </details>
+
+        {% comment %}
+          Credenciais da Cielo. Ficam sempre visíveis, e não escondidas atrás
+          do driver escolhido: o lojista precisa preencher antes de trocar, e
+          um campo que só aparece depois de trocar vira um beco.
+        {% endcomment %}
+        <hr class="divider">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Credenciais Cielo</h3>
+        <p class="xs muted" style="margin-bottom:var(--s-4)">
+          Portal da Cielo. A Cielo não usa token: estes dois valores vão no
+          cabeçalho de toda chamada. Para começar sem risco, pegue as
+          credenciais de teste no cadastro do sandbox e deixe o ambiente em
+          <em>Sandbox</em>.
+        </p>
+        <div class="stack" style="gap:var(--s-4)">
+          <div class="field">
+            <label>MerchantId <span style="color:var(--red)">*</span></label>
+            {{ form_provedor.cielo_merchant_id }}
+            {% if form_provedor.cielo_merchant_id.errors %}<span class="error-text">{{ form_provedor.cielo_merchant_id.errors|join:" " }}</span>{% endif %}
+          </div>
+          <div class="field">
+            <label>MerchantKey <span style="color:var(--red)">*</span></label>
+            {{ form_provedor.cielo_merchant_key }}
+            {% if form_provedor.cielo_merchant_key.errors %}<span class="error-text">{{ form_provedor.cielo_merchant_key.errors|join:" " }}</span>{% endif %}
+          </div>
+        </div>
+
+        <details style="margin-top:var(--s-5)">
+          <summary class="small strong" style="cursor:pointer">URLs da Cielo</summary>
+          <p class="xs muted" style="margin:var(--s-3) 0">
+            A Cielo separa os endereços: um recebe o que mexe em dinheiro, o
+            outro só responde consulta. Os valores já vêm preenchidos.
+          </p>
+          <div class="grid grid--2" style="gap:var(--s-4)">
+            <div class="field"><label>Transação · sandbox</label>{{ form_provedor.cielo_base_url_sandbox }}</div>
+            <div class="field"><label>Transação · produção</label>{{ form_provedor.cielo_base_url_producao }}</div>
+            <div class="field"><label>Consulta · sandbox</label>{{ form_provedor.cielo_query_url_sandbox }}</div>
+            <div class="field"><label>Consulta · produção</label>{{ form_provedor.cielo_query_url_producao }}</div>
+          </div>
+        </details>
+
+        <div class="alert alert--info" style="margin-top:var(--s-5)">
+          <svg width="16" height="16"><use href="#i-info"></use></svg>
+          <span>
+            Endereço para cadastrar no portal da Cielo, em
+            <strong>URL de notificação</strong>:
+            <code>{{ url_webhook_cielo }}</code>
+          </span>
+        </div>
       </div>
 
       <div class="stack">

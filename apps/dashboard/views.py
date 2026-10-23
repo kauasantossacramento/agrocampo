@@ -47,6 +47,14 @@ def operador_requerido(view):
     return _wrapper
 
 
+def _endereco_publico(caminho: str) -> str:
+    """Endereço completo de uma rota, para colar no portal do adquirente."""
+    from django.conf import settings
+
+    base = (getattr(settings, "SITE_URL", "") or "https://agrocampo.online").rstrip("/")
+    return f"{base}{caminho}"
+
+
 def _metricas():
     hoje = timezone.localdate()
     inicio = timezone.make_aware(
@@ -523,6 +531,9 @@ def configuracoes(request):
             "mensagens_whatsapp": MensagemWhatsApp.objects.select_related("pedido")[:20],
             "conversas_assistente": ConversaAssistente.objects.order_by("-criado_em")[:15],
             "form_provedor": formularios.ProvedorPagamentoForm(instance=provedor),
+            # o lojista precisa colar isto no portal da Cielo; montar à mão
+            # erra o domínio quando a loja troca de endereço
+            "url_webhook_cielo": _endereco_publico(reverse("payments:webhook_cielo")),
             "provedores": ProvedorPagamento.objects.all(),
             "provedor": provedor,
             "metricas": _metricas(),

@@ -179,3 +179,150 @@ class ProvedorTests(TestCase):
         ProvedorPagamento.objects.create(nome="B", padrao=True)
         primeiro.refresh_from_db()
         self.assertFalse(primeiro.padrao)
+
+
+class CieloTests(BaseCheckout):
+    """Driver da Cielo: o que a loja manda e o que ela entende de volta.
+
+    A API da Cielo não é chamada de verdade — as respostas são as que a
+    documentação descreve. O que se verifica aqui é a tradução: valores em
+    centavos, cabeçalhos, host certo para cada operação e o status numérico
+    virando o status do pedido.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from apps.payments.gateways.cielo import CieloGateway
+
+        self.provedor.driver = ProvedorPagamento.Driver.CIELO
+        self.provedor.cielo_merchant_id = "merchant-de-teste"
+        self.provedor.cielo_merchant_key = "chave-de-teste"
+        self.provedor.save()
+        self.gateway = CieloGateway(self.provedor)
+        self.pagamento = Pagamento.objects.create(
+            pedido=self.pedido, provedor=self.provedor,
+            metodo=Pagamento.Metodo.CARTAO, valor=Decimal("100.00"),
+        )
+
+    def _resposta(self, corpo, status=201):
+        """Finge uma resposta da Cielo, sem sair para a internet."""
+        from unittest.mock import patch
+
+        class Falsa:
+            status_code = status
+
+            def json(self):
+                return corpo
+
+        return patch("apps.payments.gateways.cielo.requests.request", return_value=Falsa())
+
+    def test_driver_cielo_e_escolhido_quando_ha_credencial(self):
+        self.assertEqual(get_gateway(self.provedor).codigo, "cielo")
+
+    def test_sem_credencial_cai_no_simulado(self):
+        """Trocar o driver sem preencher a chave não pode quebrar o checkout."""
+        self.provedor.cielo_merchant_key = ""
+        self.provedor.save()
+        self.assertEqual(get_gateway(self.provedor).codigo, "simulado")
+
+    def test_credenciais_vao_no_cabecalho(self):
+        cabecalhos = self.gateway._headers()
+        self.assertEqual(cabecalhos["MerchantId"], "merchant-de-teste")
+        self.assertEqual(cabecalhos["MerchantKey"], "chave-de-teste")
+        self.assertEqual(cabecalhos["Content-Type"], "application/json")
+
+    def test_consulta_usa_o_host_de_consulta(self):
+        """A Cielo recusa consulta no host transacional."""
+        self.pagamento.referencia_externa = "pagamento-123"
+        self.pagamento.save()
+        with self._resposta({"Payment": {"Status": 2, "PaymentId": "pagamento-123"}}, 200) as chamada:
+            self.gateway.consultar(self.pagamento)
+        url = chamada.call_args[0][1]
+        self.assertIn("apiquerysandbox", url)
+
+    def test_autorizacao_manda_centavos_e_vai_ao_host_de_transacao(self):
+        from apps.payments.gateways.base import DadosCartao
+
+        corpo = {"Payment": {"Status": 1, "PaymentId": "p-1", "Tid": "t-1",
+                             "CreditCard": {"Brand": "Visa", "CardNumber": "411111******1234"}}}
+        with self._resposta(corpo) as chamada:
+            resultado = self.gateway.autorizar_cartao(
+                self.pagamento, DadosCartao(**CARTAO_APROVADO), parcelas=3
+            )
+
+        enviado = json.loads(chamada.call_args[1]["data"])
+        self.assertEqual(enviado["Payment"]["Amount"], 10000)      # R$ 100,00
+        self.assertEqual(enviado["Payment"]["Installments"], 3)
+        self.assertIn("apisandbox", chamada.call_args[0][1])
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(resultado.status, "autorizado")
+        self.assertEqual(resultado.referencia_externa, "p-1")
+
+    def test_status_da_cielo_vira_status_do_pedido(self):
+        from apps.payments.gateways.cielo import MAPA_STATUS
+
+        self.assertEqual(MAPA_STATUS[2], "pago")
+        self.assertEqual(MAPA_STATUS[3], "recusado")
+        self.assertEqual(MAPA_STATUS[10], "cancelado")
+        self.assertEqual(MAPA_STATUS[11], "estornado")
+
+    def test_recusa_vem_com_a_mensagem_da_cielo(self):
+        from apps.payments.gateways.base import DadosCartao
+
+        corpo = {"Payment": {"Status": 3, "PaymentId": "p-2",
+                             "ReturnMessage": "Not Authorized", "ReturnCode": "05"}}
+        with self._resposta(corpo):
+            resultado = self.gateway.autorizar_cartao(
+                self.pagamento, DadosCartao(**CARTAO_RECUSADO)
+            )
+        self.assertFalse(resultado.sucesso)
+        self.assertEqual(resultado.status, "recusado")
+        self.assertEqual(resultado.codigo_retorno, "05")
+
+    def test_erro_em_lista_vira_mensagem_legivel(self):
+        """A Cielo devolve erro como lista de objetos, não como texto."""
+        corpo = [{"Code": 126, "Message": "Credit Card Expiration Date is invalid"}]
+        with self._resposta(corpo, status=400):
+            from apps.payments.gateways.base import DadosCartao
+
+            resultado = self.gateway.autorizar_cartao(
+                self.pagamento, DadosCartao(**CARTAO_APROVADO)
+            )
+        self.assertFalse(resultado.sucesso)
+        self.assertIn("Expiration Date", resultado.mensagem)
+
+    def test_pix_traz_o_qrcode(self):
+        corpo = {"Payment": {"Status": 12, "PaymentId": "pix-1",
+                             "QrCodeString": "00020126...", "QrCodeBase64Image": "iVBOR"}}
+        with self._resposta(corpo):
+            resultado = self.gateway.criar_pix(self.pagamento)
+        self.assertEqual(resultado.pix_qrcode, "00020126...")
+        self.assertEqual(resultado.status, "processando")
+
+    def test_webhook_consulta_o_estado_real(self):
+        """O aviso diz que mudou; o status verdadeiro vem da consulta."""
+        with self._resposta({"Payment": {"Status": 2, "Amount": 10000}}, 200):
+            dados = self.gateway.interpretar_webhook(
+                {"PaymentId": "p-9", "ChangeType": "1"}
+            )
+        self.assertEqual(dados["referencia_externa"], "p-9")
+        self.assertEqual(dados["status"], "pago")
+        self.assertEqual(dados["valor"], Decimal("100"))
+
+    def test_webhook_sem_payment_id_e_recusado(self):
+        resposta = self.client.post(
+            reverse("payments:webhook_cielo"),
+            data=json.dumps({"ChangeType": "1"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resposta.status_code, 400)
+
+    def test_cielo_fora_do_ar_nao_derruba_o_webhook(self):
+        from unittest.mock import patch
+
+        from apps.payments.gateways.base import ErroGateway
+
+        with patch.object(self.gateway, "_chamar", side_effect=ErroGateway("sem rede")):
+            dados = self.gateway.interpretar_webhook({"PaymentId": "p-9", "ChangeType": "1"})
+        self.assertEqual(dados["referencia_externa"], "p-9")
+        self.assertEqual(dados["status"], "")      # fica para reprocessar

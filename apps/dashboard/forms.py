@@ -423,6 +423,9 @@ class ProvedorPagamentoForm(_EstilizadoMixin, forms.ModelForm):
             "stone_merchant_id", "stone_affiliation_code",
             "stone_webhook_secret", "stone_pix_chave",
             "stone_base_url_sandbox", "stone_base_url_producao",
+            "cielo_merchant_id", "cielo_merchant_key",
+            "cielo_base_url_sandbox", "cielo_base_url_producao",
+            "cielo_query_url_sandbox", "cielo_query_url_producao",
             "aceita_cartao", "aceita_pix", "aceita_boleto",
             "parcelas_maximas", "parcelas_sem_juros", "valor_minimo_parcela",
             "captura_automatica", "soft_descriptor", "pix_expira_em_minutos",
@@ -432,6 +435,7 @@ class ProvedorPagamentoForm(_EstilizadoMixin, forms.ModelForm):
             "stone_client_secret": forms.PasswordInput(render_value=True),
             "stone_api_key": forms.PasswordInput(render_value=True),
             "stone_webhook_secret": forms.PasswordInput(render_value=True),
+            "cielo_merchant_key": forms.PasswordInput(render_value=True),
             "valor_minimo_parcela": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
             "soft_descriptor": forms.TextInput(attrs={"maxlength": 22}),
         }
@@ -453,6 +457,21 @@ class ProvedorPagamentoForm(_EstilizadoMixin, forms.ModelForm):
                 "parcelas_sem_juros",
                 f"Não pode ser maior que o total de parcelas ({maximas}x).",
             )
+
+        if dados.get("driver") == ProvedorPagamento.Driver.CIELO:
+            faltando = [
+                rotulo
+                for campo, rotulo in (("cielo_merchant_id", "MerchantId"),
+                                      ("cielo_merchant_key", "MerchantKey"))
+                if not dados.get(campo)
+            ]
+            if faltando:
+                self.add_error(
+                    None,
+                    "Para usar a Cielo é preciso preencher: "
+                    + ", ".join(faltando)
+                    + ". Enquanto faltar, a loja opera em modo simulado.",
+                )
 
         # Stone de verdade exige o mínimo para autenticar
         if dados.get("driver") == ProvedorPagamento.Driver.STONE:

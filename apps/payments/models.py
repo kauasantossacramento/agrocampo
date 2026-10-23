@@ -28,7 +28,8 @@ class ProvedorPagamento(TimeStampedModel):
     """
 
     class Driver(models.TextChoices):
-        STONE = "stone", "Stone (produção/sandbox oficial)"
+        STONE = "stone", "Stone / Pagar.me"
+        CIELO = "cielo", "Cielo (API e-Commerce 3.0)"
         SIMULADO = "simulado", "Simulado (desenvolvimento)"
 
     class Ambiente(models.TextChoices):
@@ -83,6 +84,38 @@ class ProvedorPagamento(TimeStampedModel):
     )
     stone_base_url_producao = models.URLField(
         "Stone · URL base (produção)", default="https://api.stone.com.br", blank=True
+    )
+
+    # ------------------------------------------------------------------
+    # CREDENCIAIS CIELO — API e-Commerce 3.0
+    # A Cielo não usa OAuth: autentica por dois cabeçalhos em toda chamada,
+    # MerchantId e MerchantKey. E separa os endereços: um host recebe o que
+    # muda dinheiro (autorizar, capturar, cancelar) e outro só responde
+    # consulta. Por isso são dois pares de URL, não um.
+    # ------------------------------------------------------------------
+    cielo_merchant_id = models.CharField(
+        "Cielo · MerchantId", max_length=120, blank=True,
+        help_text="Identificador da loja na Cielo (formato GUID).",
+    )
+    cielo_merchant_key = models.CharField(
+        "Cielo · MerchantKey", max_length=300, blank=True,
+        help_text="Chave de autenticação. Vai no cabeçalho de toda requisição.",
+    )
+    cielo_base_url_sandbox = models.URLField(
+        "Cielo · URL de transação (sandbox)",
+        default="https://apisandbox.cieloecommerce.cielo.com.br", blank=True,
+    )
+    cielo_base_url_producao = models.URLField(
+        "Cielo · URL de transação (produção)",
+        default="https://api.cieloecommerce.cielo.com.br", blank=True,
+    )
+    cielo_query_url_sandbox = models.URLField(
+        "Cielo · URL de consulta (sandbox)",
+        default="https://apiquerysandbox.cieloecommerce.cielo.com.br", blank=True,
+    )
+    cielo_query_url_producao = models.URLField(
+        "Cielo · URL de consulta (produção)",
+        default="https://apiquery.cieloecommerce.cielo.com.br", blank=True,
     )
 
     # cache do token OAuth — preenchido pelo driver, não editar à mão
@@ -148,8 +181,32 @@ class ProvedorPagamento(TimeStampedModel):
         )
 
     @property
+    def cielo_url(self):
+        """Host que recebe autorização, captura e cancelamento."""
+        return (
+            self.cielo_base_url_producao
+            if self.ambiente == self.Ambiente.PRODUCAO
+            else self.cielo_base_url_sandbox
+        )
+
+    @property
+    def cielo_url_consulta(self):
+        """Host só de leitura — a Cielo separa os dois de propósito."""
+        return (
+            self.cielo_query_url_producao
+            if self.ambiente == self.Ambiente.PRODUCAO
+            else self.cielo_query_url_sandbox
+        )
+
+    @property
     def credenciais_completas(self):
-        """True quando há o mínimo para falar com a Stone de verdade."""
+        """True quando há o mínimo para falar com o adquirente escolhido.
+
+        Sem isso a loja cai no driver simulado: é melhor o checkout seguir
+        fingindo do que quebrar na frente do cliente por falta de cadastro.
+        """
+        if self.driver == self.Driver.CIELO:
+            return bool(self.cielo_merchant_id and self.cielo_merchant_key)
         return bool(self.stone_api_key and self.stone_merchant_id)
 
     @property
