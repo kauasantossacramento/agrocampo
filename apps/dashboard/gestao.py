@@ -31,11 +31,16 @@ class ConfiguracaoBannersForm(_EstilizadoMixin, forms.ModelForm):
 
     class Meta:
         model = SiteConfig
-        fields = ("banners_padronizar", "banners_formato")
+        fields = ("banners_padronizar", "banners_formato", "banners_ajuste")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initial["banners_padronizar"] = "sim" if self.instance.banners_padronizar else "nao"
+        # o ajuste tem padrão no modelo: faltando no envio, fica o que está
+        self.fields["banners_ajuste"].required = False
+
+    def clean_banners_ajuste(self):
+        return self.cleaned_data.get("banners_ajuste") or self.instance.banners_ajuste
 
 
 class BannerForm(_EstilizadoMixin, forms.ModelForm):

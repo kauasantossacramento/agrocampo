@@ -26,7 +26,8 @@
 {% endif %}
 
 {% if site.capa_slides_ativa %}
-<section class="vitrine-capa wrap {% if site.banners_padronizar %}banners--faixa{% else %}banners--livres{% endif %}" style="--banner-formato:{{ site.banners_formato }}" data-hero>
+<section class="vitrine-capa wrap {% if site.banners_padronizar %}banners--faixa{% else %}banners--livres{% endif %} banners--{{ site.banners_ajuste }}"
+         style="--banner-formato:{{ site.banners_formato }}" data-hero>
   <div class="vitrine-capa__quadro">
     {% for banner in slides %}
       {% if banner.video %}

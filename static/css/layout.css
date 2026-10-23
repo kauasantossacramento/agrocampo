@@ -1570,6 +1570,15 @@
 @media (max-width: 620px) {
   .vitrine-capa { padding-top: var(--s-3); }
   .vitrine-capa__slide img { aspect-ratio: 16 / 9; }
+
+  /* Numa tela de 390 px, a faixa 16/5 vira uma tira de 120 px de altura e o
+     banner some no meio da página. No celular a moldura fica bem mais alta —
+     quase o dobro — e quem quiser enquadrar de outro jeito sobe a arte de
+     celular no próprio banner. */
+  .banners--faixa .vitrine-capa__slide img,
+  .banners--faixa .vitrine-capa__slide video,
+  .banners--faixa .vitrine-capa__slide--video video,
+  .banners--faixa .apresentacao__midia { aspect-ratio: 4 / 3; }
   .vitrine-capa__seta { display: none; }
   .secao-titulo h2 { font-size: var(--fs-lg); }
   .secao-titulo__icone { width: 28px; height: 28px; }
@@ -1707,21 +1716,38 @@
 /* 16/9 é o formato em que o vídeo é gravado; no 16/7 de antes um terço da
    cena ficava de fora, e o que sobrava parecia um retângulo escuro. */
 .vitrine-capa__slide--video video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; }
+.banners--faixa .vitrine-capa__slide--video video { aspect-ratio: var(--banner-formato, 16 / 5); }
 
-/* Cartazes trazem preços e texto nas bordas: a moldura uniforme deve mostrar
-   a peça inteira, inclusive no celular, em vez de ampliar e cortar a arte. */
+/* A moldura é uniforme; o que muda é como a arte a ocupa, e quem escolhe é
+   o lojista em Conteúdo › Banners › Exibição:
+
+   * preencher — a arte cobre a moldura inteira, sem sobra de fundo. É o
+     padrão, e foi o pedido: o banner "cabendo na div";
+   * inteira   — a arte aparece completa e pode sobrar fundo nas laterais.
+     Serve ao cartaz com preço escrito rente à borda, que não pode ser
+     cortado. */
 .banners--faixa .vitrine-capa__slide img,
 .banners--faixa .vitrine-capa__slide video,
 .banners--faixa .apresentacao__midia {
   width: 100%; height: auto; max-height: none;
-  aspect-ratio: var(--banner-formato, 16 / 5); object-fit: contain;
+  aspect-ratio: var(--banner-formato, 16 / 5);
+  object-fit: cover;
   background: var(--cream-warm);
 }
+.banners--inteira .vitrine-capa__slide img,
+.banners--inteira .vitrine-capa__slide video,
+.banners--inteira .apresentacao__midia { object-fit: contain; }
+/* Modo livre (o padrão): a moldura é a própria arte. Ocupa a largura toda,
+   não corta nada e não sobra fundo — foi o que o lojista pediu ao dizer que
+   o banner precisava "caber na div". O preço é a altura mudar de um slide
+   para o outro quando as artes têm proporções diferentes. */
 .banners--livres .vitrine-capa__slide img,
 .banners--livres .vitrine-capa__slide video,
 .banners--livres .apresentacao__midia {
-  width: 100%; height: auto; max-height: none; aspect-ratio: auto; object-fit: contain;
+  display: block; width: 100%; height: auto; max-height: none;
+  aspect-ratio: auto; object-fit: fill;
 }
+.banners--livres .vitrine-capa__quadro { background: transparent; }
 .lista-produtos-banner { max-height: 280px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-md); }
 .lista-produtos-banner label { display: flex; gap: var(--s-3); align-items: center; min-height: 44px; padding: var(--s-2) var(--s-3); cursor: pointer; }
 .lista-produtos-banner input { flex: none; }

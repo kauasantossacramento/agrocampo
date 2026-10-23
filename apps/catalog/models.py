@@ -1,4 +1,5 @@
 """Catálogo: categorias hierárquicas, marcas, espécies, produtos e estoque."""
+import unicodedata
 from decimal import Decimal
 
 from django.core.validators import (MaxValueValidator, MinValueValidator,
@@ -11,6 +12,12 @@ from django.utils import timezone
 from apps.core.models import PublicadoQuerySet, SluggedModel, TimeStampedModel
 
 CEM = Decimal("100")
+
+
+def texto_sem_acento(texto: str) -> str:
+    """Minúsculas e sem acento — a forma em que a busca compara."""
+    normalizado = unicodedata.normalize("NFD", texto or "")
+    return "".join(c for c in normalizado if unicodedata.category(c) != "Mn").lower()
 
 
 class CategoriaQuerySet(PublicadoQuerySet):
@@ -258,6 +265,14 @@ class Especie(TimeStampedModel, SluggedModel):
         help_text="Autor e licença — obrigatório para fotos sob Creative Commons.",
     )
     nome_cientifico = models.CharField(max_length=120, blank=True)
+    # Quem procura ração de cachorro digita "cachorro", não "cão"; quem cria
+    # jumento procura "jumento", não "asinino". Os apelidos entram na busca
+    # junto com o nome, e é o que faz o cliente achar o produto.
+    sinonimos = models.CharField(
+        "como o cliente também chama", max_length=250, blank=True,
+        help_text="Separe por vírgula: cachorro, dog, cãozinho. Entram na busca "
+                  "do site junto com o nome da espécie.",
+    )
     icone = models.CharField(max_length=10, blank=True)
     descricao = models.TextField(blank=True)
     ordem = models.PositiveIntegerField(default=0)
@@ -282,6 +297,12 @@ class Especie(TimeStampedModel, SluggedModel):
         Grupo.RURAL: "rural",
         Grupo.OUTRO: "pata",
     }
+
+    @property
+    def apelidos(self) -> list[str]:
+        """Nome e apelidos, em lista, para a busca comparar."""
+        termos = [self.nome] + [p.strip() for p in self.sinonimos.split(",")]
+        return [t for t in termos if t]
 
     @property
     def familia_ids(self):
@@ -360,6 +381,11 @@ class Produto(TimeStampedModel, SluggedModel):
     UNIDADES_SUGERIDAS = ("un", "kg", "g", "l", "ml", "pct", "fardo", "saco")
 
     sku = models.CharField("SKU", max_length=40, unique=True)
+    # Cópia do texto do produto sem acento e em minúsculas. Existe porque
+    # `icontains` compara acento: sem ela, quem digita "racao" não acha
+    # "ração" — e é assim que meio mundo digita no celular. Guardar a cópia
+    # resolve igual no SQLite e no Postgres, sem depender de extensão.
+    busca_normalizada = models.TextField(blank=True, editable=False)
     categoria = models.ForeignKey(
         Categoria, on_delete=models.PROTECT, related_name="produtos"
     )
@@ -618,6 +644,13 @@ class Produto(TimeStampedModel, SluggedModel):
         """O arquivo da capa — o mesmo tipo que `VariacaoProduto.foto`."""
         principal = self.imagem_principal
         return principal.imagem if principal else None
+
+    def save(self, *args, **kwargs):
+        """Atualiza a cópia sem acento antes de gravar."""
+        self.busca_normalizada = texto_sem_acento(
+            " ".join(filter(None, [self.nome, self.resumo, self.sku, self.descricao]))
+        )
+        super().save(*args, **kwargs)
 
     @property
     def na_lixeira(self) -> bool:

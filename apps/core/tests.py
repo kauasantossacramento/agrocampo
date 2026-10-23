@@ -81,10 +81,12 @@ class ConfiguracaoBannersHomeTests(TestCase):
         config.save()
         resposta = self.client.get(reverse("core:home"))
         self.assertContains(resposta, 'data-tempo="12.5"')
-        self.assertContains(resposta, 'banners--faixa')
-        config.banners_padronizar = False
+        # o padrão virou o modo livre: cada arte no próprio tamanho
+        self.assertContains(resposta, 'banners--livres')
+
+        config.banners_padronizar = True
         config.save()
-        self.assertContains(self.client.get(reverse("core:home")), 'banners--livres')
+        self.assertContains(self.client.get(reverse("core:home")), 'banners--faixa')
 
     def test_formulario_valida_tempo_destino_e_link(self):
         from apps.dashboard.gestao import BannerForm
@@ -1345,7 +1347,7 @@ class EstiloDaHomeTests(TestCase):
         self.assertTemplateUsed(r, "core/home_vitrine.html")
         self.assertContains(r, 'class="tema-vitrine"')
         self.assertContains(r, "topbar__atalho")               # topbar fixa
-        self.assertContains(r, 'class="vitrine-capa wrap banners--faixa"')     # carrossel
+        self.assertContains(r, "vitrine-capa wrap banners--livres")            # carrossel
         self.assertContains(r, 'class="secao-titulo"')          # seções divididas
         self.assertContains(r, "Navegue pelo seu animal")
         self.assertContains(r, "Por que comprar na")

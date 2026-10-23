@@ -29,6 +29,34 @@ def _decimal(valor):
         return None
 
 
+def _sem_acento(texto: str) -> str:
+    """Tira acento e caixa: "Cão" e "cao" passam a ser a mesma coisa."""
+    import unicodedata
+
+    normalizado = unicodedata.normalize("NFD", texto or "")
+    return "".join(c for c in normalizado if unicodedata.category(c) != "Mn").lower().strip()
+
+
+def _especies_por_apelido(termo: str):
+    """Espécies cujo nome ou apelido contém o termo digitado.
+
+    A comparação é em Python de propósito: são poucas dezenas de espécies, e
+    assim funciona igual no SQLite do desenvolvimento e no Postgres do
+    servidor, sem depender da extensão `unaccent`.
+    """
+    alvo = _sem_acento(termo)
+    if len(alvo) < 2:
+        return []
+
+    achadas = []
+    for especie in Especie.objects.all().only("id", "nome", "sinonimos"):
+        if any(alvo in _sem_acento(apelido) for apelido in especie.apelidos):
+            achadas.append(especie.pk)
+            # quem procura "cachorro" quer a família toda, não só a mãe
+            achadas.extend(especie.agrupadas.values_list("pk", flat=True))
+    return achadas
+
+
 def catalogo(request, categoria=None, marca=None, especie=None):
     """Listagem única que atende /catalogo, /categoria/, /marca/ e /especie/."""
     produtos = Produto.objects.vitrine()
@@ -62,14 +90,24 @@ def catalogo(request, categoria=None, marca=None, especie=None):
 
     busca = request.GET.get("q", "").strip()
     if busca:
-        produtos = produtos.filter(
-            Q(nome__icontains=busca)
+        sem_acento = _sem_acento(busca)
+        condicao = (
+            Q(busca_normalizada__icontains=sem_acento)
+            | Q(nome__icontains=busca)
             | Q(descricao__icontains=busca)
             | Q(resumo__icontains=busca)
             | Q(sku__icontains=busca)
             | Q(categoria__nome__icontains=busca)
             | Q(marca__nome__icontains=busca)
-        ).distinct()
+            | Q(especies__nome__icontains=busca)
+        )
+        # "cachorro" não aparece em lugar nenhum do cadastro — a espécie se
+        # chama "Cão". A comparação por apelido, e sem acento, é o que leva
+        # quem digitou "cachorro" ou "cao" até a ração certa.
+        especies_achadas = _especies_por_apelido(busca)
+        if especies_achadas:
+            condicao |= Q(especies__in=especies_achadas)
+        produtos = produtos.filter(condicao).distinct()
 
     faixa = produtos.aggregate(minimo=Min("preco"), maximo=Max("preco"))
     preco_min = _decimal(request.GET.get("preco_min"))
@@ -280,14 +318,29 @@ def sugestoes(request):
                         "extra": f"{c.produtos.filter(publicado=True).count()} produtos"})
     for m in Marca.objects.publicados().filter(nome__icontains=termo)[:2]:
         atalhos.append({"rotulo": m.nome, "url": m.get_absolute_url(), "icone": "medalha", "extra": "marca"})
-    for e in Especie.objects.publicados().filter(nome__icontains=termo)[:2]:
+    # a espécie também entra pelo apelido: quem digita "cachorro" vê o atalho
+    # de Cão, que é como ela está cadastrada
+    achadas = _especies_por_apelido(termo)
+    for e in Especie.objects.navegaveis().filter(
+        Q(nome__icontains=termo) | Q(pk__in=achadas)
+    )[:2]:
         atalhos.append({"rotulo": e.nome, "url": e.get_absolute_url(), "icone": "folha", "extra": "espécie"})
     if atalhos:
         grupos.append({"titulo": "Categorias, marcas e espécies", "itens": atalhos})
 
+    condicao = (
+        Q(busca_normalizada__icontains=_sem_acento(termo))
+        | Q(nome__icontains=termo)
+        | Q(sku__iexact=termo)
+        | Q(marca__nome__icontains=termo)
+    )
+    if achadas:
+        condicao |= Q(especies__in=achadas)
+
     produtos = (
         Produto.objects.vitrine()
-        .filter(Q(nome__icontains=termo) | Q(sku__iexact=termo) | Q(marca__nome__icontains=termo))
+        .filter(condicao)
+        .distinct()
         .select_related("marca")
         .prefetch_related("imagens")
         .order_by("-vendas", "nome")[:6]

@@ -326,3 +326,72 @@ class AvesAgrupadasTests(TestCase):
         bloco = bloco[:bloco.index("</section>")]
         self.assertIn("Aves", bloco)
         self.assertNotIn("Canário", bloco)
+
+
+class BuscaPorApelidoTests(TestCase):
+    """Quem digita como fala precisa achar: cachorro, racao, cavalo."""
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from apps.catalog.models import Categoria, Especie, Produto
+
+        self.Produto = Produto
+        categoria = Categoria.objects.create(nome="Ração")
+        self.cao = Especie.objects.create(
+            nome="Cão", sinonimos="cachorro, dog, canino", grupo="pet",
+        )
+        self.cavalo = Especie.objects.create(
+            nome="Cavalo", slug="equino", sinonimos="equino, égua", grupo="rural",
+        )
+        self.racao = Produto.objects.create(
+            sku="B-1", nome="Ração Premium Cães Adultos", categoria=categoria,
+            preco=Decimal("120"), publicado=True,
+        )
+        self.racao.especies.add(self.cao)
+        self.sal = Produto.objects.create(
+            sku="B-2", nome="Sal Mineral", categoria=categoria,
+            preco=Decimal("80"), publicado=True,
+        )
+        self.sal.especies.add(self.cavalo)
+
+    def _buscar(self, termo):
+        import re
+
+        html = self.client.get("/catalogo/", {"q": termo}).content.decode()
+        return re.findall(r'class="product__name"[^>]*>([^<]+)<', html)
+
+    def test_cachorro_acha_racao_de_cao(self):
+        achados = self._buscar("cachorro")
+        self.assertIn("Ração Premium Cães Adultos", [a.strip() for a in achados])
+
+    def test_sem_acento_acha_com_acento(self):
+        """"racao" é como meio mundo digita no celular."""
+        self.assertTrue(self._buscar("racao"))
+
+    def test_cavalo_acha_o_que_era_equino(self):
+        achados = [a.strip() for a in self._buscar("cavalo")]
+        self.assertIn("Sal Mineral", achados)
+
+    def test_apelido_antigo_continua_valendo(self):
+        achados = [a.strip() for a in self._buscar("equino")]
+        self.assertIn("Sal Mineral", achados)
+
+    def test_termo_curto_nao_dispara_apelido(self):
+        """Uma letra traria o catálogo inteiro sem querer."""
+        from apps.catalog.views import _especies_por_apelido
+
+        self.assertEqual(_especies_por_apelido("c"), [])
+
+    def test_sugestoes_tambem_acham_por_apelido(self):
+        import json
+
+        dados = json.loads(self.client.get("/busca/sugestoes/", {"q": "cachorro"}).content)
+        rotulos = [i["rotulo"] for g in dados["grupos"] for i in g["itens"]]
+        self.assertIn("Ração Premium Cães Adultos", rotulos)
+
+    def test_copia_sem_acento_acompanha_o_nome(self):
+        self.racao.nome = "Ração Super Premium"
+        self.racao.save()
+        self.racao.refresh_from_db()
+        self.assertIn("racao super premium", self.racao.busca_normalizada)

@@ -362,6 +362,18 @@ quando a aba sai da frente e respeita quem pediu menos animação no sistema.
 banner está sem destino escolhido: clicar nele abre a loja toda. Abra o banner
 e escolha em *Ao clicar, abrir* — categoria, produtos selecionados ou um link.
 
+**Como a arte ocupa a moldura.** Em *Conteúdo › Banners da home › Exibição*:
+**Preencher** (padrão) faz a arte cobrir a moldura inteira, sem sobra de
+fundo — pode cortar um pouco das bordas. **Mostrar a arte inteira** garante
+que nada seja cortado, ao custo de sobrar fundo nas laterais quando a arte
+tem proporção diferente da moldura. Use a segunda quando o cartaz tiver preço
+escrito rente à borda.
+
+**No celular a moldura é mais alta.** Uma faixa 16/5 numa tela de 390 px vira
+uma tira de 120 px e o banner some no meio da página; no celular ele passa a
+usar uma moldura 4/3, quase o dobro de altura. Para enquadrar de outro jeito,
+suba a *Imagem para o celular* no próprio banner.
+
 **Imagem para o celular.** Cartaz largo vira uma tira ilegível em tela de
 celular. O campo *Imagem para o celular* aceita a versão vertical ou quadrada;
 vazio, o site usa a de computador.
@@ -420,7 +432,20 @@ cheia, que avança sozinho e fecha no fim.
   isso o cadastro manual continua sendo o caminho principal. Stories sempre
   somem em 24 h no Instagram; o que for subido aqui fica.
 
-### 7.2 Aves em um card só
+### 7.2 Nomes dos animais e busca
+
+Os cards usam o nome que o cliente fala, não o termo técnico: **Cavalo** (era
+Equino), **Boi e vaca** (era Bovino), **Porco** (era Suíno), e **Burro**
+entrou na lista (serve jumento, jegue e mula). Os endereços antigos
+continuam valendo — `/especie/equino/` ainda abre Cavalo.
+
+Cada espécie tem o campo **“como o cliente também chama”** (em *Conteúdo ›
+Espécies*): ali entram os apelidos que o cliente digita. Por isso buscar
+**cachorro** traz a ração de cão, **jumento** traz a de burro e **égua** traz
+a de cavalo. A busca também ignora acento: *racao* acha *ração*. Para
+ensinar um apelido novo ao site, basta acrescentá-lo nesse campo.
+
+### 7.3 Aves em um card só
 
 A navegação por animal mostra **Cão, Gato, Peixe, Roedor, Aves, Bovino,
 Galinha, Equino e Suíno**. Os vinte tipos de pássaro (canário, calopsita,
@@ -433,7 +458,7 @@ os links antigos (`/especie/canario/`) levam para Aves automaticamente. Para
 desfazer num caso específico, abra a espécie em *Conteúdo › Espécies* e
 limpe o campo **Agrupada em** — ela volta a ter card próprio.
 
-### 7.3 Blog
+### 7.4 Blog
 
 O blog está **desligado** por padrão: a loja publica no Instagram, e os
 textos antigos ficam guardados. Para trazê-lo de volta, marque *blog ativo*

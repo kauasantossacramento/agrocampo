@@ -182,8 +182,21 @@ class SiteConfig(TimeStampedModel):
     )
 
     banners_padronizar = models.BooleanField(
-        "padronizar tamanho (modo faixa)", default=True,
-        help_text="Sim: todos usam a mesma moldura, sem cortar a arte. Não: cada imagem ou vídeo mantém sua proporção original.",
+        "padronizar tamanho (modo faixa)", default=False,
+        help_text="Não (padrão): cada arte sai no próprio tamanho, ocupando a "
+                  "largura toda — preenche sem cortar e sem sobrar fundo. "
+                  "Sim: todos entram numa moldura única, e aí a escolha abaixo "
+                  "decide se a arte preenche (cortando) ou aparece inteira.",
+    )
+    banners_ajuste = models.CharField(
+        "como a arte ocupa a moldura", max_length=10, default="preencher",
+        choices=[
+            ("preencher", "Preencher a moldura (pode cortar as bordas da arte)"),
+            ("inteira", "Mostrar a arte inteira (pode sobrar fundo nas laterais)"),
+        ],
+        help_text="Preencher deixa o banner sem sobra de fundo, que é como a "
+                  "maioria das lojas usa. Mostrar inteira serve a cartaz com "
+                  "preço escrito perto da borda, que não pode ser cortado.",
     )
     banners_formato = models.CharField(
         "tamanho da faixa", max_length=10, default="16/5",
