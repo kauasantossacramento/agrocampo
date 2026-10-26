@@ -536,3 +536,25 @@ dos temporizadores foram verificados por testes e requisições.
 Reversão apenas do código, preservando o banco e os uploads: voltar ao commit
 `fc75759`, reconstruir `web` e subir com `--no-deps`. Os campos novos podem
 permanecer no banco, pois a versão anterior os ignora.
+
+### 10.9 Faixa promocional entre as seções (26/10/2026)
+
+Commit `1612fdd`. A posição *Faixa promocional*, que existia no cadastro de
+banners desde o início mas não era desenhada em lugar nenhum, virou seção da
+home — entre o "Por que comprar" e o "Cadastre seu e-mail", na largura das
+outras seções. Migração `core.0028` encaixa a chave `faixa_banner` na ordem
+já salva, logo depois de `porque`, e é reversível.
+
+O quadro sai na proporção da própria arte (medida lida do arquivo pela view),
+porque o cartaz do fornecedor traz texto dentro da imagem e a moldura fixa de
+16:5 cortaria a chamada. As duas faixas — esta e a do fim da página — passaram
+a dividir a mesma partial (`core/secoes/_faixa_de_banners.html`).
+
+Procedimento: `pg_dump` (`backups/pre-faixa-2026-10-26-1532.sql.gz`) →
+`git pull --ff-only` → `docker compose build web` → `migrate` →
+`up -d --no-deps web`. O cartaz da Indubras foi publicado nessa posição
+(banner 8, 4160 × 2339). Conferido em produção no computador e no celular.
+
+Pendente do lojista: a marca Indubras ainda não existe no catálogo, então o
+clique no cartaz leva ao catálogo completo. Cadastrada a marca, basta trocar
+o destino do banner para ela.
