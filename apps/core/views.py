@@ -18,16 +18,20 @@ def _prontos(consulta):
     return [b for b in consulta if b.pronto_para_o_ar]
 
 
-def _proporcao_da_arte(banner):
+def _proporcao_da_arte(banner, movel=False):
     """Proporção da arte ("largura / altura"), para reservar o espaço.
 
     O cartaz da faixa chega pronto do fornecedor, com o texto dentro da
     imagem; forçar uma proporção fixa comeria esse texto. Lendo a medida do
     arquivo, o quadro nasce no formato da própria arte: sem corte e sem
     pulo de layout. Arquivo faltando devolve vazio, e o CSS usa o padrão.
+
+    A arte do celular quase nunca tem o mesmo formato da do computador —
+    uma é faixa larga, a outra precisa ser legível em tela estreita —, por
+    isso cada uma rende a sua medida.
     """
     try:
-        arte = banner.foto
+        arte = banner.foto_movel if movel else banner.foto
         if arte and arte.width and arte.height:
             return f"{arte.width} / {arte.height}"
     except (OSError, ValueError):
@@ -114,6 +118,11 @@ def home(request):
             "banners_faixa": banners_faixa,
             "faixa_proporcao": (
                 _proporcao_da_arte(banners_faixa[0]) if banners_faixa else ""
+            ),
+            "faixa_proporcao_movel": (
+                _proporcao_da_arte(banners_faixa[0], movel=True)
+                if banners_faixa and banners_faixa[0].imagem_movel
+                else ""
             ),
             "banners_rodape": [
                 b for b in Banner.objects.publicados()

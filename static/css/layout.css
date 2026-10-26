@@ -1517,6 +1517,11 @@
   /* no celular o cartaz largo vira tira: a proporção abre e, se o lojista
      subiu a arte vertical, é ela que entra pelo <picture> */
   .rodape-banner__quadro { aspect-ratio: 4 / 3; }
+  /* a faixa larga vira uma tira de 2 cm na tela do celular: quando há arte
+     própria para ele, é a medida dela que vale */
+  .faixa-banner__quadro {
+    aspect-ratio: var(--faixa-proporcao-movel, var(--faixa-proporcao, 16 / 5));
+  }
   .rodape-banner .vitrine-capa__seta,
   .faixa-banner .vitrine-capa__seta { display: none; }
 }

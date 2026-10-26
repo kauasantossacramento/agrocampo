@@ -6,8 +6,9 @@
   existe: nada de espaço vazio.
 
   Recebe `banners` (a lista), `classe` (o bloco de CSS) e, quando se sabe a
-  medida da arte, `proporcao` — assim o quadro nasce no formato da imagem,
-  sem cortar o cartaz nem deixar a página dar um pulo quando ela carrega.
+  medida da arte, `proporcao` e `proporcao_movel` — assim o quadro nasce no
+  formato da imagem, sem cortar o cartaz nem deixar a página dar um pulo
+  quando ela carrega, e no celular segue a medida da arte do celular.
 
   Vindo mais de um banner, o mesmo carrossel do topo assume: `data-hero` e
   `data-hero-slide` são os ganchos, e o JS já cuida de tempo, pausa e setas.
@@ -15,7 +16,7 @@
 {% if banners %}
 <section class="section section--tight wrap" aria-label="{{ rotulo|default:'Destaques' }}">
   <div class="{{ classe }}" data-hero
-       {% if proporcao %}style="--faixa-proporcao:{{ proporcao }}"{% endif %}>
+       {% if proporcao %}style="--faixa-proporcao:{{ proporcao }}{% if proporcao_movel %};--faixa-proporcao-movel:{{ proporcao_movel }}{% endif %}"{% endif %}>
     <div class="{{ classe }}__quadro">
       {% for banner in banners %}
         <a href="{{ banner.destino|default:'/catalogo/' }}"

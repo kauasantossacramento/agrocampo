@@ -2125,6 +2125,30 @@ class FaixaPromocionalTests(TestCase):
         html = self.client.get(reverse("core:home")).content.decode()
         self.assertIn("--faixa-proporcao:1200 / 600", html)
 
+    def test_no_celular_vale_a_medida_da_arte_do_celular(self):
+        """A faixa de 16:5 vira uma tira ilegível em tela estreita."""
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        cartaz = self._cartaz(largura=3200, altura=1000)
+        buffer = io.BytesIO()
+        Image.new("RGB", (1200, 580), "white").save(buffer, format="PNG")
+        cartaz.imagem_movel = SimpleUploadedFile(
+            "cartaz-celular.png", buffer.getvalue(), content_type="image/png",
+        )
+        cartaz.save()
+
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn("--faixa-proporcao:3200 / 1000", html)
+        self.assertIn("--faixa-proporcao-movel:1200 / 580", html)
+
+    def test_sem_arte_de_celular_nao_sai_medida_de_celular(self):
+        self._cartaz()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("--faixa-proporcao-movel", html)
+
     def test_arquivo_faltando_nao_derruba_a_home(self):
         """Mídia apagada na mão não pode virar erro 500 na vitrine."""
         cartaz = self._cartaz()
