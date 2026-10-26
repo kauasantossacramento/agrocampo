@@ -558,3 +558,11 @@ Procedimento: `pg_dump` (`backups/pre-faixa-2026-10-26-1532.sql.gz`) →
 Pendente do lojista: a marca Indubras ainda não existe no catálogo, então o
 clique no cartaz leva ao catálogo completo. Cadastrada a marca, basta trocar
 o destino do banner para ela.
+
+**Ajuste do mesmo dia (26/10/2026, tarde).** Commit `ae9e3d5`. O cartaz passou
+a sair em faixa 16:5 de verdade: a arte inteira no meio e o cenário seguindo
+nas laterais, desfocado e com a borda esfumada — recorte coerente, sem cortar
+logo, chamada ou frasco. Entregue em WebP no tamanho de exibição: 1 MB virou
+166 KB no computador e 85 KB no celular, onde a faixa larga viraria uma tira
+ilegível e por isso a arte do celular manda na altura do quadro. O JPEG
+original de 1 MB foi removido de `media/banners/`.
