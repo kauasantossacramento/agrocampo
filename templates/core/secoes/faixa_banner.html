@@ -1,0 +1,11 @@
+{% comment %}
+  Faixa promocional entre as seções da home (posição “Faixa promocional”,
+  no cadastro de banners) — o cartaz do fornecedor, na mesma largura das
+  seções vizinhas. A posição exata na página é definida pelo lojista em
+  Painel › Configurações › Vitrines, como qualquer outra seção.
+
+  Aqui a proporção é a da própria arte (`faixa_proporcao`, calculada na
+  view): o cartaz vem pronto, com texto dentro da imagem, e um recorte
+  fixo comeria esse texto.
+{% endcomment %}
+{% include 'core/secoes/_faixa_de_banners.html' with banners=banners_faixa classe='faixa-banner' rotulo='Faixa promocional' proporcao=faixa_proporcao %}

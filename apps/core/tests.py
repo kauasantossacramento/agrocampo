@@ -2065,6 +2065,122 @@ class BannerDoRodapeTests(TestCase):
         self.assertIn("/categoria/", banner.destino)
 
 
+class FaixaPromocionalTests(TestCase):
+    """O cartaz do fornecedor entra entre as seções, na largura delas."""
+
+    def setUp(self):
+        from apps.core.models import Banner
+
+        self.Banner = Banner
+        config = SiteConfig.load()
+        config.layout_home = SiteConfig.LayoutHome.VITRINE
+        config.save()
+
+    def _cartaz(self, largura=1600, altura=900, **extra):
+        """Banner na faixa, com uma arte de verdade para dar medida."""
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (largura, altura), "white").save(buffer, format="PNG")
+        return self.Banner.objects.create(
+            titulo="Cartaz do fornecedor", posicao=self.Banner.Posicao.FAIXA,
+            imagem=SimpleUploadedFile(
+                "cartaz.png", buffer.getvalue(), content_type="image/png",
+            ),
+            **extra,
+        )
+
+    def test_sem_cartaz_a_secao_nao_aparece(self):
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("faixa-banner", html)
+
+    def test_com_cartaz_a_secao_entra(self):
+        self._cartaz()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn("faixa-banner", html)
+        self.assertIn("Cartaz do fornecedor", html)
+
+    def test_despublicado_nao_entra(self):
+        self._cartaz(publicado=False)
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertNotIn("faixa-banner", html)
+
+    def test_fica_entre_o_porque_comprar_e_a_newsletter(self):
+        """Era o lugar marcado pelo lojista: depois dos cartões, antes do e-mail."""
+        from apps.core.models import Diferencial
+
+        # a seção "Por que comprar" só sai com diferencial cadastrado
+        Diferencial.objects.create(titulo="Entrega na região")
+        self._cartaz()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertLess(html.index("Por que comprar na"), html.index("faixa-banner"))
+        self.assertLess(html.index("faixa-banner"), html.index('class="newsletter"'))
+
+    def test_quadro_sai_na_proporcao_da_arte(self):
+        """Proporção fixa cortaria o texto que vem dentro do cartaz."""
+        self._cartaz(largura=1200, altura=600)
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn("--faixa-proporcao:1200 / 600", html)
+
+    def test_arquivo_faltando_nao_derruba_a_home(self):
+        """Mídia apagada na mão não pode virar erro 500 na vitrine."""
+        cartaz = self._cartaz()
+        cartaz.imagem.storage.delete(cartaz.imagem.name)
+        resposta = self.client.get(reverse("core:home"))
+        self.assertEqual(resposta.status_code, 200)
+
+    def test_o_fim_da_pagina_continua_no_seu_lugar(self):
+        """As duas faixas usam a mesma partial: uma não pode comer a outra."""
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (1600, 500), "white").save(buffer, format="PNG")
+        self.Banner.objects.create(
+            titulo="Chamada do fim", posicao=self.Banner.Posicao.RODAPE,
+            imagem=SimpleUploadedFile(
+                "fim.png", buffer.getvalue(), content_type="image/png",
+            ),
+        )
+        self._cartaz()
+        html = self.client.get(reverse("core:home")).content.decode()
+        self.assertIn("faixa-banner", html)
+        self.assertIn("rodape-banner", html)
+        self.assertLess(html.index("faixa-banner"), html.index("rodape-banner"))
+
+    def test_a_migracao_encaixa_a_faixa_depois_do_porque_comprar(self):
+        """Ordem salva antes da seção existir não pode jogar o cartaz pro fim.
+
+        Quem já tinha ordem gravada não teria a chave nova, e a regra geral
+        ("quem falta entra no fim") colocaria o cartaz depois do rodapé das
+        marcas. A migração é que o encaixa no lugar combinado.
+        """
+        from importlib import import_module
+
+        from django.apps import apps as registro
+
+        migracao = import_module("apps.core.migrations.0028_faixa_promocional_entre_secoes")
+
+        config = SiteConfig.load()
+        config.home_ordem = "sucessos,porque,newsletter,marcas"
+        config.save()
+
+        migracao.encaixar(registro, None)
+        chaves = SiteConfig.load().secoes_home()
+        self.assertEqual(chaves.index("faixa_banner"), chaves.index("porque") + 1)
+        self.assertLess(chaves.index("faixa_banner"), chaves.index("newsletter"))
+
+        migracao.desencaixar(registro, None)
+        self.assertNotIn(
+            "faixa_banner", SiteConfig.load().home_ordem.split(","),
+        )
+
+
 class InstagramNaHomeTests(TestCase):
     """Os vídeos da loja entram no lugar que era do blog."""
 

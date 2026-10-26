@@ -18,6 +18,23 @@ def _prontos(consulta):
     return [b for b in consulta if b.pronto_para_o_ar]
 
 
+def _proporcao_da_arte(banner):
+    """Proporção da arte ("largura / altura"), para reservar o espaço.
+
+    O cartaz da faixa chega pronto do fornecedor, com o texto dentro da
+    imagem; forçar uma proporção fixa comeria esse texto. Lendo a medida do
+    arquivo, o quadro nasce no formato da própria arte: sem corte e sem
+    pulo de layout. Arquivo faltando devolve vazio, e o CSS usa o padrão.
+    """
+    try:
+        arte = banner.foto
+        if arte and arte.width and arte.height:
+            return f"{arte.width} / {arte.height}"
+    except (OSError, ValueError):
+        pass
+    return ""
+
+
 def _promocoes_por_secao():
     """{chave_da_secao: [promoções vigentes]} — só o que está no prazo."""
     agora = timezone.now()
@@ -63,6 +80,12 @@ def home(request):
         if itens:
             vitrines.append({**config_vitrine, "produtos": itens})
 
+    banners_faixa = [
+        b for b in Banner.objects.publicados()
+        .filter(posicao=Banner.Posicao.FAIXA)
+        .order_by("ordem", "-criado_em") if b.imagem and b.pronto_para_o_ar
+    ]
+
     template = (
         "core/home_vitrine.html"
         if config.layout_home == SiteConfig.LayoutHome.VITRINE
@@ -85,6 +108,13 @@ def home(request):
             "banners": Banner.objects.publicados().filter(posicao=Banner.Posicao.HERO),
             # faixa do fim da página: só entra o que tem arte, senão a seção
             # apareceria como um buraco antes do rodapé
+            # faixa promocional entre as seções (posição "Faixa promocional"
+            # no cadastro de banners): cartaz do fornecedor, na mesma largura
+            # das outras seções
+            "banners_faixa": banners_faixa,
+            "faixa_proporcao": (
+                _proporcao_da_arte(banners_faixa[0]) if banners_faixa else ""
+            ),
             "banners_rodape": [
                 b for b in Banner.objects.publicados()
                 .filter(posicao=Banner.Posicao.RODAPE)

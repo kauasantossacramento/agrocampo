@@ -214,8 +214,8 @@ class SiteConfig(TimeStampedModel):
     home_ordem = models.CharField(
         "ordem das seções da home", max_length=400, blank=True,
         default="sucessos,linhas,especies,categorias,faixas,oferta,"
-                "promocoes,destaques,lancamentos,assinatura,porque,instagram,"
-                "newsletter,marcas,blog",
+                "promocoes,destaques,lancamentos,assinatura,porque,faixa_banner,"
+                "instagram,newsletter,marcas,blog",
     )
 
     # ------------------------------------------------------- entrega
@@ -468,6 +468,7 @@ class SiteConfig(TimeStampedModel):
         ("lancamentos", "Lançamentos do mês"),
         ("assinatura", "Assinatura"),
         ("porque", "Por que comprar"),
+        ("faixa_banner", "Faixa promocional (cartaz entre as seções)"),
         ("instagram", "Instagram da loja (vídeos)"),
         ("blog", "Blog"),
         ("newsletter", "Newsletter"),
@@ -549,7 +550,7 @@ class Banner(TimeStampedModel):
 
     class Posicao(models.TextChoices):
         HERO = "hero", "Carrossel principal"
-        FAIXA = "faixa", "Faixa promocional"
+        FAIXA = "faixa", "Faixa promocional (cartaz entre as seções)"
         SECUNDARIO = "secundario", "Oferta em destaque (cartaz na home)"
         PRODUTOS = "produtos", "Faixa de produtos (fotos com link)"
         APRESENTACAO = "apresentacao", "Vídeo ou foto de apresentação (entra no carrossel)"

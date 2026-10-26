@@ -335,7 +335,7 @@ uma lista com busca e o botão "Novo…" que abre o formulário em modal.
 
 | Tela | Para quê |
 |---|---|
-| **Banners** | os slides do carrossel (*Carrossel principal* = cartaz 16:5 com link, título opcional; *Vídeo ou foto de apresentação* = mídia grande, entra no mesmo carrossel; *Fim da página* = faixa antes do rodapé), as **Ofertas em destaque** (*Oferta em destaque (cartaz na home)* — 1 ocupa a largura toda, 2 lado a lado, 3+ em duas colunas; liga/desliga por *publicado*) e a *Faixa de produtos* (fotos de produtos com link). |
+| **Banners** | os slides do carrossel (*Carrossel principal* = cartaz 16:5 com link, título opcional; *Vídeo ou foto de apresentação* = mídia grande, entra no mesmo carrossel; *Fim da página* = faixa antes do rodapé; *Faixa promocional* = cartaz do fornecedor entre as seções), as **Ofertas em destaque** (*Oferta em destaque (cartaz na home)* — 1 ocupa a largura toda, 2 lado a lado, 3+ em duas colunas; liga/desliga por *publicado*) e a *Faixa de produtos* (fotos de produtos com link). |
 | **Promoções em destaque** | bloco com título, texto, imagem ou produto, **início e fim** e a seção depois da qual entra. |
 | **Faixa de garantias** | os quatro selos abaixo do carrossel (frete, Pix, assinatura, compra garantida). |
 | **Páginas institucionais** | Quem somos, Entregas e prazos, Trocas, Privacidade, FAQ (HTML simples). |
@@ -387,6 +387,15 @@ vazio, o site usa a de computador.
 **Fim da página.** A posição *Fim da página* põe uma faixa logo antes do
 rodapé. Sem banner publicado nessa posição, a seção não aparece. Com mais de
 um, eles giram no mesmo carrossel do topo.
+
+**Faixa promocional.** A posição *Faixa promocional (cartaz entre as seções)*
+é o lugar do cartaz que o fornecedor manda pronto — Indubras, Premier, quem
+for. Ele entra no meio da home, na mesma largura das outras seções, e sai na
+proporção da própria arte: nada é cortado, mesmo quando o cartaz tem texto
+dentro da imagem. Sem banner publicado nessa posição, a seção não aparece;
+com mais de um, eles giram em carrossel. Para mudar o lugar dele na página,
+vá em **Configurações › Vitrines** e mova a seção *Faixa promocional* com as
+setas, como qualquer outra.
 
 ![Banners](prints/painel-conteudo-banners-desktop.png)
 

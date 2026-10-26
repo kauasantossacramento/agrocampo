@@ -1,0 +1,58 @@
+{% load l10n %}
+{% comment %}
+  Faixa de cartazes — usada em duas posições do cadastro de banners: a
+  “Faixa promocional”, que entra entre as seções da home, e o “Fim da
+  página”, que fecha o site. Sem banner publicado a seção inteira não
+  existe: nada de espaço vazio.
+
+  Recebe `banners` (a lista), `classe` (o bloco de CSS) e, quando se sabe a
+  medida da arte, `proporcao` — assim o quadro nasce no formato da imagem,
+  sem cortar o cartaz nem deixar a página dar um pulo quando ela carrega.
+
+  Vindo mais de um banner, o mesmo carrossel do topo assume: `data-hero` e
+  `data-hero-slide` são os ganchos, e o JS já cuida de tempo, pausa e setas.
+{% endcomment %}
+{% if banners %}
+<section class="section section--tight wrap" aria-label="{{ rotulo|default:'Destaques' }}">
+  <div class="{{ classe }}" data-hero
+       {% if proporcao %}style="--faixa-proporcao:{{ proporcao }}"{% endif %}>
+    <div class="{{ classe }}__quadro">
+      {% for banner in banners %}
+        <a href="{{ banner.destino|default:'/catalogo/' }}"
+           class="{{ classe }}__slide" data-hero-slide
+           data-tempo="{{ banner.tempo_exibicao|unlocalize }}"
+           {% if not forloop.first %}hidden{% endif %}
+           aria-label="{{ banner.titulo|default:'Destaque' }}">
+          {% comment %}
+            Duas artes: a larga no computador e, se o lojista subiu, a do
+            celular. `<picture>` escolhe sem JS e sem baixar as duas.
+          {% endcomment %}
+          <picture>
+            {% if banner.imagem_movel %}
+              <source media="(max-width: 640px)" srcset="{{ banner.foto_movel.url }}">
+            {% endif %}
+            <img src="{{ banner.foto.url }}" alt="{{ banner.titulo }}" loading="lazy" decoding="async">
+          </picture>
+        </a>
+      {% endfor %}
+    </div>
+
+    {% if banners|length > 1 %}
+      <button type="button" class="vitrine-capa__seta vitrine-capa__seta--esq" data-hero-prev
+              aria-label="Anterior">
+        <svg width="18" height="18"><use href="#i-seta-esq"></use></svg>
+      </button>
+      <button type="button" class="vitrine-capa__seta vitrine-capa__seta--dir" data-hero-next
+              aria-label="Próximo">
+        <svg width="18" height="18"><use href="#i-seta-dir"></use></svg>
+      </button>
+      <div class="hero__dots">
+        {% for banner in banners %}
+          <button type="button" class="hero__dot {% if forloop.first %}is-active{% endif %}"
+                  data-hero-dot aria-label="Destaque {{ forloop.counter }}"></button>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

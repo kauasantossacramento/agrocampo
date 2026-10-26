@@ -1483,27 +1483,42 @@
   .reels { grid-auto-columns: 150px; }
 }
 
-/* ───────────────────────────── faixa de banners do fim da página
+/* ───────────────────────────── faixas de cartaz (entre as seções e no fim)
    A proporção fica reservada no quadro: sem isso a página dá um pulo quando
-   a imagem termina de carregar, logo acima do rodapé. */
-.rodape-banner { position: relative; }
-.rodape-banner__quadro {
+   a imagem termina de carregar. */
+.rodape-banner,
+.faixa-banner { position: relative; }
+.rodape-banner__quadro,
+.faixa-banner__quadro {
   position: relative; overflow: hidden;
   border-radius: var(--r-lg); box-shadow: var(--sh-1);
   background: var(--cream-warm);
   aspect-ratio: 16 / 5;
 }
-.rodape-banner__slide { display: block; width: 100%; height: 100%; }
-.rodape-banner__slide[hidden] { display: none; }
-.rodape-banner__slide img {
+.rodape-banner__slide,
+.faixa-banner__slide { display: block; width: 100%; height: 100%; }
+.rodape-banner__slide[hidden],
+.faixa-banner__slide[hidden] { display: none; }
+.rodape-banner__slide img,
+.faixa-banner__slide img {
   display: block; width: 100%; height: 100%; object-fit: cover;
 }
-.rodape-banner .hero__dots { bottom: var(--s-3); }
+.rodape-banner .hero__dots,
+.faixa-banner .hero__dots { bottom: var(--s-3); }
+
+/* A faixa entre as seções segue a medida da própria arte: o cartaz vem
+   pronto do fornecedor, com o texto dentro da imagem, e um recorte fixo
+   cortaria esse texto. A view mede o arquivo e preenche a variável; sem
+   ela, o formato de faixa larga continua valendo. */
+.faixa-banner__quadro { aspect-ratio: var(--faixa-proporcao, 16 / 5); }
+.faixa-banner__slide img { object-fit: contain; }
+
 @media (max-width: 640px) {
   /* no celular o cartaz largo vira tira: a proporção abre e, se o lojista
      subiu a arte vertical, é ela que entra pelo <picture> */
   .rodape-banner__quadro { aspect-ratio: 4 / 3; }
-  .rodape-banner .vitrine-capa__seta { display: none; }
+  .rodape-banner .vitrine-capa__seta,
+  .faixa-banner .vitrine-capa__seta { display: none; }
 }
 
 /* --- faixa de garantias em cartão flutuante, como o topo das vitrines */
