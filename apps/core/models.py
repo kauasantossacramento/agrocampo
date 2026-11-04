@@ -555,6 +555,7 @@ class Banner(TimeStampedModel):
         PRODUTOS = "produtos", "Faixa de produtos (fotos com link)"
         APRESENTACAO = "apresentacao", "Vídeo ou foto de apresentação (entra no carrossel)"
         RODAPE = "rodape", "Fim da página (faixa antes do rodapé)"
+        MODAL = "modal", "Pop-up de promoção (ao abrir o site)"
 
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=220, blank=True)

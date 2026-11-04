@@ -371,7 +371,8 @@ class LinhaProdutoForm(_EstilizadoMixin, forms.ModelForm):
     class Meta:
         model = LinhaProduto
         fields = ("nome", "cor", "selo_imagem", "selo_tamanho",
-                  "vitrine_titulo", "vitrine_ativa", "ordem", "ativo")
+                  "vitrine_titulo", "vitrine_ativa", "vitrine_produtos",
+                  "ordem", "ativo")
 
         widgets = {
             "vitrine_titulo": forms.TextInput(attrs={
@@ -379,6 +380,9 @@ class LinhaProdutoForm(_EstilizadoMixin, forms.ModelForm):
             }),
             # cor livre: seletor do sistema, com as cinco clássicas à mão
             "cor": forms.TextInput(attrs={"type": "color", "list": "cores-de-linha"}),
+            "vitrine_produtos": forms.CheckboxSelectMultiple(
+                attrs={"class": "lista-produtos-banner"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -393,6 +397,19 @@ class LinhaProdutoForm(_EstilizadoMixin, forms.ModelForm):
         self.fields["selo_tamanho"].widget.attrs.update({"inputmode": "numeric"})
         self.fields["vitrine_ativa"].help_text = (
             "A vitrine só aparece se houver produto publicado nesta linha."
+        )
+        from apps.catalog.models import Produto
+
+        # só os produtos desta linha: escolher fora dela misturaria vitrines
+        linha_atual = self.instance if self.instance.pk else None
+        self.fields["vitrine_produtos"].queryset = (
+            Produto.objects.publicados().filter(linha=linha_atual).order_by("nome")
+            if linha_atual else Produto.objects.none()
+        )
+        self.fields["vitrine_produtos"].required = False
+        self.fields["vitrine_produtos"].help_text = (
+            "Marque até 8. Sem nenhum marcado, a vitrine mostra sozinha os 8 "
+            "mais vendidos da linha. Linha nova: salve primeiro para escolher."
         )
 
 

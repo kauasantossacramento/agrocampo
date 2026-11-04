@@ -5,24 +5,14 @@
   promocional é opcional. No "clássico" ela só aparece com mensagem.
 {% endcomment %}
 {% if site.layout_home == 'vitrine' or site.topbar_mensagem %}
-<div class="topbar">
+{% comment %}
+  Faixa do topo: só o nome da loja, centralizado (pedido de 04/11/2026).
+  WhatsApp, horário e telefone continuam no rodapé e no balão; aqui eles
+  disputavam espaço com o nome e quebravam a linha no celular.
+{% endcomment %}
+<div class="topbar topbar--nome">
   <div class="wrap">
-    <span class="topbar__highlight">
-      {% if site.topbar_mensagem %}{{ site.topbar_icone }} {{ site.topbar_mensagem }}{% else %}{{ site.nome_loja }}{% endif %}
-    </span>
-    <div class="topbar__pills">
-      {% if site.layout_home == 'vitrine' %}
-        {% if site.whatsapp_url %}
-          <a href="{{ site.whatsapp_url_com_mensagem }}" target="_blank" rel="noopener" class="topbar__atalho">
-            <svg width="13" height="13"><use href="#i-whatsapp"></use></svg>WhatsApp
-          </a>
-        {% endif %}
-      {% elif site.topbar_link_texto %}
-        <a href="{{ site.topbar_link_url|default:'/pedidos/' }}">{{ site.topbar_link_texto }}</a>
-      {% endif %}
-      {% if site.horario_atendimento %}<span>{{ site.horario_atendimento }}</span>{% endif %}
-      {% if site.telefone %}<span>{{ site.telefone }}</span>{% endif %}
-    </div>
+    <span class="topbar__highlight">{{ site.nome_loja }}</span>
   </div>
 </div>
 {% endif %}

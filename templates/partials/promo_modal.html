@@ -1,0 +1,27 @@
+{% comment %}
+  Promoção em pop-up, ao abrir a loja. Vem do cadastro de banners, na
+  posição "Pop-up de promoção (ao abrir o site)": o lojista sobe o cartaz e
+  escolhe o destino como em qualquer banner.
+
+  Aparece uma vez por dia para cada visitante (app.js guarda a data no
+  navegador): pop-up a cada clique afasta o cliente em vez de vender. Fecha
+  no X, no Esc e tocando fora — aqui é vitrine, não formulário.
+{% endcomment %}
+{% if banner_modal %}
+<div class="promo-modal" data-promo-modal="{{ banner_modal.pk }}-{{ banner_modal.atualizado_em|date:'U' }}" hidden
+     role="dialog" aria-modal="true" aria-label="{{ banner_modal.titulo|default:'Promoção' }}">
+  <div class="promo-modal__caixa">
+    <button type="button" class="promo-modal__fechar" data-promo-fechar aria-label="Fechar">
+      <svg width="18" height="18" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+    <a href="{{ banner_modal.destino|default:'/catalogo/' }}" class="promo-modal__arte">
+      <picture>
+        {% if banner_modal.imagem_movel %}
+          <source media="(max-width: 640px)" srcset="{{ banner_modal.foto_movel.url }}">
+        {% endif %}
+        <img src="{{ banner_modal.foto.url }}" alt="{{ banner_modal.titulo }}" decoding="async">
+      </picture>
+    </a>
+  </div>
+</div>
+{% endif %}

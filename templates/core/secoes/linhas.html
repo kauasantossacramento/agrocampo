@@ -7,7 +7,20 @@
 {% for vitrine in vitrines_linha %}
 <section class="section section--tight wrap vitrine-linha vitrine-linha--{{ vitrine.classe }}">
   <div class="secao-titulo" data-reveal>
-    <h2 class="vitrine-linha__titulo"><span class="vitrine-linha__fita" aria-hidden="true"></span>{{ vitrine.titulo }}</h2>
+    {% comment %}
+      O selo da linha abre o título — o mesmo que vai no card, menor —, no
+      lugar da fita colorida que no celular parecia um ícone que faltou.
+    {% endcomment %}
+    <h2 class="vitrine-linha__titulo">
+      <span class="vitrine-linha__selo" style="{{ vitrine.objeto.estilo_css }}" aria-hidden="true">
+        {% if vitrine.objeto.selo_imagem %}
+          <img src="{{ vitrine.objeto.selo_imagem.url }}" alt="">
+        {% else %}
+          {% include 'partials/selo_medalha.html' %}
+        {% endif %}
+      </span>
+      <span>{{ vitrine.titulo }}</span>
+    </h2>
     <a href="{% url 'catalog:catalogo' %}?linha={{ vitrine.linha }}" class="secao-titulo__link">Ver a linha →</a>
   </div>
   <div class="grid grid--4" data-stagger>

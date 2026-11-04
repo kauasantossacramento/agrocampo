@@ -1881,3 +1881,115 @@
   .faixa-proteina--grande strong { font-size: 1.5rem; }
   .texto-produto { font-size: var(--fs-sm); line-height: 1.7; }
 }
+
+/* ════════════════════════════════════ lista estética de 04/11/2026 */
+
+/* ---- faixa do topo: só o nome da loja, no meio */
+.topbar--nome .wrap { justify-content: center; }
+.topbar--nome .topbar__highlight { text-align: center; letter-spacing: .02em; }
+
+/* ---- título da vitrine da linha: o selo abre o título
+   Do tamanho de duas linhas de texto, com folga para não colar na palavra;
+   o fio colorido de antes saía no celular como um ícone que faltou. */
+.vitrine-linha__titulo { display: inline-flex; align-items: center; gap: var(--s-3); }
+.vitrine-linha__selo {
+  flex: none; display: block; width: 40px; height: 40px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .18));
+}
+.vitrine-linha__selo img,
+.vitrine-linha__selo svg { display: block; width: 100%; height: 100%; object-fit: contain; }
+@media (max-width: 620px) {
+  .vitrine-linha__selo { width: 34px; height: 34px; }
+}
+
+/* ---- selo do card no celular: menor e dentro do canto
+   Vazando do card, a medalha cobria metade da foto numa tela de 390 px. */
+@media (max-width: 620px) {
+  .product .selo-linha {
+    --selo-tamanho: calc(var(--selo-base, 64px) * .62);
+    top: 6px; right: 6px;
+  }
+}
+
+/* ---- carrossel do topo no celular: de ponta a ponta e mais alto
+   A regra do modo faixa (16/5) vencia a de 4/3 e deixava o banner com 112
+   px. 16/6 corta só 7,5% de cada lateral — o texto que o cartaz põe rente à
+   borda continua inteiro — e a largura cheia ganha os 32 px das margens. */
+@media (max-width: 620px) {
+  .vitrine-capa.wrap { padding-inline: 0; }
+  .vitrine-capa__quadro { border-radius: 0; box-shadow: none; }
+  .banners--faixa .vitrine-capa__slide img,
+  .banners--faixa .vitrine-capa__slide video,
+  .banners--faixa .apresentacao__midia { aspect-ratio: 16 / 6; }
+}
+
+/* ---- barra de app no celular */
+.barra-app { display: none; }
+@media (max-width: 860px) {
+  :root { --barra-app-h: calc(62px + env(safe-area-inset-bottom, 0px)); }
+  .barra-app {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 950;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    height: var(--barra-app-h); padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(255, 255, 255, .97);
+    -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 18px rgba(34, 24, 18, .07);
+  }
+  .barra-app__item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; min-width: 0; padding: 6px 2px;
+    background: none; border: 0; color: var(--muted);
+    font: 600 11px/1.1 var(--font-body, inherit); text-decoration: none; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .barra-app__item.is-ativo { color: var(--red); }
+  .barra-app__item:active { transform: scale(.94); }
+  .barra-app__icone { position: relative; display: inline-flex; }
+  .barra-app__contador {
+    position: absolute; top: -6px; right: -10px; min-width: 18px; height: 18px;
+    padding: 0 5px; border-radius: 999px; background: var(--red); color: #fff;
+    font-size: 10px; font-weight: 700; line-height: 18px; text-align: center;
+  }
+  .barra-app__contador[hidden] { display: none; }
+
+  /* o que flutua sobe acima da barra: fica no fim do responsive.css,
+     que carrega depois deste arquivo e redefinia a posição do WhatsApp */
+}
+
+/* ---- convite do app no Android: uma tira fina, não um cartão */
+.pwa-convite--tira {
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  gap: var(--s-2); border-radius: 999px;
+}
+.pwa-convite--tira .pwa-convite__icone { width: 30px; height: 30px; border-radius: 8px; }
+.pwa-convite--tira .pwa-convite__texto strong { font-size: var(--fs-xs); }
+.pwa-convite--tira .pwa-convite__texto span { display: none; }
+.pwa-convite--tira .btn { min-height: 34px; padding-inline: var(--s-4); border-radius: 999px; }
+
+/* ---- pop-up de promoção */
+.promo-modal {
+  position: fixed; inset: 0; z-index: 1150;
+  display: grid; place-items: center; padding: var(--s-4);
+  background: rgba(20, 14, 10, .62);
+  opacity: 0; transition: opacity .25s var(--ease-out);
+}
+.promo-modal[hidden] { display: none; }
+.promo-modal.is-aberto { opacity: 1; }
+.promo-modal__caixa {
+  position: relative; width: min(560px, 100%);
+  transform: translateY(12px) scale(.97);
+  transition: transform .3s var(--ease-out);
+}
+.promo-modal.is-aberto .promo-modal__caixa { transform: none; }
+.promo-modal__arte { display: block; border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--sh-4); }
+.promo-modal__arte img { display: block; width: 100%; height: auto; max-height: 80vh; object-fit: contain; background: #fff; }
+.promo-modal__fechar {
+  position: absolute; top: -14px; right: -14px; z-index: 2;
+  width: 40px; height: 40px; border-radius: 50%; border: 0;
+  display: grid; place-items: center; cursor: pointer;
+  background: #fff; color: var(--ink); box-shadow: var(--sh-2);
+}
+@media (max-width: 620px) {
+  .promo-modal__fechar { top: -10px; right: -6px; }
+}

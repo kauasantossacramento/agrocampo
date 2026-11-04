@@ -1342,12 +1342,14 @@ class EstiloDaHomeTests(TestCase):
 
     def test_vitrine_e_o_padrao_e_traz_a_estrutura_nova(self):
         self.assertEqual(SiteConfig.load().layout_home, SiteConfig.LayoutHome.VITRINE)
-        self._config(whatsapp="(75) 98816-7389")   # o atalho da topbar é o WhatsApp
+        self._config(whatsapp="(75) 98816-7389")
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
         self.assertTemplateUsed(r, "core/home_vitrine.html")
         self.assertContains(r, 'class="tema-vitrine"')
-        self.assertContains(r, "topbar__atalho")               # topbar fixa
+        # topo só com o nome da loja (04/11/2026); o WhatsApp fica no balão
+        self.assertContains(r, "topbar--nome")
+        self.assertNotContains(r, "topbar__atalho")
         self.assertContains(r, "vitrine-capa wrap banners--faixa")             # carrossel
         self.assertContains(r, 'class="secao-titulo"')          # seções divididas
         self.assertContains(r, "Navegue pelo seu animal")
@@ -2473,3 +2475,82 @@ class PaginasDeErroTests(TestCase):
         self.assertIn('href="/"', html)
         # sem Django no ar: nada de tag de template
         self.assertNotIn("{%", html)
+
+
+
+class EsteticaDeNovembroTests(TestCase):
+    """Lista de 04/11/2026: topo, barra de app, vitrine da linha e pop-up."""
+
+    def setUp(self):
+        from apps.catalog.models import LinhaProduto
+
+        config = SiteConfig.load()
+        config.layout_home = SiteConfig.LayoutHome.VITRINE
+        config.save()
+        self.categoria = Categoria.objects.create(nome="Ração")
+        self.linha = LinhaProduto.objects.create(nome="Super Premium", cor="#C9971B")
+
+    def _produto(self, sku, vendas=0):
+        return Produto.objects.create(
+            sku=sku, nome=f"Ração {sku}", categoria=self.categoria,
+            preco=Decimal("100"), publicado=True, linha=self.linha, vendas=vendas,
+        )
+
+    def _home(self):
+        return self.client.get(reverse("core:home")).content.decode()
+
+    def test_topo_mostra_so_o_nome_da_loja(self):
+        html = self._home()
+        self.assertIn("topbar--nome", html)
+        self.assertNotIn("topbar__pills", html)
+
+    def test_barra_de_app_na_loja_e_fora_do_painel(self):
+        self.assertIn('class="barra-app"', self._home())
+
+        from django.contrib.auth import get_user_model
+
+        Usuario = get_user_model()
+        lojista = Usuario.objects.create_user(
+            email="lojista@exemplo.com", password="senha-forte-123",
+            papel=Usuario.Papel.LOJISTA, is_staff=True,
+        )
+        self.client.force_login(lojista)
+        painel = self.client.get(reverse("dashboard:painel"))
+        self.assertEqual(painel.status_code, 200)
+        self.assertNotIn('class="barra-app"', painel.content.decode())
+
+    def test_titulo_da_vitrine_leva_o_selo_da_linha(self):
+        self._produto("V-1", vendas=5)
+        html = self._home()
+        self.assertIn("vitrine-linha__selo", html)
+        self.assertIn("selo-linha__medalha", html)
+        self.assertNotIn("vitrine-linha__fita", html)
+
+    def test_vitrine_sem_escolha_usa_os_mais_vendidos(self):
+        pouco = self._produto("V-1", vendas=1)
+        muito = self._produto("V-2", vendas=90)
+        html = self._home()
+        self.assertLess(html.index(muito.nome), html.index(pouco.nome))
+
+    def test_vitrine_com_escolha_manual_mostra_so_os_escolhidos(self):
+        escolhido = self._produto("V-1", vendas=1)
+        campeao = self._produto("V-2", vendas=90)
+        self.linha.vitrine_produtos.add(escolhido)
+        html = self._home()
+        trecho = html[html.index("vitrine-linha"):]
+        self.assertIn(escolhido.nome, trecho)
+        self.assertNotIn(campeao.nome, trecho.split("</section>")[0])
+
+    def test_banner_em_popup_entra_na_home(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.core.models import Banner
+
+        self.assertNotIn("data-promo-modal", self._home())
+        Banner.objects.create(
+            titulo="Promoção de sexta", posicao=Banner.Posicao.MODAL,
+            imagem=SimpleUploadedFile("promo.jpg", b"fake", content_type="image/jpeg"),
+        )
+        html = self._home()
+        self.assertIn("data-promo-modal", html)
+        self.assertIn("Promoção de sexta", html)

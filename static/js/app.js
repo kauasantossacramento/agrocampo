@@ -410,13 +410,14 @@
   }
 
   function atualizarContadorCarrinho(quantidade) {
-    const contador = $('[data-cart-count]');
-    if (!contador) return;
-    contador.textContent = quantidade;
-    contador.hidden = quantidade === 0;
-    contador.classList.remove('anim-bump');
-    void contador.offsetWidth; // força o reinício da animação
-    contador.classList.add('anim-bump');
+    // o do topo e o da barra de app do celular andam juntos
+    $$('[data-cart-count]').forEach((contador) => {
+      contador.textContent = quantidade;
+      contador.hidden = quantidade === 0;
+      contador.classList.remove('anim-bump');
+      void contador.offsetWidth; // força o reinício da animação
+      contador.classList.add('anim-bump');
+    });
   }
 
   /* ------------------------------------------- seletores de opção (radio) */
@@ -887,6 +888,53 @@
   });
 
   /* ----------------------------------------- polling do status do Pix */
+  function iniciarBarraApp() {
+    $$('[data-barra-busca]').forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const campo = $('.header__busca-movel input[name="q"]') || $('.header__search input[name="q"]');
+        if (!campo) return;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // o foco depois da rolagem: antes dela o teclado abre e a tela pula
+        setTimeout(() => campo.focus(), 250);
+      });
+    });
+  }
+
+  /* ------------------------------------------ pop-up de promoção (banner)
+     Uma vez por dia por visitante, guardado no navegador. A chave inclui a
+     data da última edição do banner: promoção nova aparece mesmo para quem
+     fechou a anterior hoje. */
+  function iniciarPromoModal() {
+    const modal = $('[data-promo-modal]');
+    if (!modal) return;
+    const chave = 'agrocampo_promo_' + modal.dataset.promoModal;
+    const hoje = new Date().toISOString().slice(0, 10);
+    try { if (localStorage.getItem(chave) === hoje) return; } catch (e) { /* segue */ }
+
+    const fechar = () => {
+      modal.classList.remove('is-aberto');
+      setTimeout(() => { modal.hidden = true; }, 250);
+      document.removeEventListener('keydown', aoTeclar);
+      try { localStorage.setItem(chave, hoje); } catch (e) { /* aba privada */ }
+    };
+    const aoTeclar = (e) => { if (e.key === 'Escape') fechar(); };
+
+    setTimeout(() => {
+      modal.hidden = false;
+      requestAnimationFrame(() => modal.classList.add('is-aberto'));
+      document.addEventListener('keydown', aoTeclar);
+      const botao = $('[data-promo-fechar]', modal);
+      if (botao) botao.focus();
+    }, 1200);
+
+    $('[data-promo-fechar]', modal).addEventListener('click', fechar);
+    // tocar fora fecha; tocar na arte segue o link (e conta como visto)
+    modal.addEventListener('click', (e) => { if (e.target === modal) fechar(); });
+    $('.promo-modal__arte', modal).addEventListener('click', () => {
+      try { localStorage.setItem(chave, hoje); } catch (e) { /* segue */ }
+    });
+  }
+
   function iniciarPixPolling() {
     const caixa = $('[data-pix-status]');
     if (!caixa) return;
@@ -1006,7 +1054,8 @@
     if (!caixa || !window.AGROCAMPO_PWA) return;
 
     const CHAVE = 'agrocampo_pwa_dispensado';
-    const dispensadoEm = Number(localStorage.getItem(CHAVE) || 0);
+    let dispensadoEm = 0;
+    try { dispensadoEm = Number(localStorage.getItem(CHAVE) || 0); } catch (e) { /* aba privada */ }
     const SETE_DIAS = 7 * 24 * 60 * 60 * 1000;
     if (dispensadoEm && Date.now() - dispensadoEm < SETE_DIAS) return;
 
@@ -1015,19 +1064,36 @@
         window.navigator.standalone) return;
 
     let evento = null;
+    const mostrar = function () {
+      caixa.hidden = false;
+      requestAnimationFrame(function () { caixa.classList.add('is-visivel'); });
+    };
+
+    // No Android o convite é uma tira fina que aparece logo (pedido de
+    // 04/11/2026): o Chrome nem sempre dispara `beforeinstallprompt`, e
+    // esperar por ele escondia o convite de quem mais instala. Sem o evento,
+    // o botão ensina o caminho pelo menu do navegador.
+    const android = /Android/i.test(navigator.userAgent);
+    if (android) {
+      caixa.classList.add('pwa-convite--tira');
+      setTimeout(mostrar, 2500);
+    }
 
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
       evento = e;
+      if (android) return;  // a tira já está (ou vai estar) na tela
       setTimeout(function () {
         if (!evento) return;
-        caixa.hidden = false;
-        caixa.classList.add('is-visivel');
+        mostrar();
       }, (window.AGROCAMPO_PWA.atrasoSegundos || 30) * 1000);
     });
 
     $('[data-pwa-instalar]', caixa).addEventListener('click', async function () {
-      if (!evento) return;
+      if (!evento) {
+        toast('No Chrome, toque nos três pontinhos ⋮ e depois em “Instalar app”.', 'info');
+        return;
+      }
       caixa.classList.remove('is-visivel');
       evento.prompt();
       const escolha = await evento.userChoice;
@@ -1075,6 +1141,8 @@
     iniciarBarraFrete();
     iniciarMensagens();
     iniciarConvitePwa();
+    iniciarBarraApp();
+    iniciarPromoModal();
   }
 
   if (document.readyState === 'loading') {

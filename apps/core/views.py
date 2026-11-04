@@ -80,7 +80,13 @@ def home(request):
     for config_vitrine in config.vitrines_por_linha():
         if not config_vitrine["ativa"]:
             continue
-        itens = produtos.da_linha(config_vitrine["linha"]).order_by("-vendas", "-destaque")[:8]
+        linha = config_vitrine["objeto"]
+        # escolhidos a dedo no painel valem mais que o contador de vendas
+        escolhidos = produtos.filter(pk__in=linha.vitrine_produtos.values("pk"))
+        if escolhidos.exists():
+            itens = escolhidos.order_by("-vendas", "-destaque")[:8]
+        else:
+            itens = produtos.da_linha(linha).order_by("-vendas", "-destaque")[:8]
         if itens:
             vitrines.append({**config_vitrine, "produtos": itens})
 
@@ -123,6 +129,16 @@ def home(request):
                 _proporcao_da_arte(banners_faixa[0], movel=True)
                 if banners_faixa and banners_faixa[0].imagem_movel
                 else ""
+            ),
+            # pop-up de promoção: o mais recente publicado com arte
+            "banner_modal": next(
+                (
+                    b for b in Banner.objects.publicados()
+                    .filter(posicao=Banner.Posicao.MODAL)
+                    .order_by("ordem", "-criado_em")
+                    if b.imagem
+                ),
+                None,
             ),
             "banners_rodape": [
                 b for b in Banner.objects.publicados()

@@ -196,6 +196,13 @@ class LinhaProduto(TimeStampedModel, SluggedModel):
         help_text="Vazio usa “Mais vendidos — <nome da linha>”.",
     )
     vitrine_ativa = models.BooleanField("mostrar vitrine na home", default=True)
+    # Sem escolha, a vitrine mostra os 8 mais vendidos da linha (pelo
+    # contador de vendas). Com escolha, mostra estes, na ordem de vendas —
+    # o lojista decide o que empurra, em vez de esperar a venda decidir.
+    vitrine_produtos = models.ManyToManyField(
+        "catalog.Produto", blank=True, related_name="vitrines_de_linha",
+        verbose_name="produtos da vitrine (escolha manual)",
+    )
     ordem = models.PositiveIntegerField(default=0, help_text="Menor aparece primeiro.")
     ativo = models.BooleanField("em uso", default=True)
 

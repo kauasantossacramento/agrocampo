@@ -1,0 +1,45 @@
+{% comment %}
+  Barra de navegação de aplicativo, presa ao pé da tela no celular — o
+  polegar alcança tudo sem subir até o menu do topo. No computador ela não
+  existe (layout.css). Os cinco destinos são os que o cliente mais usa:
+  início, categorias, busca, carrinho e conta.
+
+  "Categorias" abre a mesma gaveta do botão de menu do topo, e "Buscar" só
+  leva o foco à caixa de busca que já está na tela: nada de tela nova.
+{% endcomment %}
+{% with caminho=request.path %}
+<nav class="barra-app" aria-label="Navegação principal">
+  <a href="{% url 'core:home' %}" class="barra-app__item {% if caminho == '/' %}is-ativo{% endif %}"
+     {% if caminho == '/' %}aria-current="page"{% endif %}>
+    <svg width="22" height="22" aria-hidden="true"><use href="#i-casa"></use></svg>
+    <span>Início</span>
+  </a>
+  <button type="button" class="barra-app__item" data-drawer-open="#menu-mobile">
+    <svg width="22" height="22" aria-hidden="true"><use href="#i-grade"></use></svg>
+    <span>Categorias</span>
+  </button>
+  <button type="button" class="barra-app__item" data-barra-busca>
+    <svg width="22" height="22" aria-hidden="true"><use href="#i-busca"></use></svg>
+    <span>Buscar</span>
+  </button>
+  <a href="{% url 'cart:detalhe' %}" class="barra-app__item {% if '/carrinho/' in caminho %}is-ativo{% endif %}"
+     {% if '/carrinho/' in caminho %}aria-current="page"{% endif %}>
+    <span class="barra-app__icone">
+      <svg width="22" height="22" aria-hidden="true"><use href="#i-carrinho"></use></svg>
+      <span class="barra-app__contador" data-cart-count {% if not carrinho_qtd %}hidden{% endif %}>{{ carrinho_qtd }}</span>
+    </span>
+    <span>Carrinho</span>
+  </a>
+  {% if user.is_authenticated %}
+    <a href="{% url 'accounts:perfil' %}" class="barra-app__item {% if '/conta/' in caminho or '/pedidos/' in caminho %}is-ativo{% endif %}">
+      <svg width="22" height="22" aria-hidden="true"><use href="#i-usuario"></use></svg>
+      <span>Conta</span>
+    </a>
+  {% else %}
+    <a href="{% url 'accounts:entrar' %}" class="barra-app__item">
+      <svg width="22" height="22" aria-hidden="true"><use href="#i-usuario"></use></svg>
+      <span>Entrar</span>
+    </a>
+  {% endif %}
+</nav>
+{% endwith %}

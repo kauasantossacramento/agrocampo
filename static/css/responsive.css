@@ -342,3 +342,14 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .checkout-grid form.row input { min-width: 0; flex: 1; }
   .checkout-grid form.row .btn { flex: none; padding-inline: var(--s-4); }
 }
+
+/* ═══════════════ barra de app do celular: o que flutua sobe acima dela
+   Fica aqui, no último arquivo carregado: as regras de celular acima
+   reposicionam o balão do WhatsApp e, antes, o escondiam atrás da barra. */
+@media (max-width: 860px) {
+  body { padding-bottom: var(--barra-app-h); }
+  .zap { bottom: calc(var(--barra-app-h) + var(--s-3)); }
+  .silvinha { bottom: calc(var(--barra-app-h) + var(--s-3)); }
+  .toast-stack { bottom: calc(var(--barra-app-h) + var(--s-3)); }
+  .pwa-convite { bottom: calc(var(--barra-app-h) + var(--s-2)); }
+}
