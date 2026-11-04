@@ -4,7 +4,7 @@
 {% block whatsapp_balao %}{% endblock %}
 
 {% block content %}
-<div class="wrap section">
+<div class="wrap section" data-sempre-atual>
   <div class="pix-box card card--pad" data-reveal="scale" data-pix-status="{% url 'payments:status' pagamento.id %}">
     <span class="badge badge--green">
       <svg width="12" height="12"><use href="#i-raio"></use></svg>Pix
@@ -15,6 +15,22 @@
       <strong style="color:var(--ink)">R$ {{ pagamento.valor|floatformat:2 }}</strong>
     </p>
 
+    {% if pagamento.status == 'recusado' %}
+      {% comment %}
+        Pix que não foi gerado não tem QR Code para esperar. Antes a tela
+        mostrava "Recusado" e, na linha de baixo, "assim que confirmar esta
+        página avança sozinha" — o cliente ficava esperando o que não viria.
+      {% endcomment %}
+      <div class="alert alert--error" style="margin-top:var(--s-5);text-align:left">
+        <svg width="16" height="16"><use href="#i-alerta"></use></svg>
+        <span>
+          <strong>O Pix não foi gerado.</strong><br>
+          {{ pagamento.mensagem|default:"Tente de novo ou escolha outra forma de pagamento." }}
+        </span>
+      </div>
+      <a href="{% url 'payments:checkout' pedido.numero %}" class="btn btn--primary btn--block"
+         style="margin-top:var(--s-4)">Tentar de novo</a>
+    {% else %}
     <div class="pix-qr">
       {% if pagamento.pix_qrcode_imagem %}
         <img src="{{ pagamento.pix_qrcode_imagem }}" alt="QR Code do Pix">
@@ -41,9 +57,10 @@
       <span>
         Status: <strong data-pix-label>{{ pagamento.get_status_display }}</strong><br>
         {% if pagamento.pix_expira_em %}Este código expira em {{ pagamento.pix_expira_em|timeuntil }}.{% endif %}
-        Assim que a Stone confirmar, esta página avança sozinha.
+        Assim que o banco confirmar, esta página avança sozinha.
       </span>
     </div>
+    {% endif %}
 
     {% if pagamento.provedor.driver == 'simulado' %}
       <form method="post" action="{% url 'payments:simular_pix' pagamento.id %}" style="margin-top:var(--s-4)">

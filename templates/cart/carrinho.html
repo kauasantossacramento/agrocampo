@@ -3,8 +3,25 @@
 {% block title %}Seu carrinho — {{ site.nome_loja }}{% endblock %}
 
 {% block content %}
-<div class="wrap section">
+<div class="wrap section" data-sempre-atual>
   <h1 style="margin-bottom:var(--s-6)">Seu carrinho</h1>
+
+  {% for pedido in pedidos_pendentes %}
+    {% comment %}
+      Ao fechar o pedido os itens saem do carrinho e vão para ele. Sem este
+      aviso, quem voltava antes de pagar via o carrinho vazio e achava que
+      tinha perdido a compra.
+    {% endcomment %}
+    <div class="alert alert--info" style="margin-bottom:var(--s-4)">
+      <svg width="16" height="16"><use href="#i-relogio"></use></svg>
+      <span>
+        <strong>Pedido {{ pedido.numero }} esperando pagamento</strong> ·
+        R$ {{ pedido.total|floatformat:2 }}.
+        Os itens que estavam aqui foram para este pedido.
+        <a href="{% url 'payments:checkout' pedido.numero %}" class="strong link-underline">Pagar agora</a>
+      </span>
+    </div>
+  {% endfor %}
 
   {% if carrinho and not carrinho.vazio %}
     <div class="checkout-grid">

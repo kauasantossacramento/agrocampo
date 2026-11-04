@@ -5,7 +5,7 @@
    correção de CSS chegue na visita seguinte em vez de nunca. Em produção os
    arquivos já vêm com hash no nome, mas quem abre o site em desenvolvimento
    — ou por um caminho sem hash — ficava preso à versão antiga para sempre. */
-const VERSAO = 'v2';
+const VERSAO = 'v3';
 const CACHE = `agrocampo-${VERSAO}`;
 
 const ESSENCIAIS = [
@@ -51,9 +51,16 @@ self.addEventListener('fetch', (evento) => {
   const req = evento.request;
   if (req.method !== 'GET') return;
 
-  // navegação: rede primeiro, offline como reserva
+  // navegação: rede primeiro, offline como reserva — mas só depois de
+  // uma segunda tentativa. No 4G/5G do interior uma requisição falha e a
+  // seguinte passa; desistir na primeira mostrava "sem conexão" a quem
+  // estava conectado, sem o pedido nem chegar ao servidor.
   if (req.mode === 'navigate') {
-    evento.respondWith(fetch(req).catch(() => caches.match('/offline/')));
+    evento.respondWith(
+      fetch(req)
+        .catch(() => new Promise((ok) => setTimeout(ok, 1200)).then(() => fetch(req)))
+        .catch(() => caches.match('/offline/'))
+    );
     return;
   }
 

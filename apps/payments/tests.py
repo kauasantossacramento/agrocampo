@@ -436,6 +436,191 @@ class PagarmeTests(BaseCheckout):
         self.assertEqual(resposta.status_code, 400)
 
 
+class CompraComPagarmeTests(BaseCheckout):
+    """O que aconteceu na primeira compra real, em 04/11/2026.
+
+    A Pagar.me recusou o Pix com "The customer Document is required.": o
+    comprador não tinha CPF, que é opcional no cadastro. A tela ainda
+    mostrou "Recusado" e, logo abaixo, "assim que confirmar esta página
+    avança sozinha". E quem voltou ao carrinho o achou vazio, com os itens
+    já dentro de um pedido que nada mostrava.
+    """
+
+    RECUSA_SEM_CPF = {
+        "id": "or_x", "status": "failed",
+        "charges": [{"id": "ch_x", "status": "failed", "last_transaction": {
+            "status": "failed", "success": False,
+            "gateway_response": {"code": "400", "errors": [
+                {"message": "The customer Document is required."}]},
+        }}],
+    }
+
+    def setUp(self):
+        super().setUp()
+        self.provedor.driver = ProvedorPagamento.Driver.PAGARME
+        self.provedor.pagarme_secret_key_sandbox = "sk_test_chave"
+        self.provedor.save()
+        self.client.force_login(self.usuario)
+
+    def _resposta(self, corpo, status=200):
+        from unittest.mock import patch
+
+        class Falsa:
+            status_code = status
+
+            def json(self):
+                return corpo
+
+        return patch("apps.payments.gateways.pagarme.requests.request", return_value=Falsa())
+
+    # ------------------------------------------------------------- CPF
+    def test_cpf_confere_os_digitos(self):
+        from apps.core.documentos import cpf_valido, formatar_cpf
+
+        self.assertTrue(cpf_valido("083.627.535-79"))
+        self.assertTrue(cpf_valido("08362753579"))
+        self.assertFalse(cpf_valido("083.627.535-70"))
+        self.assertFalse(cpf_valido("111.111.111-11"))
+        self.assertFalse(cpf_valido(""))
+        self.assertEqual(formatar_cpf("08362753579"), "083.627.535-79")
+
+    def test_checkout_pede_cpf_a_quem_nao_tem(self):
+        html = self.client.get(
+            reverse("payments:checkout", args=[self.pedido.numero])
+        ).content.decode()
+        self.assertIn('name="comprador_cpf"', html)
+
+    def test_quem_ja_tem_cpf_nao_e_perguntado_de_novo(self):
+        self.usuario.cpf = "083.627.535-79"
+        self.usuario.save()
+        html = self.client.get(
+            reverse("payments:checkout", args=[self.pedido.numero])
+        ).content.decode()
+        self.assertNotIn('name="comprador_cpf"', html)
+
+    def test_simulado_nao_pede_cpf(self):
+        """Sem adquirente de verdade ninguém exige o documento."""
+        self.provedor.driver = ProvedorPagamento.Driver.SIMULADO
+        self.provedor.save()
+        html = self.client.get(
+            reverse("payments:checkout", args=[self.pedido.numero])
+        ).content.decode()
+        self.assertNotIn('name="comprador_cpf"', html)
+
+    def test_cpf_invalido_nao_chega_ao_adquirente(self):
+        from unittest.mock import patch
+
+        with patch("apps.payments.gateways.pagarme.requests.request") as chamada:
+            resposta = self.client.post(
+                reverse("payments:checkout", args=[self.pedido.numero]),
+                {"metodo": "pix", "comprador_cpf": "123.456.789-00"},
+            )
+        self.assertEqual(resposta.status_code, 302)
+        chamada.assert_not_called()
+        self.usuario.refresh_from_db()
+        self.assertEqual(self.usuario.cpf, "")
+
+    def test_cpf_valido_fica_no_cadastro_e_vai_na_cobranca(self):
+        aprovado = {
+            "id": "or_y", "status": "pending",
+            "charges": [{"id": "ch_y", "status": "pending", "last_transaction": {
+                "status": "waiting_payment", "success": True,
+                "qr_code": "00020126BR.GOV.BCB.PIX", "qr_code_url": "https://x/qr.png",
+            }}],
+        }
+        with self._resposta(aprovado) as chamada:
+            self.client.post(
+                reverse("payments:checkout", args=[self.pedido.numero]),
+                {"metodo": "pix", "comprador_cpf": "08362753579"},
+            )
+        self.usuario.refresh_from_db()
+        self.assertEqual(self.usuario.cpf, "083.627.535-79")
+        enviado = json.loads(chamada.call_args[1]["data"])
+        self.assertEqual(enviado["customer"]["document"], "08362753579")
+        self.assertEqual(enviado["customer"]["document_type"], "CPF")
+
+    # ------------------------------------------------- recusa do Pix
+    def test_pix_recusado_fica_recusado_e_em_portugues(self):
+        """Antes ficava "aguardando" esperando um QR Code que nunca viria."""
+        self.usuario.cpf = "083.627.535-79"
+        self.usuario.save()
+        with self._resposta(self.RECUSA_SEM_CPF):
+            pagamento = cobrar_pix(self.pedido)
+
+        self.assertEqual(pagamento.status, Pagamento.Status.RECUSADO)
+        self.assertIn("CPF", pagamento.mensagem)
+        self.assertNotIn("required", pagamento.mensagem)
+
+    def test_tela_do_pix_recusado_oferece_tentar_de_novo(self):
+        self.usuario.cpf = "083.627.535-79"
+        self.usuario.save()
+        with self._resposta(self.RECUSA_SEM_CPF):
+            pagamento = cobrar_pix(self.pedido)
+
+        html = self.client.get(reverse("payments:pix", args=[pagamento.pk])).content.decode()
+        self.assertIn("O Pix não foi gerado", html)
+        self.assertIn("Tentar de novo", html)
+        self.assertNotIn("avança sozinha", html)
+        self.assertNotIn("Stone", html)
+
+    def test_recusa_repetida_pelo_webhook_nao_manda_outro_aviso(self):
+        """A recusa chega na resposta e de novo no webhook: um aviso só."""
+        from apps.notifications.models import Notificacao
+
+        pagamento = Pagamento.objects.create(
+            pedido=self.pedido, provedor=self.provedor, metodo=Pagamento.Metodo.CARTAO,
+            valor=Decimal("100.00"), referencia_externa="ch_x",
+        )
+        pagamento.marcar_recusado("O banco não aprovou o pagamento.")
+        antes = Notificacao.objects.count()
+
+        confirmacao = {"id": "ch_x", "status": "failed",
+                       "last_transaction": {"status": "not_authorized"}}
+        with self._resposta(confirmacao):
+            evento = registrar_webhook(
+                b"{}", {"type": "charge.payment_failed", "data": {"id": "ch_x"}}, ""
+            )
+            processar_webhook(evento)
+
+        self.assertEqual(Notificacao.objects.count(), antes)
+        pagamento.refresh_from_db()
+        self.assertEqual(pagamento.mensagem, "O banco não aprovou o pagamento.")
+
+    # ------------------------------------------- carrinho e o "voltar"
+    def test_carrinho_mostra_o_pedido_esperando_pagamento(self):
+        html = self.client.get(reverse("cart:detalhe")).content.decode()
+        self.assertIn(f"Pedido {self.pedido.numero} esperando pagamento", html)
+        self.assertIn(reverse("payments:checkout", args=[self.pedido.numero]), html)
+
+    def test_tela_de_entrega_antiga_leva_ao_pedido_ja_fechado(self):
+        """Confirmar de novo uma tela velha caía em "carrinho vazio"."""
+        resposta = self.client.get(reverse("cart:checkout"))
+        self.assertRedirects(
+            resposta,
+            reverse("payments:checkout", args=[self.pedido.numero]),
+            fetch_redirect_response=False,
+        )
+
+    def test_pedido_antigo_nao_sequestra_compra_nova(self):
+        """Meia hora depois, carrinho vazio é carrinho vazio."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        Pedido.objects.filter(pk=self.pedido.pk).update(
+            criado_em=timezone.now() - timedelta(hours=2)
+        )
+        resposta = self.client.get(reverse("cart:checkout"))
+        self.assertRedirects(resposta, reverse("catalog:catalogo"),
+                             fetch_redirect_response=False)
+
+    def test_carrinho_e_pagamento_nao_ficam_na_memoria_do_navegador(self):
+        for url in (reverse("cart:detalhe"),
+                    reverse("payments:checkout", args=[self.pedido.numero])):
+            resposta = self.client.get(url)
+            self.assertIn("no-store", resposta.headers.get("Cache-Control", ""), url)
+
+
 class CieloTests(BaseCheckout):
     """Driver da Cielo: o que a loja manda e o que ela entende de volta.
 

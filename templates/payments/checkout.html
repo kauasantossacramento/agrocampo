@@ -6,7 +6,7 @@
 {% block whatsapp_balao %}{% endblock %}
 
 {% block content %}
-<div class="wrap section">
+<div class="wrap section" data-sempre-atual>
   <div class="row" style="gap:var(--s-3);margin-bottom:var(--s-6)">
     <span class="badge badge--green">1. Entrega ✓</span>
     <span class="badge badge--red">2. Pagamento</span>
@@ -15,7 +15,7 @@
 
   <h1 style="margin-bottom:var(--s-2)">Como você quer pagar?</h1>
   <p class="small muted" style="margin-bottom:var(--s-6)">
-    Pedido {{ pedido.numero }} · processado com segurança pela <strong>Stone</strong>
+    Pedido {{ pedido.numero }} · pagamento processado com segurança
     {% if provedor.ambiente == 'sandbox' %}<span class="badge badge--amber" style="margin-left:var(--s-2)">Ambiente {{ provedor.get_ambiente_display }}</span>{% endif %}
   </p>
 
@@ -23,6 +23,22 @@
     {% csrf_token %}
 
     <div data-reveal="left">
+      {% if pede_cpf %}
+        {% comment %}
+          O CPF é opcional no cadastro, mas o banco recusa a cobrança sem
+          ele. Pedido uma vez só, aqui, e guardado no perfil do cliente.
+        {% endcomment %}
+        <div class="card card--pad" style="margin-bottom:var(--s-5)">
+          <div class="field" style="margin:0">
+            <label for="comprador_cpf">Seu CPF</label>
+            <input type="text" name="comprador_cpf" id="comprador_cpf" data-mask="cpf"
+                   inputmode="numeric" autocomplete="off" required
+                   placeholder="000.000.000-00">
+            <span class="xs muted">O banco exige o CPF de quem compra para gerar o
+              pagamento. Fica salvo no seu cadastro para as próximas compras.</span>
+          </div>
+        </div>
+      {% endif %}
       <div class="stack" data-option-group>
 
         {% if 'pix' in metodos %}

@@ -100,6 +100,8 @@ EVENTOS_CONHECIDOS = {
 
 class PagarmeGateway(GatewayBase):
     codigo = "pagarme"
+    # "The customer Document is required." — Pix sem CPF não sai
+    exige_documento = True
 
     # ------------------------------------------------------------- infra
     @property

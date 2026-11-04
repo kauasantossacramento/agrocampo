@@ -31,11 +31,48 @@ def _novo_pagamento(pedido, metodo, provedor=None, parcelas=1) -> Pagamento:
     )
 
 
+# O que o adquirente responde vai inteiro para a trilha de auditoria; o
+# cliente lê outra coisa. "The customer Document is required." na tela de
+# quem só queria pagar um Pix não ajuda — e mensagem técnica para o lojista
+# também está fora do combinado.
+MOTIVOS_CONHECIDOS = (
+    ("document", "Para gerar o pagamento, o banco exige o CPF de quem compra. "
+                 "Confira o CPF e tente de novo."),
+    ("expired", "O cartão está vencido. Confira a validade ou use outro cartão."),
+    ("card number", "O número do cartão não confere. Confira e tente de novo."),
+    ("cvv", "O código de segurança do cartão não confere."),
+    ("insufficient", "O cartão não tem limite para esta compra."),
+    ("limite", "O cartão não tem limite para esta compra."),
+)
+
+RECUSA_GENERICA = {
+    Pagamento.Metodo.PIX: "Não foi possível gerar o Pix agora. Tente de novo "
+                          "ou escolha outra forma de pagamento.",
+    Pagamento.Metodo.CARTAO: "O banco não aprovou o pagamento. Confira os dados "
+                             "do cartão ou use outro.",
+    Pagamento.Metodo.BOLETO: "Não foi possível gerar o boleto agora. Tente de novo "
+                             "ou escolha outra forma de pagamento.",
+}
+
+
+def mensagem_ao_cliente(texto: str, metodo: str) -> str:
+    """Traduz a recusa do adquirente para quem está comprando."""
+    minusculo = (texto or "").lower()
+    for trecho, frase in MOTIVOS_CONHECIDOS:
+        if trecho in minusculo:
+            return frase
+    return RECUSA_GENERICA.get(metodo, "Pagamento não aprovado.")
+
+
 def _aplicar_resultado(pagamento: Pagamento, resultado) -> Pagamento:
     """Copia a resposta normalizada do adquirente para o model."""
     pagamento.status = resultado.status or pagamento.status
     pagamento.referencia_externa = resultado.referencia_externa or pagamento.referencia_externa
-    pagamento.mensagem = resultado.mensagem
+    pagamento.mensagem = (
+        resultado.mensagem
+        if resultado.sucesso
+        else mensagem_ao_cliente(resultado.mensagem, pagamento.metodo)
+    )
     pagamento.codigo_retorno = resultado.codigo_retorno
     pagamento.codigo_autorizacao = resultado.codigo_autorizacao
     pagamento.nsu = resultado.nsu
@@ -98,10 +135,17 @@ def cobrar_pix(pedido) -> Pagamento:
     gateway = get_gateway(provedor)
     try:
         resultado = gateway.criar_pix(pagamento)
-    except ErroGateway as exc:
-        pagamento.marcar_recusado(f"Falha ao gerar Pix: {exc.mensagem}")
+    except ErroGateway:
+        pagamento.marcar_recusado(RECUSA_GENERICA[Pagamento.Metodo.PIX])
         return pagamento
     _aplicar_resultado(pagamento, resultado)
+    # Pix que o adquirente recusou não tem código para pagar: marcar como
+    # "aguardando" deixava o cliente esperando um QR Code que nunca viria
+    if not resultado.sucesso or not resultado.pix_qrcode:
+        pagamento.marcar_recusado(
+            pagamento.mensagem or RECUSA_GENERICA[Pagamento.Metodo.PIX]
+        )
+        return pagamento
     pagamento.status = Pagamento.Status.PENDENTE
     pagamento.save(update_fields=["status"])
     return pagamento
@@ -295,8 +339,13 @@ def processar_webhook(evento: EventoWebhook) -> EventoWebhook:
             pagamento.save(update_fields=["pix_e2e_id"])
         _confirmar_pedido(pagamento.pedido, pagamento)
     elif novo_status == Pagamento.Status.RECUSADO:
-        pagamento.marcar_recusado("Recusado pelo adquirente.")
-        _pagamento_recusado(pagamento.pedido, pagamento)
+        # a recusa costuma chegar duas vezes: na resposta da cobrança e no
+        # webhook logo depois. Quem já foi avisado não recebe outro e-mail.
+        if pagamento.status != Pagamento.Status.RECUSADO:
+            pagamento.marcar_recusado(
+                pagamento.mensagem or RECUSA_GENERICA.get(pagamento.metodo, "")
+            )
+            _pagamento_recusado(pagamento.pedido, pagamento)
     elif novo_status in {Pagamento.Status.ESTORNADO, Pagamento.Status.ESTORNO_PARCIAL}:
         valor = dados.get("valor") or pagamento.valor_estornavel
         pagamento.registrar_estorno(valor)

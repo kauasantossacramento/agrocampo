@@ -874,6 +874,18 @@
     });
   }
 
+  /* ------------------------------- carrinho e pagamento sempre atuais
+     O "voltar" do celular reabre a página da memória, sem perguntar ao
+     servidor. No carrinho e no pagamento isso mostrava itens que já tinham
+     virado pedido — e confirmar de novo dava "carrinho vazio". O
+     `never_cache` das views tira essas telas da memória na maioria dos
+     navegadores; este ouvinte cobre os que guardam assim mesmo. */
+  window.addEventListener('pageshow', (evento) => {
+    if (evento.persisted && document.querySelector('[data-sempre-atual]')) {
+      window.location.reload();
+    }
+  });
+
   /* ----------------------------------------- polling do status do Pix */
   function iniciarPixPolling() {
     const caixa = $('[data-pix-status]');
@@ -891,6 +903,12 @@
         if (dados.pago) {
           toast('Pagamento confirmado!', 'success');
           setTimeout(() => (window.location.href = dados.url_pedido), 900);
+          return;
+        }
+        // recusado pelo banco: a tela troca o QR Code pelo motivo e pelo
+        // botão de tentar de novo — continuar consultando não muda nada
+        if (dados.status === 'recusado') {
+          window.location.reload();
           return;
         }
       } catch { /* rede instável: tenta de novo no próximo ciclo */ }

@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from apps.core.models import SiteConfig
@@ -31,6 +32,48 @@ def _resposta(request, carrinho, mensagem, ok=True, destino="cart:detalhe"):
     return redirect(request.META.get("HTTP_REFERER", destino) if ok else destino)
 
 
+def _pedidos_esperando_pagamento(request):
+    """Pedidos fechados que o cliente ainda não pagou.
+
+    Ao fechar o pedido o carrinho se esvazia: os itens passam para o pedido.
+    Quem volta ao carrinho antes de pagar encontrava "seu carrinho está
+    vazio" e achava que tinha perdido tudo — os itens estavam no pedido,
+    sem nada que levasse até ele.
+    """
+    if not request.user.is_authenticated:
+        return []
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.orders.models import Pedido
+
+    return list(
+        Pedido.objects.filter(
+            usuario=request.user,
+            status=Pedido.Status.AGUARDANDO_PAGAMENTO,
+            criado_em__gte=timezone.now() - timedelta(days=7),
+        ).order_by("-criado_em")[:3]
+    )
+
+
+def _pedido_recem_fechado(request):
+    """O pedido que este cliente fechou há pouco e ainda não pagou.
+
+    Meia hora basta para cobrir o "voltar" e não arrasta para um pedido
+    esquecido de ontem quem quer, de fato, começar uma compra nova.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    for pedido in _pedidos_esperando_pagamento(request):
+        if pedido.criado_em >= timezone.now() - timedelta(minutes=30):
+            return pedido
+    return None
+
+
+@never_cache
 def detalhe(request):
     from apps.shipping.models import RegraEntrega
 
@@ -46,6 +89,7 @@ def detalhe(request):
         request,
         "cart/carrinho.html",
         {
+            "pedidos_pendentes": _pedidos_esperando_pagamento(request),
             "carrinho": carrinho,
             "provedor": provedor,
             "metodos": provedor.metodos_disponiveis(),
@@ -166,10 +210,22 @@ def aplicar_cupom(request):
     return _resposta(request, carrinho, f"Cupom {codigo} aplicado!")
 
 
+@never_cache
 @login_required
 def checkout(request):
     carrinho = obter_carrinho(request)
     if carrinho.vazio:
+        # Quem confirma de novo numa tela de entrega antiga (o "voltar" do
+        # celular) chega aqui com o carrinho já convertido em pedido. Em vez
+        # de "carrinho vazio", leva ao pedido que acabou de ser fechado.
+        recente = _pedido_recem_fechado(request)
+        if recente:
+            messages.info(
+                request,
+                f"O pedido {recente.numero} já foi fechado com esses itens — "
+                "falta só o pagamento.",
+            )
+            return redirect("payments:checkout", numero=recente.numero)
         messages.info(request, "Seu carrinho está vazio.")
         return redirect("catalog:catalogo")
 

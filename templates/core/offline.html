@@ -9,4 +9,20 @@
     <button onclick="location.reload()" class="btn btn--primary" style="margin-top:var(--s-5)">Tentar de novo</button>
   </div>
 </div>
+<script>
+  // O service worker entrega esta página no endereço que falhou, então
+  // recarregar é tentar a página que o cliente queria. Volta sozinha quando
+  // o aparelho avisa que a rede voltou, e tenta por conta própria algumas
+  // vezes para o caso de o sinal voltar sem o aviso chegar — com teto, para
+  // não ficar recarregando para sempre se o problema for do outro lado.
+  window.addEventListener('online', function () { location.reload(); });
+  var tentativas = 0;
+  try { tentativas = Number(sessionStorage.getItem('offline-tentativas') || 0); } catch (e) {}
+  if (tentativas < 5) {
+    setTimeout(function () {
+      try { sessionStorage.setItem('offline-tentativas', String(tentativas + 1)); } catch (e) {}
+      if (navigator.onLine) location.reload();
+    }, 6000);
+  }
+</script>
 {% endblock %}

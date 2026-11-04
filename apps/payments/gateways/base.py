@@ -84,6 +84,10 @@ class GatewayBase:
     """Interface que todo adquirente precisa implementar."""
 
     codigo = "base"
+    # O adquirente recusa a cobrança sem o CPF de quem compra? Quando sim,
+    # o checkout pede o CPF antes de chamar a API, em vez de deixar a
+    # recusa chegar sem explicação depois do clique em pagar.
+    exige_documento = False
 
     def __init__(self, provedor):
         self.provedor = provedor

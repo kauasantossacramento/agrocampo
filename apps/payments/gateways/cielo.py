@@ -52,6 +52,8 @@ MAPA_STATUS = {
 
 class CieloGateway(GatewayBase):
     codigo = "cielo"
+    # o Pix da Cielo também recusa comprador sem documento
+    exige_documento = True
 
     # ------------------------------------------------------------- infra
     def _headers(self) -> dict:

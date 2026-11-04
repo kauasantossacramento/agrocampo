@@ -7,11 +7,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from apps.core.documentos import cpf_valido, formatar_cpf
 from apps.orders.models import Pedido
 
+from .gateways import get_gateway
 from .models import Pagamento, ProvedorPagamento
 from .services import (
     cobrar_boleto,
@@ -23,6 +26,7 @@ from .services import (
 )
 
 
+@never_cache
 @login_required
 def checkout(request, numero):
     """Escolha do método e submissão do pagamento."""
@@ -35,8 +39,26 @@ def checkout(request, numero):
     }:
         return redirect(pedido.get_absolute_url())
 
+    # O adquirente recusa a cobrança sem o CPF de quem compra, e o CPF é
+    # opcional no cadastro. Pedido aqui, uma vez só: fica salvo no perfil.
+    pede_cpf = get_gateway(provedor).exige_documento and not cpf_valido(
+        request.user.cpf
+    )
+
     if request.method == "POST":
         metodo = request.POST.get("metodo", Pagamento.Metodo.PIX)
+
+        if pede_cpf:
+            cpf = request.POST.get("comprador_cpf", "")
+            if not cpf_valido(cpf):
+                messages.error(
+                    request,
+                    "Informe um CPF válido. O banco exige o CPF de quem compra "
+                    "para gerar o pagamento.",
+                )
+                return redirect("payments:checkout", numero=numero)
+            request.user.cpf = formatar_cpf(cpf)
+            request.user.save(update_fields=["cpf"])
 
         if metodo == Pagamento.Metodo.CARTAO:
             faltando = [
@@ -94,10 +116,12 @@ def checkout(request, numero):
             "metodos": provedor.metodos_disponiveis(),
             "parcelas": provedor.parcelas_disponiveis(pedido.total),
             "cartoes": request.user.cartoes.filter(ativo=True),
+            "pede_cpf": pede_cpf,
         },
     )
 
 
+@never_cache
 @login_required
 def pix(request, pagamento_id):
     """Tela do QR Code, com polling até a confirmação."""
