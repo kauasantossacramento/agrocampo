@@ -595,3 +595,14 @@ ligar: *Configurações › Pagamentos* → Driver **Pagar.me**, Ambiente
 Pendente do lojista: cadastrar o webhook `/pagamentos/webhook/pagarme/` no
 painel da Pagar.me (eventos `charge.paid`, `charge.payment_failed`,
 `charge.refunded`) e, se quiser, o usuário/senha Basic do webhook.
+
+**Virada para produção (04/11/2026, mesmo dia).** A pedido do lojista, com
+o webhook já cadastrado no painel da Pagar.me: provedor renomeado para
+"Pagar.me", driver `pagarme`, ambiente `producao`. Backup antes
+(`backups/pre-pagarme-producao-*.sql.gz`). Conferido no servidor:
+credenciais completas, driver ativo `pagarme`, API respondendo do container
+(350–500 ms; a primeira conexão levou 7,4 s). Métodos no checkout: cartão e
+Pix; boleto segue desligado. Nenhum webhook recebido até a virada — o
+primeiro chega com a primeira venda.
+
+Reversão sem deploy: *Configurações › Pagamentos* → Driver **Simulado**.
