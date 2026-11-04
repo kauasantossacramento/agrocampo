@@ -534,6 +534,7 @@ def configuracoes(request):
             # o lojista precisa colar isto no portal da Cielo; montar à mão
             # erra o domínio quando a loja troca de endereço
             "url_webhook_cielo": _endereco_publico(reverse("payments:webhook_cielo")),
+            "url_webhook_pagarme": _endereco_publico(reverse("payments:webhook_pagarme")),
             "provedores": ProvedorPagamento.objects.all(),
             "provedor": provedor,
             "metricas": _metricas(),
@@ -1123,6 +1124,7 @@ def manual_stone(request):
             "provedor": provedor,
             "site_url": site_url,
             "url_webhook": f"{site_url}{reverse('payments:webhook')}",
+            "url_webhook_pagarme": f"{site_url}{reverse('payments:webhook_pagarme')}",
             "hoje": timezone.localdate(),
         },
     )

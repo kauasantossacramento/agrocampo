@@ -35,7 +35,7 @@
 
   <header class="folha__capa">
     <img src="{% static 'img/logo-agrocampo.png' %}" alt="{{ site.nome_loja }}" class="folha__logo">
-    <h1>Configuração do pagamento com a Stone</h1>
+    <h1>Configuração do pagamento online (Stone / Pagar.me)</h1>
     <p class="folha__sub">
       {{ site.nome_loja|default:"AgroCampo" }} · documento interno ·
       gerado em {{ hoje|date:"d/m/Y" }}
@@ -62,14 +62,20 @@
         <th>Credenciais</th>
         <td>
           {% if provedor.credenciais_completas %}
-            API Key e Merchant ID preenchidos.
+            Preenchidas para o driver em uso.
+          {% elif provedor.driver == 'pagarme' %}
+            <strong>Falta a chave secreta da Pagar.me para este ambiente.</strong>
           {% else %}
-            <strong>Faltam API Key e/ou Merchant ID.</strong>
+            <strong>Faltam credenciais — a loja segue em modo simulado.</strong>
           {% endif %}
         </td>
       </tr>
       <tr>
-        <th>Endereço do webhook</th>
+        <th>Webhook da Pagar.me</th>
+        <td><code>{{ url_webhook_pagarme }}</code></td>
+      </tr>
+      <tr>
+        <th>Webhook da Stone</th>
         <td><code>{{ url_webhook }}</code></td>
       </tr>
     </table>
@@ -110,7 +116,7 @@
       </li>
       <li>
         <strong>Pedir a URL base da API</strong> que a conta deve usar. Isto é
-        importante: ver o aviso do item 5.
+        importante: ver o aviso do item 6.
       </li>
     </ol>
   </section>
@@ -158,9 +164,88 @@
     </table>
   </section>
 
+  {# ══════════════════════════════════════════════════ 3.5 #}
+  <section class="quebra-antes">
+    <h2>4. Pagar.me: campo por campo</h2>
+    <p>
+      Este é o caminho de quem contratou <strong>pagamento online</strong> pela
+      Stone: as chaves que chegam são da Pagar.me, e o driver a escolher no
+      painel é <strong>Pagar.me (API v5)</strong>. O driver <em>Stone</em>
+      (item 5) é outro produto, da API própria dela, e quase nenhuma conta
+      nova usa.
+    </p>
+
+    <table class="doc doc--campos">
+      <thead>
+        <tr><th>Campo no painel</th><th>De onde vem</th><th>Obrigatório?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Driver</strong></td>
+          <td>Escolha <em>Pagar.me (API v5)</em> quando a chave estiver preenchida.</td>
+          <td>sim</td>
+        </tr>
+        <tr>
+          <td><strong>Ambiente</strong></td>
+          <td>Decide <strong>qual chave cobra</strong>: a de teste ou a de produção.
+              Não muda o endereço — na Pagar.me ele é o mesmo para os dois.</td>
+          <td>sim</td>
+        </tr>
+        <tr>
+          <td><strong>Chave secreta (teste / produção)</strong></td>
+          <td>Painel da Pagar.me → Configurações → Chaves. Começa com
+              <code>sk_</code>. É ela que autoriza cada cobrança — não mostre
+              a ninguém e não mande por mensagem.</td>
+          <td><strong>sim</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Chave pública (teste / produção)</strong></td>
+          <td>Mesma tela, começa com <code>pk_</code>. Serve para cifrar o
+              cartão no navegador; pode aparecer em página pública.</td>
+          <td>recomendado</td>
+        </tr>
+        <tr>
+          <td><strong>ID da conta</strong></td>
+          <td>Começa com <code>acc_</code>. Identifica a conta quando você
+              abre chamado no suporte da Pagar.me.</td>
+          <td>não</td>
+        </tr>
+        <tr>
+          <td><strong>Usuário e senha do webhook</strong></td>
+          <td>Opcional. Preenchidos aqui <em>e</em> no painel da Pagar.me, a
+              loja recusa qualquer notificação que não traga os dois.</td>
+          <td>recomendado</td>
+        </tr>
+        <tr>
+          <td><strong>URL da API</strong></td>
+          <td>Já vem com <code>https://api.pagar.me/core/v5</code>. Só mexa se
+              a Pagar.me mandar outro endereço por escrito.</td>
+          <td>já preenchido</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="aviso">
+      <p>
+        <strong>A chave é o ambiente.</strong> Não existe endereço de teste na
+        Pagar.me: a mesma API atende os dois lados e quem separa é a chave.
+        Com a chave de teste, nenhum cliente é cobrado e nenhum recebível é
+        gerado. Com a de produção, toda compra passa de verdade no cartão —
+        inclusive a sua, se fizer um pedido para conferir.
+      </p>
+      <p>
+        No painel da Pagar.me, em <strong>Webhooks</strong>, cadastre o
+        endereço <code>{{ url_webhook_pagarme }}</code> e marque pelo menos
+        <code>charge.paid</code>, <code>charge.payment_failed</code> e
+        <code>charge.refunded</code>. Sem webhook, o Pix não vira “pago”
+        sozinho: alguém tem que conferir na mão.
+      </p>
+    </div>
+  </section>
+
   {# ══════════════════════════════════════════════════ 4 #}
   <section class="quebra-antes">
-    <h2>4. Campo por campo do painel</h2>
+    <h2>5. Stone (API própria): campo por campo</h2>
     <p>
       Painel → <strong>Configurações → Pagamentos</strong>. Nada disso fica no
       código: tudo é gravado no banco de dados da loja e pode ser trocado sem
@@ -207,7 +292,7 @@
         <tr>
           <td><strong>Segredo do webhook</strong></td>
           <td>Gerado junto com o webhook, no painel de pagamentos. Valida a
-              assinatura das notificações — ver item 6.</td>
+              assinatura das notificações — ver item 7.</td>
           <td><strong>sim</strong></td>
         </tr>
         <tr>
@@ -218,7 +303,7 @@
         <tr>
           <td><strong>URL base (sandbox)</strong> e <strong>(produção)</strong></td>
           <td>Endereço da API informado pela Stone na abertura da conta.</td>
-          <td><strong>sim</strong> — ver item 5</td>
+          <td><strong>sim</strong> — ver item 6</td>
         </tr>
         <tr>
           <td><strong>Parcelas / sem juros / valor mínimo</strong></td>
@@ -243,7 +328,11 @@
 
   {# ══════════════════════════════════════════════════ 5 #}
   <section>
-    <h2>5. Aviso sobre a URL base</h2>
+    <h2>6. Aviso sobre a URL base da Stone</h2>
+    <p>
+      Vale apenas para o driver <em>Stone (API própria)</em>. Na Pagar.me o
+      endereço é um só e já vem preenchido.
+    </p>
     <div class="aviso">
       <p>
         Os endereços que vêm preenchidos por padrão no painel
@@ -263,7 +352,7 @@
 
   {# ══════════════════════════════════════════════════ 6 #}
   <section>
-    <h2>6. Webhook — a parte que não pode faltar</h2>
+    <h2>7. Webhook — a parte que não pode faltar</h2>
     <p>
       O webhook é o aviso que a Stone manda quando um pagamento muda de estado.
       É ele que confirma o Pix e o cartão: <strong>sem webhook, o pedido pago
@@ -301,7 +390,7 @@
 
   {# ══════════════════════════════════════════════════ 7 #}
   <section class="quebra-antes">
-    <h2>7. Passo a passo da virada</h2>
+    <h2>8. Passo a passo da virada</h2>
     <ol class="passos-doc">
       <li>Contrate o pagamento online e peça acesso ao painel de pagamentos.</li>
       <li>No painel da Stone, copie a <strong>chave de teste</strong>.</li>
@@ -312,7 +401,7 @@
         <strong>Driver em Stone</strong>. Salve.
       </li>
       <li>
-        Ainda no painel da Stone, cadastre o webhook com o endereço do item 6 e
+        Ainda no painel da Stone, cadastre o webhook com o endereço do item 7 e
         copie o segredo gerado para o campo <em>Segredo do webhook</em>.
       </li>
       <li>
@@ -336,7 +425,7 @@
 
   {# ══════════════════════════════════════════════════ 8 #}
   <section>
-    <h2>8. Quando algo não funciona</h2>
+    <h2>9. Quando algo não funciona</h2>
     <table class="doc">
       <tr>
         <th>A loja continua em simulado</th>
@@ -350,7 +439,7 @@
       </tr>
       <tr>
         <th>“Falha de comunicação”</th>
-        <td>URL base errada (item 5) ou a Stone fora do ar.</td>
+        <td>URL base errada (item 6) ou a Stone fora do ar.</td>
       </tr>
       <tr>
         <th>Pedido pago não vira “pago”</th>

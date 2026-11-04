@@ -114,20 +114,37 @@ class GatewayBase:
             erro=erro,
         )
 
+    # Comparadas sem maiúscula, sem "_" e sem "-": "CardNumber",
+    # "card_number" e "cardNumber" são o mesmo campo, e cada adquirente
+    # escreve do seu jeito.
+    CAMPOS_SENSIVEIS = {
+        "number", "numero", "cardnumber", "pan",
+        "cvv", "cvc", "securitycode", "cvvnumber",
+        "clientsecret", "apikey", "secretkey", "authorization", "password",
+        "senha", "merchantkey", "token",
+    }
+
     @staticmethod
-    def _mascarar(dados: dict) -> dict:
-        """Remove PAN, CVV e segredos antes de persistir a requisição."""
-        sensiveis = {
-            "number", "numero", "card_number", "cvv", "cvc", "security_code",
-            "client_secret", "api_key", "authorization", "password",
-        }
+    def _mascarar(dados):
+        """Remove PAN, CVV e segredos antes de persistir a requisição.
+
+        Caminha por listas também: na Pagar.me o cartão vem em
+        `payments[0].credit_card.card.number`, e uma varredura só de
+        dicionários gravaria o número inteiro na trilha de auditoria.
+        """
+        if isinstance(dados, list):
+            return [GatewayBase._mascarar(item) for item in dados]
+        if not isinstance(dados, dict):
+            return dados
+
         limpo = {}
-        for chave, valor in (dados or {}).items():
-            if isinstance(valor, dict):
-                limpo[chave] = GatewayBase._mascarar(valor)
-            elif chave.lower() in sensiveis:
+        for chave, valor in dados.items():
+            normal = str(chave).lower().replace("_", "").replace("-", "")
+            if normal in GatewayBase.CAMPOS_SENSIVEIS:
                 texto = str(valor)
                 limpo[chave] = f"****{texto[-4:]}" if len(texto) > 4 else "****"
+            elif isinstance(valor, (dict, list)):
+                limpo[chave] = GatewayBase._mascarar(valor)
             else:
                 limpo[chave] = valor
         return limpo

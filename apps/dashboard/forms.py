@@ -423,6 +423,11 @@ class ProvedorPagamentoForm(_EstilizadoMixin, forms.ModelForm):
             "stone_merchant_id", "stone_affiliation_code",
             "stone_webhook_secret", "stone_pix_chave",
             "stone_base_url_sandbox", "stone_base_url_producao",
+            "pagarme_account_id",
+            "pagarme_secret_key_sandbox", "pagarme_secret_key_producao",
+            "pagarme_public_key_sandbox", "pagarme_public_key_producao",
+            "pagarme_webhook_usuario", "pagarme_webhook_senha",
+            "pagarme_base_url",
             "cielo_merchant_id", "cielo_merchant_key",
             "cielo_base_url_sandbox", "cielo_base_url_producao",
             "cielo_query_url_sandbox", "cielo_query_url_producao",
@@ -436,6 +441,9 @@ class ProvedorPagamentoForm(_EstilizadoMixin, forms.ModelForm):
             "stone_api_key": forms.PasswordInput(render_value=True),
             "stone_webhook_secret": forms.PasswordInput(render_value=True),
             "cielo_merchant_key": forms.PasswordInput(render_value=True),
+            "pagarme_secret_key_sandbox": forms.PasswordInput(render_value=True),
+            "pagarme_secret_key_producao": forms.PasswordInput(render_value=True),
+            "pagarme_webhook_senha": forms.PasswordInput(render_value=True),
             "valor_minimo_parcela": forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
             "soft_descriptor": forms.TextInput(attrs={"maxlength": 22}),
         }
@@ -457,6 +465,22 @@ class ProvedorPagamentoForm(_EstilizadoMixin, forms.ModelForm):
                 "parcelas_sem_juros",
                 f"Não pode ser maior que o total de parcelas ({maximas}x).",
             )
+
+        if dados.get("driver") == ProvedorPagamento.Driver.PAGARME:
+            # a chave cobrada é a do ambiente escolhido: apontar para
+            # produção sem a chave de produção é o erro caro
+            campo = (
+                "pagarme_secret_key_producao"
+                if dados.get("ambiente") == ProvedorPagamento.Ambiente.PRODUCAO
+                else "pagarme_secret_key_sandbox"
+            )
+            if not dados.get(campo):
+                qual = "de produção" if campo.endswith("producao") else "de teste"
+                self.add_error(
+                    campo,
+                    f"Para usar a Pagar.me neste ambiente é preciso a chave secreta {qual}. "
+                    "Enquanto faltar, a loja opera em modo simulado.",
+                )
 
         if dados.get("driver") == ProvedorPagamento.Driver.CIELO:
             faltando = [

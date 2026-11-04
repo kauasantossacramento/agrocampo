@@ -619,7 +619,7 @@ Stone devolve (é ele que permite a cobrança automática da assinatura).
 
 ---
 
-### 12.2 Cielo ou Stone/Pagar.me
+### 12.2 Pagar.me, Cielo ou Stone
 
 A loja fala com **um** adquirente por vez, e quem escolhe é você em
 *Configurações › Pagamentos › Driver*:
@@ -627,14 +627,45 @@ A loja fala com **um** adquirente por vez, e quem escolhe é você em
 | Driver | Quando usar |
 |---|---|
 | **Simulado** | hoje. Aceita pedidos e não movimenta dinheiro. |
-| **Stone / Pagar.me** | com as credenciais da Stone preenchidas. |
+| **Pagar.me (API v5)** | com a chave secreta preenchida. É o caminho da Stone para venda online. |
 | **Cielo** | com MerchantId e MerchantKey da Cielo preenchidos. |
+| **Stone (API própria)** | só para contas na API antiga da Stone, com OAuth. |
+
+> **Pagar.me e Stone são a mesma empresa, mas não a mesma API.** Quem
+> contratou pagamento online pela Stone recebe chaves da Pagar.me e deve
+> usar o driver **Pagar.me**. O driver *Stone* existe para contas na API
+> própria dela, que é outro produto.
 
 **Trocar é só mudar o driver e salvar** — nada precisa ser reinstalado, e as
 credenciais do outro adquirente continuam guardadas, então dá para voltar
 atrás na mesma tela. Se o driver escolhido estiver sem credencial, a loja
 **volta sozinha para o simulado**: é melhor o checkout seguir fingindo do que
 quebrar na frente do cliente.
+
+**Para ligar a Pagar.me:**
+
+1. No painel da Pagar.me (*dashboard.pagar.me*), vá em **Configurações ›
+   Chaves** e copie a **chave secreta** e a **chave pública**. Elas vêm em
+   dois jogos: um de teste e um de produção.
+2. Preencha em *Configurações › Pagamentos › Credenciais Pagar.me*. A chave
+   de teste e a de produção têm campos separados, e o campo **Ambiente**
+   decide qual delas cobra.
+3. Deixe **Ambiente** em *Sandbox*, troque o **Driver** para *Pagar.me* e
+   salve. Com a chave de teste nada é cobrado de verdade.
+4. No painel da Pagar.me, em **Webhooks**, cadastre o endereço mostrado na
+   mesma tela (`/pagamentos/webhook/pagarme/`) e marque os eventos
+   `charge.paid`, `charge.payment_failed` e `charge.refunded`. Sem isso o
+   Pix não vira “pago” sozinho no painel.
+5. Se o painel da Pagar.me pedir usuário e senha para o webhook, use os
+   mesmos dois campos da aba *Webhook e URL da Pagar.me*: preenchidos nos
+   dois lados, a loja passa a recusar aviso que não traga a senha.
+6. Faça um pedido de teste, veja o status mudar sozinho e só então troque o
+   **Ambiente** para *Produção*.
+
+> Na Pagar.me não existe endereço de teste: o mesmo `api.pagar.me` atende os
+> dois ambientes e **quem separa teste de produção é a chave**. Por isso
+> trocar o ambiente sem trocar a chave não protege ninguém — e é por isso
+> que a tela recusa salvar *Produção* sem a chave de produção.
 
 **Para ligar a Cielo:**
 

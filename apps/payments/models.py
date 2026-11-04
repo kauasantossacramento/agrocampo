@@ -28,7 +28,11 @@ class ProvedorPagamento(TimeStampedModel):
     """
 
     class Driver(models.TextChoices):
-        STONE = "stone", "Stone / Pagar.me"
+        # "Stone" e "Pagar.me" eram o mesmo item até aqui, e não são a mesma
+        # API: a Stone autentica por OAuth em api.stone.com.br, a Pagar.me
+        # por Basic em api.pagar.me/core/v5. Separados, cada um com o seu.
+        PAGARME = "pagarme", "Pagar.me (API v5)"
+        STONE = "stone", "Stone (API própria)"
         CIELO = "cielo", "Cielo (API e-Commerce 3.0)"
         SIMULADO = "simulado", "Simulado (desenvolvimento)"
 
@@ -118,6 +122,44 @@ class ProvedorPagamento(TimeStampedModel):
         default="https://apiquery.cieloecommerce.cielo.com.br", blank=True,
     )
 
+    # ------------------------------------------------------------------
+    # CREDENCIAIS PAGAR.ME — API v5
+    # A Pagar.me não tem host de teste: `api.pagar.me/core/v5` atende os
+    # dois ambientes e quem separa é a chave. Por isso aqui são dois pares
+    # de chave em vez de duas URLs, e o campo "ambiente" do provedor
+    # escolhe qual par usar.
+    # ------------------------------------------------------------------
+    pagarme_account_id = models.CharField(
+        "Pagar.me · ID da conta", max_length=120, blank=True,
+        help_text="Começa com acc_. Aparece no painel, em Configurações.",
+    )
+    pagarme_secret_key_sandbox = models.CharField(
+        "Pagar.me · Chave secreta (teste)", max_length=300, blank=True,
+        help_text="Chave de teste. Não gera cobrança real.",
+    )
+    pagarme_secret_key_producao = models.CharField(
+        "Pagar.me · Chave secreta (produção)", max_length=300, blank=True,
+        help_text="Cobra de verdade. Nunca exibida no site.",
+    )
+    pagarme_public_key_sandbox = models.CharField(
+        "Pagar.me · Chave pública (teste)", max_length=300, blank=True,
+    )
+    pagarme_public_key_producao = models.CharField(
+        "Pagar.me · Chave pública (produção)", max_length=300, blank=True,
+        help_text="Usada para cifrar o cartão no navegador. Pode ser pública.",
+    )
+    pagarme_webhook_usuario = models.CharField(
+        "Pagar.me · Usuário do webhook", max_length=120, blank=True,
+        help_text="Opcional. Se preenchido, a loja recusa notificação sem este Basic.",
+    )
+    pagarme_webhook_senha = models.CharField(
+        "Pagar.me · Senha do webhook", max_length=200, blank=True,
+    )
+    pagarme_base_url = models.URLField(
+        "Pagar.me · URL da API", default="https://api.pagar.me/core/v5", blank=True,
+        help_text="Mesma URL para teste e produção — quem separa é a chave.",
+    )
+
     # cache do token OAuth — preenchido pelo driver, não editar à mão
     access_token = models.TextField(blank=True, editable=False)
     access_token_expira_em = models.DateTimeField(null=True, blank=True, editable=False)
@@ -181,6 +223,23 @@ class ProvedorPagamento(TimeStampedModel):
         )
 
     @property
+    def pagarme_secret_key(self):
+        """A chave do ambiente escolhido. É ela que cobra — ou não."""
+        return (
+            self.pagarme_secret_key_producao
+            if self.ambiente == self.Ambiente.PRODUCAO
+            else self.pagarme_secret_key_sandbox
+        )
+
+    @property
+    def pagarme_public_key(self):
+        return (
+            self.pagarme_public_key_producao
+            if self.ambiente == self.Ambiente.PRODUCAO
+            else self.pagarme_public_key_sandbox
+        )
+
+    @property
     def cielo_url(self):
         """Host que recebe autorização, captura e cancelamento."""
         return (
@@ -205,6 +264,10 @@ class ProvedorPagamento(TimeStampedModel):
         Sem isso a loja cai no driver simulado: é melhor o checkout seguir
         fingindo do que quebrar na frente do cliente por falta de cadastro.
         """
+        if self.driver == self.Driver.PAGARME:
+            # só a chave secreta cobra; a pública e o id da conta são para
+            # o navegador e para o suporte
+            return bool(self.pagarme_secret_key)
         if self.driver == self.Driver.CIELO:
             return bool(self.cielo_merchant_id and self.cielo_merchant_key)
         return bool(self.stone_api_key and self.stone_merchant_id)

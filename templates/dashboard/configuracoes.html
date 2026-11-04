@@ -168,12 +168,16 @@
       {% if provedor.driver == 'simulado' %}
         <strong>Modo simulado.</strong> A loja processa pagamentos de forma fictícia —
         pedido, separação e estorno funcionam, mas nenhum dinheiro é movimentado.
-        Preencha a API Key e o Merchant ID e troque o driver para <em>Stone</em>.
+        Preencha as credenciais do adquirente e troque o driver.
       {% elif provedor.credenciais_completas %}
-        <strong>Conectado à Stone</strong> · ambiente {{ provedor.get_ambiente_display }}.
+        <strong>Conectado a {{ provedor.get_driver_display }}</strong> ·
+        ambiente {{ provedor.get_ambiente_display }}.
+        {% if provedor.ambiente == 'producao' %}
+          <em>Cobrança real: toda compra passa no cartão do cliente.</em>
+        {% endif %}
       {% else %}
-        <strong>Credenciais pendentes.</strong> Faltam API Key e/ou Merchant ID —
-        até lá a loja opera em modo simulado, para o checkout não quebrar.
+        <strong>Credenciais pendentes</strong> para {{ provedor.get_driver_display }} —
+        até preencher, a loja opera em modo simulado, para o checkout não quebrar.
       {% endif %}
     </span>
   </div>
@@ -206,6 +210,71 @@
           <div class="field"><label>Driver</label>{{ form_provedor.driver }}</div>
           <div class="field"><label>Ambiente</label>{{ form_provedor.ambiente }}</div>
           <label class="switch-row" style="align-self:end">{{ form_provedor.ativo }} Ativo</label>
+        </div>
+
+        {% comment %}
+          Credenciais da Pagar.me. Ficam sempre visíveis, não escondidas
+          atrás do driver escolhido: o lojista precisa preencher antes de
+          trocar, e um campo que só aparece depois de trocar vira um beco.
+        {% endcomment %}
+        <hr class="divider">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Credenciais Pagar.me</h3>
+        <p class="xs muted" style="margin-bottom:var(--s-4)">
+          Painel da Pagar.me, em Configurações › Chaves. Não há endereço de
+          teste: a mesma API atende os dois ambientes e <strong>quem separa
+          teste de produção é a chave</strong>. Com a de teste, nada é
+          cobrado de verdade.
+        </p>
+        <div class="stack" style="gap:var(--s-4)">
+          <div class="field">
+            <label>ID da conta</label>
+            {{ form_provedor.pagarme_account_id }}
+            <span class="xs muted">Começa com <code>acc_</code>.</span>
+          </div>
+          <div class="grid grid--2" style="gap:var(--s-4)">
+            <div class="field">
+              <label>Chave secreta · teste</label>
+              {{ form_provedor.pagarme_secret_key_sandbox }}
+              {% if form_provedor.pagarme_secret_key_sandbox.errors %}<span class="error-text">{{ form_provedor.pagarme_secret_key_sandbox.errors|join:" " }}</span>{% endif %}
+            </div>
+            <div class="field">
+              <label>Chave secreta · produção</label>
+              {{ form_provedor.pagarme_secret_key_producao }}
+              {% if form_provedor.pagarme_secret_key_producao.errors %}<span class="error-text">{{ form_provedor.pagarme_secret_key_producao.errors|join:" " }}</span>{% endif %}
+            </div>
+            <div class="field">
+              <label>Chave pública · teste</label>
+              {{ form_provedor.pagarme_public_key_sandbox }}
+            </div>
+            <div class="field">
+              <label>Chave pública · produção</label>
+              {{ form_provedor.pagarme_public_key_producao }}
+            </div>
+          </div>
+        </div>
+
+        <details style="margin-top:var(--s-5)">
+          <summary class="small strong" style="cursor:pointer">Webhook e URL da Pagar.me</summary>
+          <p class="xs muted" style="margin:var(--s-3) 0">
+            A Pagar.me não assina a notificação. Se você cadastrar um usuário
+            e senha aqui <em>e</em> no painel dela, a loja recusa qualquer
+            aviso que não traga os dois.
+          </p>
+          <div class="grid grid--2" style="gap:var(--s-4)">
+            <div class="field"><label>Usuário do webhook</label>{{ form_provedor.pagarme_webhook_usuario }}</div>
+            <div class="field"><label>Senha do webhook</label>{{ form_provedor.pagarme_webhook_senha }}</div>
+          </div>
+          <div class="field" style="margin-top:var(--s-4)">
+            <label>URL da API</label>{{ form_provedor.pagarme_base_url }}
+          </div>
+        </details>
+
+        <div class="alert alert--info" style="margin-top:var(--s-5)">
+          <svg width="16" height="16"><use href="#i-info"></use></svg>
+          <span>
+            Endereço para cadastrar no painel da Pagar.me, em
+            <strong>Webhooks</strong>: <code>{{ url_webhook_pagarme }}</code>
+          </span>
         </div>
 
         <hr class="divider">

@@ -26,6 +26,13 @@ CARTAO_APROVADO = {
 CARTAO_RECUSADO = {**CARTAO_APROVADO, "numero": "4111111111110000"}
 
 
+def _cartao(**extra):
+    """DadosCartao de teste, para os drivers que falam com a API de verdade."""
+    from apps.payments.gateways.base import DadosCartao
+
+    return DadosCartao(**{**CARTAO_APROVADO, **extra})
+
+
 class BaseCheckout(TestCase):
     def setUp(self):
         self.provedor = ProvedorPagamento.objects.create(
@@ -179,6 +186,254 @@ class ProvedorTests(TestCase):
         ProvedorPagamento.objects.create(nome="B", padrao=True)
         primeiro.refresh_from_db()
         self.assertFalse(primeiro.padrao)
+
+
+class PagarmeTests(BaseCheckout):
+    """Driver da Pagar.me: o que a loja manda e o que entende de volta.
+
+    A API não é chamada de verdade — as respostas são as que a documentação
+    descreve. O que se verifica aqui é a tradução: valores em centavos,
+    autenticação Basic, a cobrança certa dentro do pedido e os dois níveis
+    de status virando o status da loja.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from apps.payments.gateways.pagarme import PagarmeGateway
+
+        self.provedor.driver = ProvedorPagamento.Driver.PAGARME
+        self.provedor.pagarme_secret_key_sandbox = "sk_test_chave"
+        self.provedor.pagarme_public_key_sandbox = "pk_test_chave"
+        self.provedor.pagarme_account_id = "acc_de_teste"
+        self.provedor.save()
+        self.gateway = PagarmeGateway(self.provedor)
+        self.pagamento = Pagamento.objects.create(
+            pedido=self.pedido, provedor=self.provedor,
+            metodo=Pagamento.Metodo.CARTAO, valor=Decimal("100.00"),
+        )
+
+    def _resposta(self, corpo, status=200):
+        """Finge uma resposta da Pagar.me, sem sair para a internet."""
+        from unittest.mock import patch
+
+        class Falsa:
+            status_code = status
+
+            def json(self):
+                return corpo
+
+        return patch("apps.payments.gateways.pagarme.requests.request", return_value=Falsa())
+
+    @staticmethod
+    def _pedido_pago(status_transacao="captured", status_cobranca="paid", extra=None):
+        transacao = {
+            "status": status_transacao, "success": True,
+            "acquirer_tid": "tid-1", "acquirer_nsu": "nsu-1",
+            "acquirer_auth_code": "auth-1",
+            "card": {"brand": "visa", "last_four_digits": "1234"},
+        }
+        transacao.update(extra or {})
+        return {
+            "id": "or_abc", "status": status_cobranca, "amount": 10000,
+            "charges": [{"id": "ch_abc", "status": status_cobranca,
+                         "amount": 10000, "last_transaction": transacao}],
+        }
+
+    # ----------------------------------------------------------- escolha
+    def test_driver_e_escolhido_quando_ha_chave(self):
+        self.assertEqual(get_gateway(self.provedor).codigo, "pagarme")
+
+    def test_sem_chave_cai_no_simulado(self):
+        """Trocar o driver sem a chave não pode quebrar o checkout."""
+        self.provedor.pagarme_secret_key_sandbox = ""
+        self.provedor.save()
+        self.assertEqual(get_gateway(self.provedor).codigo, "simulado")
+
+    def test_ambiente_escolhe_a_chave(self):
+        """Apontar para produção com chave de teste cobraria no lugar errado."""
+        self.provedor.pagarme_secret_key_producao = "sk_producao"
+        self.provedor.ambiente = ProvedorPagamento.Ambiente.PRODUCAO
+        self.provedor.save()
+        self.assertEqual(self.provedor.pagarme_secret_key, "sk_producao")
+        self.provedor.ambiente = ProvedorPagamento.Ambiente.SANDBOX
+        self.assertEqual(self.provedor.pagarme_secret_key, "sk_test_chave")
+
+    # ------------------------------------------------------------ cartão
+    def test_cartao_vai_em_centavos_e_com_basic(self):
+        with self._resposta(self._pedido_pago(), 200) as chamada:
+            resultado = self.gateway.autorizar_cartao(
+                self.pagamento, _cartao(), parcelas=3
+            )
+
+        kwargs = chamada.call_args[1]
+        corpo = json.loads(kwargs["data"])
+        pagamento_enviado = corpo["payments"][0]
+        self.assertEqual(kwargs["auth"], ("sk_test_chave", ""))
+        self.assertEqual(pagamento_enviado["amount"], 10000)
+        self.assertEqual(pagamento_enviado["credit_card"]["installments"], 3)
+        self.assertEqual(corpo["items"][0]["amount"], 10000)
+        self.assertEqual(corpo["code"], self.pedido.numero)
+        self.assertEqual(resultado.status, Pagamento.Status.PAGO)
+        self.assertEqual(resultado.referencia_externa, "ch_abc")
+        self.assertEqual(resultado.ultimos_digitos, "1234")
+
+    def test_captura_manual_so_autoriza(self):
+        self.provedor.captura_automatica = False
+        self.provedor.save()
+        with self._resposta(
+            self._pedido_pago("authorized_pending_capture", "pending")
+        ) as chamada:
+            resultado = self.gateway.autorizar_cartao(self.pagamento, _cartao())
+
+        corpo = json.loads(chamada.call_args[1]["data"])
+        self.assertEqual(
+            corpo["payments"][0]["credit_card"]["operation_type"], "auth_only"
+        )
+        self.assertEqual(resultado.status, Pagamento.Status.AUTORIZADO)
+
+    def test_cartao_recusado_nao_e_sucesso(self):
+        """Recusa volta 200 com a transação reprovada — não é erro de HTTP."""
+        corpo = self._pedido_pago(
+            "not_authorized", "failed",
+            extra={"success": False,
+                   "gateway_response": {"errors": [{"message": "Cartão sem limite"}]}},
+        )
+        with self._resposta(corpo, 200):
+            resultado = self.gateway.autorizar_cartao(self.pagamento, _cartao())
+
+        self.assertFalse(resultado.sucesso)
+        self.assertEqual(resultado.status, Pagamento.Status.RECUSADO)
+        self.assertIn("limite", resultado.mensagem)
+
+    def test_numero_do_cartao_nao_vai_para_a_auditoria(self):
+        """O PAN está dentro de duas listas e um dicionário no payload."""
+        from apps.payments.models import TransacaoPagamento
+
+        with self._resposta(self._pedido_pago()):
+            self.gateway.autorizar_cartao(self.pagamento, _cartao())
+
+        registro = TransacaoPagamento.objects.get(operacao="autorizacao")
+        gravado = json.dumps(registro.requisicao)
+        self.assertNotIn("4111111111111234", gravado)
+        self.assertNotIn("111111111111", gravado)
+
+    # --------------------------------------------------------------- pix
+    def test_pix_devolve_copia_e_cola(self):
+        corpo = self._pedido_pago(
+            "waiting_payment", "pending",
+            extra={"qr_code": "00020126BR.GOV.BCB.PIX",
+                   "qr_code_url": "https://api.pagar.me/qr.png",
+                   "expires_at": "2026-11-04T23:59:59Z"},
+        )
+        with self._resposta(corpo) as chamada:
+            resultado = self.gateway.criar_pix(self.pagamento)
+
+        enviado = json.loads(chamada.call_args[1]["data"])["payments"][0]
+        self.assertEqual(enviado["payment_method"], "pix")
+        self.assertEqual(enviado["pix"]["expires_in"], 30 * 60)
+        self.assertEqual(resultado.pix_qrcode, "00020126BR.GOV.BCB.PIX")
+        self.assertEqual(resultado.status, Pagamento.Status.PENDENTE)
+        self.assertIsNotNone(resultado.pix_expira_em)
+
+    # --------------------------------------------------- ciclo e estorno
+    def test_estorno_parcial_manda_o_valor(self):
+        self.pagamento.referencia_externa = "ch_abc"
+        self.pagamento.save()
+        with self._resposta(
+            {"id": "ch_abc", "status": "paid",
+             "last_transaction": {"status": "partial_refunded"}}
+        ) as chamada:
+            resultado = self.gateway.estornar(self.pagamento, Decimal("40.00"))
+
+        metodo, url = chamada.call_args[0]
+        self.assertEqual(metodo, "DELETE")
+        self.assertTrue(url.endswith("/charges/ch_abc"))
+        self.assertEqual(json.loads(chamada.call_args[1]["data"])["amount"], 4000)
+        self.assertEqual(resultado.status, Pagamento.Status.ESTORNO_PARCIAL)
+
+    def test_consulta_le_a_cobranca(self):
+        self.pagamento.referencia_externa = "ch_abc"
+        self.pagamento.save()
+        with self._resposta(
+            {"id": "ch_abc", "status": "paid", "last_transaction": {"status": "captured"}}
+        ) as chamada:
+            resultado = self.gateway.consultar(self.pagamento)
+
+        self.assertEqual(chamada.call_args[0][0], "GET")
+        self.assertEqual(resultado.status, Pagamento.Status.PAGO)
+
+    # ----------------------------------------------------------- webhook
+    def test_webhook_confirma_na_api_em_vez_de_acreditar(self):
+        """O aviso diz que mudou; quem diz o que ficou é a consulta."""
+        self.pagamento.referencia_externa = "ch_abc"
+        self.pagamento.metodo = Pagamento.Metodo.PIX
+        self.pagamento.save()
+
+        aviso = {"type": "charge.paid",
+                 "data": {"id": "ch_abc", "status": "paid", "amount": 10000}}
+        confirmacao = {"id": "ch_abc", "status": "paid", "paid_amount": 10000,
+                       "last_transaction": {"status": "captured",
+                                            "end_to_end_id": "E123"}}
+        with self._resposta(confirmacao) as chamada:
+            dados = self.gateway.interpretar_webhook(aviso)
+
+        self.assertEqual(chamada.call_args[0][0], "GET")
+        self.assertEqual(dados["referencia_externa"], "ch_abc")
+        self.assertEqual(dados["status"], Pagamento.Status.PAGO)
+        self.assertEqual(dados["valor"], Decimal("100.00"))
+        self.assertEqual(dados["e2e_id"], "E123")
+
+    def test_webhook_sobrevive_a_api_fora_do_ar(self):
+        """Sem resposta, o evento fica gravado para reprocessar — sem 500."""
+        from unittest.mock import patch
+
+        import requests as req
+
+        with patch("apps.payments.gateways.pagarme.requests.request",
+                   side_effect=req.RequestException("timeout")):
+            dados = self.gateway.interpretar_webhook(
+                {"type": "charge.paid", "data": {"id": "ch_abc"}}
+            )
+        self.assertEqual(dados["status"], "")
+        self.assertEqual(dados["referencia_externa"], "ch_abc")
+
+    def test_webhook_sem_basic_e_recusado_quando_ha_senha(self):
+        self.provedor.pagarme_webhook_usuario = "loja"
+        self.provedor.pagarme_webhook_senha = "segredo"
+        self.provedor.save()
+
+        resposta = self.client.post(
+            reverse("payments:webhook_pagarme"),
+            data=json.dumps({"type": "charge.paid", "data": {"id": "ch_abc"}}),
+            content_type="application/json",
+        )
+        self.assertEqual(resposta.status_code, 401)
+
+    def test_webhook_com_basic_correto_entra(self):
+        import base64
+
+        self.provedor.pagarme_webhook_usuario = "loja"
+        self.provedor.pagarme_webhook_senha = "segredo"
+        self.provedor.save()
+        credencial = base64.b64encode(b"loja:segredo").decode()
+
+        with self._resposta({"id": "ch_abc", "status": "paid",
+                             "last_transaction": {"status": "captured"}}):
+            resposta = self.client.post(
+                reverse("payments:webhook_pagarme"),
+                data=json.dumps({"type": "charge.paid", "data": {"id": "ch_abc"}}),
+                content_type="application/json",
+                HTTP_AUTHORIZATION="Basic " + credencial,
+            )
+        self.assertEqual(resposta.status_code, 200)
+
+    def test_webhook_sem_tipo_e_recusado(self):
+        resposta = self.client.post(
+            reverse("payments:webhook_pagarme"),
+            data=json.dumps({"data": {"id": "ch_abc"}}),
+            content_type="application/json",
+        )
+        self.assertEqual(resposta.status_code, 400)
 
 
 class CieloTests(BaseCheckout):

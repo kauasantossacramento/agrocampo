@@ -1,5 +1,7 @@
-"""Checkout de pagamento, acompanhamento do Pix e webhook da Stone."""
+"""Checkout de pagamento, acompanhamento do Pix e webhooks dos adquirentes."""
+import base64
 import json
+import secrets
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -179,6 +181,57 @@ def webhook_cielo(request):
     processar_webhook(evento)
     # a Cielo reenvia enquanto não receber 200
     return JsonResponse({"recebido": True, "evento": evento.pk})
+
+
+@csrf_exempt
+@require_POST
+def webhook_pagarme(request):
+    """Recebe a notificação da Pagar.me.
+
+    A Pagar.me não assina o corpo. O que ela oferece é um usuário e senha
+    Basic no endereço cadastrado no painel dela — quando o lojista
+    preencher os dois campos aqui, a loja passa a recusar quem não mandar
+    o cabeçalho. Vazios, a porta fica aberta, e quem garante a verdade é a
+    consulta que o driver faz em seguida: o aviso diz que algo mudou, a
+    API diz o que ficou.
+    """
+    provedor = ProvedorPagamento.ativo_padrao()
+    if not _basic_confere(request, provedor):
+        return HttpResponse("não autorizado", status=401)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return HttpResponse("payload inválido", status=400)
+
+    if not payload.get("type"):
+        return HttpResponse("sem tipo de evento", status=400)
+
+    evento = registrar_webhook(request.body, payload, assinatura="")
+    processar_webhook(evento)
+    # a Pagar.me reenvia enquanto não receber 2xx
+    return JsonResponse({"recebido": True, "evento": evento.pk})
+
+
+def _basic_confere(request, provedor) -> bool:
+    """Confere o Basic do webhook, quando o lojista cadastrou um."""
+    usuario = provedor.pagarme_webhook_usuario
+    senha = provedor.pagarme_webhook_senha
+    if not usuario and not senha:
+        return True
+
+    cabecalho = request.headers.get("Authorization", "")
+    if not cabecalho.lower().startswith("basic "):
+        return False
+    try:
+        cru = base64.b64decode(cabecalho[6:].strip()).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return False
+    recebido_usuario, _, recebido_senha = cru.partition(":")
+    # compare_digest para a resposta não vazar o tamanho do acerto
+    return secrets.compare_digest(recebido_usuario, usuario) and secrets.compare_digest(
+        recebido_senha, senha
+    )
 
 
 @login_required
