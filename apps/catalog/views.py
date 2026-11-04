@@ -1,4 +1,5 @@
 """Vitrine: catálogo com filtros facetados, produto, categoria, marca e espécie."""
+import re
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
@@ -37,8 +38,29 @@ def _sem_acento(texto: str) -> str:
     return "".join(c for c in normalizado if unicodedata.category(c) != "Mn").lower().strip()
 
 
-def _por_nome_sem_acento(modelo, termo: str):
-    """pks do modelo cujo nome contém o termo, ignorando acento e caixa.
+# Uma palavra da busca casa com o começo de uma palavra do cadastro, nunca
+# com o meio. Pelo meio, "cão" casava com "raÇÃO" e "alimentaÇÃO": buscar
+# "cão" trazia toda ração da loja, inclusive a de gato, e "cão" e "cachorro"
+# davam resultados diferentes. O padrão é o mesmo no Postgres e no SQLite.
+INICIO_DE_PALAVRA = r"(^|[^a-z0-9])"
+FIM_DE_PALAVRA = r"([^a-z0-9]|$)"
+
+
+def _palavras(texto: str) -> list[str]:
+    """Quebra em palavras já sem acento: "anti-pulgas" vira anti e pulgas."""
+    return re.findall(r"[a-z0-9]+", _sem_acento(texto))
+
+
+def _regex_no_inicio(forma: str, inteira: bool = False) -> str:
+    return INICIO_DE_PALAVRA + re.escape(forma) + (FIM_DE_PALAVRA if inteira else "")
+
+
+def _casa_no_inicio(texto: str, forma: str, inteira: bool = False) -> bool:
+    return re.search(_regex_no_inicio(forma, inteira), _sem_acento(texto)) is not None
+
+
+def _por_nome_sem_acento(modelo, termo: str, inteira: bool = False):
+    """pks do modelo cujo nome tem uma palavra que começa pelo termo.
 
     O `icontains` do banco compara acento: "racao" não casa com a categoria
     "Ração". São poucas dezenas de categorias e marcas, então a comparação
@@ -49,12 +71,12 @@ def _por_nome_sem_acento(modelo, termo: str):
         return []
     return [
         pk for pk, nome in modelo.objects.values_list("pk", "nome")
-        if alvo in _sem_acento(nome)
+        if _casa_no_inicio(nome, alvo, inteira)
     ]
 
 
-def _especies_por_apelido(termo: str):
-    """Espécies cujo nome ou apelido contém o termo digitado.
+def _especies_por_apelido(termo: str, inteira: bool = False):
+    """Espécies cujo nome ou apelido começa pelo termo digitado.
 
     A comparação é em Python de propósito: são poucas dezenas de espécies, e
     assim funciona igual no SQLite do desenvolvimento e no Postgres do
@@ -66,7 +88,7 @@ def _especies_por_apelido(termo: str):
 
     achadas = []
     for especie in Especie.objects.all().only("id", "nome", "sinonimos"):
-        if any(alvo in _sem_acento(apelido) for apelido in especie.apelidos):
+        if any(_casa_no_inicio(apelido, alvo, inteira) for apelido in especie.apelidos):
             achadas.append(especie.pk)
             # quem procura "cachorro" quer a família toda, não só a mãe
             achadas.extend(especie.agrupadas.values_list("pk", flat=True))
@@ -82,10 +104,38 @@ PALAVRAS_SEM_PESO = {
 def _palavras_da_busca(busca: str) -> list[str]:
     """As palavras que valem na busca, já sem acento e sem as de ligação."""
     palavras = [
-        p for p in _sem_acento(busca).split()
+        p for p in _palavras(busca)
         if len(p) >= 2 and p not in PALAVRAS_SEM_PESO
     ]
-    return palavras or [_sem_acento(busca)]
+    return palavras or _palavras(busca)[:1]
+
+
+def _formas(palavra: str) -> dict[str, bool]:
+    """Tudo o que esta palavra pode querer dizer: {forma: só palavra inteira?}.
+
+    - o que foi digitado vale pelo começo ("cach" já acha "cachorro");
+    - o singular e os sinônimos do grupo entram também;
+    - forma derivada curta ("ave", "boi") só vale como palavra inteira:
+      pelo começo, "ave" traria a aveia.
+
+    Quem ainda está digitando ("cachor") já ganha o grupo do sinônimo que a
+    palavra começa — é o que faz a prévia acertar antes do fim da palavra.
+    """
+    from apps.catalog.models import SinonimoBusca, singular
+
+    formas = {palavra: False}
+    derivadas = {singular(palavra)}
+    raiz = singular(palavra)
+    for grupo in SinonimoBusca.grupos():
+        no_grupo = palavra in grupo or any(singular(t) == raiz for t in grupo)
+        comeco = len(palavra) >= 4 and any(t.startswith(palavra) for t in grupo)
+        if no_grupo or comeco:
+            derivadas |= grupo
+            derivadas |= {singular(t) for t in grupo}
+    for forma in derivadas:
+        if forma and forma not in formas:
+            formas[forma] = len(forma) <= 3
+    return formas
 
 
 def _condicao_de_busca(busca: str):
@@ -96,42 +146,90 @@ def _condicao_de_busca(busca: str):
     dentro de um nome que nunca a contém. Palavras de ligação são ignoradas:
     exigir "para" só tiraria resultado bom da frente do cliente.
     """
-    from apps.catalog.models import singular
-
     condicao = Q()
     for palavra in _palavras_da_busca(busca):
-        # o produto guarda as duas formas, então procurar pelas duas acha
-        # tanto quem digitou "ração" quanto quem digitou "rações"
-        formas = {palavra, singular(palavra)}
         desta_palavra = Q()
-        for forma in formas:
-            desta_palavra |= Q(busca_normalizada__icontains=forma)
-            categorias = _por_nome_sem_acento(Categoria, forma)
+        for forma, inteira in _formas(palavra).items():
+            desta_palavra |= Q(busca_normalizada__iregex=_regex_no_inicio(forma, inteira))
+            categorias = _por_nome_sem_acento(Categoria, forma, inteira)
             if categorias:
                 desta_palavra |= Q(categoria__in=categorias)
-            marcas = _por_nome_sem_acento(Marca, forma)
+            marcas = _por_nome_sem_acento(Marca, forma, inteira)
             if marcas:
                 desta_palavra |= Q(marca__in=marcas)
-        especies = _especies_por_apelido(palavra)
-        if especies:
-            # "cachorro" não aparece no cadastro — a espécie se chama "Cão"
-            desta_palavra |= Q(especies__in=especies)
+            especies = _especies_por_apelido(forma, inteira)
+            if especies:
+                # "cachorro" não aparece no cadastro — a espécie se chama "Cão"
+                desta_palavra |= Q(especies__in=especies)
         condicao &= desta_palavra
     return condicao
 
 
 def _condicao_no_nome(busca: str):
     """Só o que bate no nome do produto — serve para ordenar, não para filtrar."""
-    from apps.catalog.models import singular
-
     condicao = Q()
     for palavra in _palavras_da_busca(busca):
-        formas = {palavra, singular(palavra)}
         desta_palavra = Q()
-        for forma in formas:
-            desta_palavra |= Q(nome_normalizado__icontains=forma)
+        for forma, inteira in _formas(palavra).items():
+            desta_palavra |= Q(nome_normalizado__iregex=_regex_no_inicio(forma, inteira))
         condicao &= desta_palavra
     return condicao
+
+
+def _vocabulario() -> set[str]:
+    """Todas as palavras que a loja conhece, para corrigir erro de digitação.
+
+    Nomes de produto, categorias, marcas, espécies e sinônimos. Guardado dez
+    minutos: muda quando o lojista cadastra, não a cada busca.
+    """
+    from django.core.cache import cache
+
+    from apps.catalog.models import SinonimoBusca
+
+    vocabulario = cache.get("busca:vocabulario")
+    if vocabulario is not None:
+        return vocabulario
+
+    textos = list(Produto.objects.vitrine().values_list("nome", flat=True))
+    textos += list(Categoria.objects.values_list("nome", flat=True))
+    textos += list(Marca.objects.values_list("nome", flat=True))
+    for especie in Especie.objects.all().only("nome", "sinonimos"):
+        textos += list(especie.apelidos)
+    for grupo in SinonimoBusca.grupos():
+        textos += list(grupo)
+
+    vocabulario = {p for texto in textos for p in _palavras(texto) if len(p) >= 4 and not p.isdigit()}
+    cache.set("busca:vocabulario", vocabulario, 600)
+    return vocabulario
+
+
+def _busca_corrigida(busca: str):
+    """A busca com erro de digitação trocado pela palavra mais parecida.
+
+    Só entra quando a busca original não achou nada, e só troca palavra que
+    a loja não conhece: "cachoro" vira "cachorro", "racão" fica como está.
+    Devolve None quando não há o que corrigir.
+    """
+    import difflib
+
+    vocabulario = _vocabulario()
+    corrigidas, mudou = [], False
+    for palavra in _palavras_da_busca(busca):
+        conhecida = (
+            len(palavra) < 4
+            or palavra in vocabulario
+            or any(v.startswith(palavra) for v in vocabulario)
+        )
+        if conhecida:
+            corrigidas.append(palavra)
+            continue
+        parecida = difflib.get_close_matches(palavra, vocabulario, n=1, cutoff=0.8)
+        if parecida:
+            corrigidas.append(parecida[0])
+            mudou = True
+        else:
+            corrigidas.append(palavra)
+    return " ".join(corrigidas) if mudou else None
 
 
 def _produtos_em_destaque(busca: str):
@@ -178,8 +276,18 @@ def catalogo(request, categoria=None, marca=None, especie=None):
 
     busca = request.GET.get("q", "").strip()
     destacados = []
+    busca_corrigida = None
+    busca_digitada = ""
     if busca:
+        antes_da_busca = produtos
         produtos = produtos.filter(_condicao_de_busca(busca)).distinct()
+        if not produtos.exists():
+            # nada com o que foi digitado: tenta o erro de digitação mais
+            # provável antes de dizer ao cliente que a loja não tem
+            busca_corrigida = _busca_corrigida(busca)
+            if busca_corrigida:
+                produtos = antes_da_busca.filter(_condicao_de_busca(busca_corrigida)).distinct()
+                busca_digitada, busca = busca, busca_corrigida
         destacados = _produtos_em_destaque(busca)
 
     faixa = produtos.aggregate(minimo=Min("preco"), maximo=Max("preco"))
@@ -247,6 +355,9 @@ def catalogo(request, categoria=None, marca=None, especie=None):
             # usado no estado vazio: "o catálogo tem N produtos esperando por você"
             "total_catalogo": Produto.objects.publicados().count(),
             "busca": busca,
+            # "cachoro" virou "cachorro": a tela avisa, para o cliente não
+            # achar que a loja leu errado
+            "busca_digitada": busca_digitada,
             "ordem": ordem,
             "ordenacoes": ORDENACOES.keys(),
             "linhas": [(l.slug, l.nome) for l in LinhaProduto.objects.filter(ativo=True)],
@@ -427,6 +538,11 @@ def sugestoes(request):
     # a prévia precisa achar o mesmo que o catálogo: quem digita "ração para
     # cachorro" e não vê nada na caixa acha que a loja não tem
     condicao = _condicao_de_busca(termo) | Q(sku__iexact=termo)
+    if not Produto.objects.vitrine().filter(condicao).exists():
+        corrigido = _busca_corrigida(termo)
+        if corrigido:
+            termo = corrigido
+            condicao = _condicao_de_busca(termo)
 
     produtos = (
         Produto.objects.vitrine()

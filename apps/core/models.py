@@ -987,3 +987,42 @@ class PromocaoDestaque(TimeStampedModel):
         if self.produto_id:
             return self.produto.foto_principal
         return None
+
+
+class ErroServidor(models.Model):
+    """Erro 500 do Django ou 502/503/504 visto pelo nginx, agrupado.
+
+    A mesma falha repetida soma `ocorrencias` em vez de criar linha nova; a
+    assinatura junta tipo, exceção e o lugar do código onde estourou.
+    Preenchido por `apps.core.erros` — não é tela do lojista: aparece só no
+    admin do desenvolvedor.
+    """
+
+    class Tipo(models.TextChoices):
+        ERRO_INTERNO = "500", "500 · erro no código"
+        GATEWAY = "502", "502 · site não respondeu"
+        INDISPONIVEL = "503", "503 · site indisponível"
+        DEMORA = "504", "504 · site demorou demais"
+
+    assinatura = models.CharField(max_length=40, unique=True)
+    tipo = models.CharField(max_length=3, choices=Tipo.choices, db_index=True)
+    excecao = models.CharField("exceção", max_length=200, blank=True)
+    mensagem = models.TextField(blank=True)
+    onde = models.CharField("onde estourou", max_length=300, blank=True)
+    caminho = models.CharField("última página", max_length=500, blank=True)
+    metodo = models.CharField(max_length=10, blank=True)
+    usuario = models.CharField("último cliente", max_length=200, blank=True)
+    rastro = models.TextField(blank=True)
+    ocorrencias = models.PositiveIntegerField(default=1)
+    primeira_em = models.DateTimeField(auto_now_add=True)
+    ultima_em = models.DateTimeField(auto_now_add=True, db_index=True)
+    avisado_em = models.DateTimeField("alerta enviado em", null=True, blank=True)
+    resolvido = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-ultima_em"]
+        verbose_name = "erro do servidor"
+        verbose_name_plural = "erros do servidor"
+
+    def __str__(self):
+        return f"{self.tipo} {self.excecao} · {self.ocorrencias}×"

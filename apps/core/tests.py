@@ -1,9 +1,10 @@
 """Smoke tests: garantem que toda página pública e privada renderiza."""
+import io
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -2300,3 +2301,175 @@ class BlogDesligadoTests(TestCase):
         config.blog_ativo = False
         config.save()
         self.assertEqual(Post.objects.count(), antes)
+
+
+
+@override_settings(
+    ALERTA_ERROS_EMAIL="alerta@exemplo.com",
+    ALERTA_ERROS_SINCRONO=True,
+    EMAIL_CONFIGURADO=True,
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+)
+class ErrosDoServidorTests(TestCase):
+    """Todo 500 e todo 502 vira registro, e o registro vira e-mail.
+
+    Pedido de 04/11/2026: o lojista viu um "502 Bad Gateway" cru na tela e
+    ninguém soube. Erro repetido soma ocorrência; o e-mail sai uma vez por
+    hora por erro, não uma vez por clique.
+    """
+
+    def _estourar(self, caminho="/carrinho/", mensagem="boom"):
+        import sys
+
+        from django.core.signals import got_request_exception
+        from django.test import RequestFactory
+
+        requisicao = RequestFactory().get(caminho)
+        try:
+            raise ValueError(mensagem)
+        except ValueError:
+            # o mesmo sinal que o Django dispara diante de um erro 500
+            got_request_exception.send(sender=None, request=requisicao)
+        return sys.exc_info
+
+    def test_excecao_vira_registro_com_rastro(self):
+        from apps.core.models import ErroServidor
+
+        self._estourar()
+        erro = ErroServidor.objects.get()
+        self.assertEqual(erro.tipo, "500")
+        self.assertEqual(erro.excecao, "ValueError")
+        self.assertEqual(erro.caminho, "/carrinho/")
+        self.assertIn("Traceback", erro.rastro)
+        self.assertIn("apps/core/tests.py", erro.onde)
+
+    def test_mesmo_erro_soma_e_avisa_uma_vez(self):
+        from django.core import mail
+
+        from apps.core.models import ErroServidor
+
+        for _ in range(3):
+            self._estourar()
+        erro = ErroServidor.objects.get()
+        self.assertEqual(erro.ocorrencias, 3)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["alerta@exemplo.com"])
+        self.assertIn("Erro 500", mail.outbox[0].subject)
+        self.assertIn("ValueError", mail.outbox[0].body)
+
+    def test_volta_a_avisar_depois_do_intervalo(self):
+        from datetime import timedelta
+
+        from django.core import mail
+        from django.utils import timezone
+
+        from apps.core.models import ErroServidor
+
+        self._estourar()
+        ErroServidor.objects.update(avisado_em=timezone.now() - timedelta(hours=2))
+        self._estourar()
+        self.assertEqual(len(mail.outbox), 2)
+
+    @override_settings(EMAIL_CONFIGURADO=False)
+    def test_sem_smtp_registra_e_guarda_o_alerta_para_depois(self):
+        from django.core import mail
+        from django.core.management import call_command
+
+        from apps.core.models import ErroServidor
+
+        self._estourar()
+        erro = ErroServidor.objects.get()
+        self.assertIsNone(erro.avisado_em)
+        self.assertEqual(len(mail.outbox), 0)
+
+        with self.settings(EMAIL_CONFIGURADO=True):
+            call_command("vigiar_erros", stdout=io.StringIO())
+        erro.refresh_from_db()
+        self.assertIsNotNone(erro.avisado_em)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_linha_502_do_nginx_vira_registro_agrupado(self):
+        from apps.core.erros import registrar_linha_da_borda
+        from apps.core.models import ErroServidor
+
+        linha = ('172.20.0.4 - - [04/Nov/2026:10:50:29 +0000] "GET /conta/perfil/ HTTP/1.1" '
+                 '502 559 "https://agrocampo.online/" "Mozilla/5.0"')
+        registrar_linha_da_borda(linha)
+        registrar_linha_da_borda(linha.replace("/conta/perfil/", "/sw.js"))
+        erro = ErroServidor.objects.get()
+        self.assertEqual(erro.tipo, "502")
+        self.assertEqual(erro.ocorrencias, 2)
+        self.assertEqual(erro.caminho, "/sw.js")
+
+    def test_200_e_404_do_nginx_nao_sao_erro(self):
+        from apps.core.erros import registrar_linha_da_borda
+
+        for status in ("200", "404", "500"):
+            linha = f'1.1.1.1 - - [04/Nov/2026:10:50:29 +0000] "GET / HTTP/1.1" {status} 1 "-" "x"'
+            self.assertIsNone(registrar_linha_da_borda(linha))
+
+    def test_vigia_le_o_arquivo_do_nginx_e_esvazia(self):
+        import tempfile
+        from pathlib import Path
+
+        from django.core.management import call_command
+
+        from apps.core.models import ErroServidor
+
+        with tempfile.TemporaryDirectory() as pasta:
+            arquivo = Path(pasta) / "borda-5xx.log"
+            arquivo.write_text(
+                '1.1.1.1 - - [04/Nov/2026:10:50:29 +0000] "GET /a/ HTTP/1.1" 502 1 "-" "x"\n'
+                '1.1.1.1 - - [04/Nov/2026:10:50:30 +0000] "GET /b/ HTTP/1.1" 504 1 "-" "x"\n',
+                encoding="utf-8",
+            )
+            with self.settings(LOG_ERROS_BORDA=str(arquivo)):
+                call_command("vigiar_erros", stdout=io.StringIO())
+            self.assertEqual(arquivo.read_text(encoding="utf-8"), "")
+
+        self.assertEqual(
+            sorted(ErroServidor.objects.values_list("tipo", flat=True)), ["502", "504"]
+        )
+
+    def test_resolvido_volta_quando_o_erro_volta(self):
+        from apps.core.models import ErroServidor
+
+        self._estourar()
+        ErroServidor.objects.update(resolvido=True)
+        self._estourar()
+        self.assertFalse(ErroServidor.objects.get().resolvido)
+
+
+class PaginasDeErroTests(TestCase):
+    """404, 500 e 502 com a cara da loja, levando de volta ao início."""
+
+    def test_404_tem_a_cara_da_loja_e_leva_ao_inicio(self):
+        resposta = self.client.get("/endereco-que-nao-existe/")
+        self.assertEqual(resposta.status_code, 404)
+        html = resposta.content.decode()
+        self.assertIn("Não encontramos esta página", html)
+        self.assertIn('href="/"', html)
+        self.assertIn("window.location.replace('/')", html)
+        self.assertIn('name="q"', html)
+
+    def test_500_se_desenha_sem_contexto(self):
+        """Erro no banco ou num processador de contexto não pode derrubar
+        também a página de erro."""
+        from django.template import loader
+
+        html = loader.get_template("500.html").render()
+        self.assertIn("Algo deu errado", html)
+        self.assertIn("window.location.replace('/')", html)
+
+    def test_pagina_do_502_existe_e_leva_ao_inicio(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        html = (Path(settings.BASE_DIR) / "deploy" / "erros" / "indisponivel.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("window.location.replace('/')", html)
+        self.assertIn('href="/"', html)
+        # sem Django no ar: nada de tag de template
+        self.assertNotIn("{%", html)

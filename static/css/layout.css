@@ -41,7 +41,7 @@
   background: var(--cream-warm); border-color: transparent;
 }
 .header__search input:focus { background: var(--surface); }
-.header__search svg { left: 16px; }
+.header__search > svg { left: 16px; }
 .header__search button {
   position: absolute; right: 5px; top: 5px; height: 34px;
   padding-inline: var(--s-4); border-radius: var(--r-full);

@@ -1134,7 +1134,6 @@
   const forms = document.querySelectorAll('form[data-sugestoes]');
   if (!forms.length) return;
   const esc = (t) => String(t || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const icone = (n) => '<svg width="15" height="15" aria-hidden="true"><use href="#i-' + n + '"></use></svg>';
 
   forms.forEach((form) => {
     const input = form.querySelector('input[name="q"]');
@@ -1161,7 +1160,9 @@
               + (it.extra ? '<span class="sugestoes__extra">' + esc(it.extra) + '</span>' : '')
               + '<span class="sugestoes__preco">' + (it.a_partir ? 'a partir de ' : '') + esc(it.preco) + '</span></span></a>';
           } else {
-            html += '<a class="sugestoes__item" href="' + esc(it.url) + '" role="option">' + icone(it.icone || 'busca')
+            // sem ícone: o texto já diz o que é, e o ícone saía empilhado
+            // por cima das palavras (pedido de 04/11/2026)
+            html += '<a class="sugestoes__item" href="' + esc(it.url) + '" role="option">'
               + '<span class="sugestoes__texto"><strong>' + esc(it.rotulo) + '</strong></span>'
               + (it.extra ? '<span class="sugestoes__extra">' + esc(it.extra) + '</span>' : '') + '</a>';
           }

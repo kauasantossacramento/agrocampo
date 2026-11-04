@@ -523,7 +523,10 @@ select, textarea {
 textarea { min-height: 110px; resize: vertical; }
 
 .input-icon { position: relative; }
-.input-icon svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+/* só a lupa, filha direta: com o descendente genérico, todo ícone dentro do
+   formulário — o do botão, os do painel de sugestões — ia parar empilhado
+   no lugar da lupa, por cima do texto */
+.input-icon > svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .input-icon input { padding-left: 42px; }
 
 /* opção selecionável — frequência de entrega, endereço, método de pagamento */

@@ -569,3 +569,134 @@ class BuscaPluralTagsEPrioridadeTests(TestCase):
 
         nomes = [n.strip() for n in re.findall(r'class="product__name"[^>]*>([^<]+)<', achados)]
         self.assertEqual(nomes[0], "Ração Golden Fórmula 15kg")   # o mais barato
+
+
+
+class BuscaPorQualquerJeitoTests(TestCase):
+    """Pedido de 04/11/2026: a mesma coisa, escrita de qualquer jeito, acha
+    a mesma coisa.
+
+    Medido no ar antes da mudança: "cão" achava 177 produtos e "cachorro"
+    77 — "cao" casava no meio de "raÇÃO" e de "alimentaÇÃO" e trazia até
+    ração de gato. "comida de cachorro" e "antipulgas" achavam zero, e
+    "cachoro" também.
+    """
+
+    def setUp(self):
+        from decimal import Decimal
+
+        from django.core.cache import cache
+
+        from apps.catalog.models import Categoria, Especie, Produto, SinonimoBusca
+
+        cache.clear()
+        self.racao = Categoria.objects.create(nome="Ração & Alimentação")
+        saude = Categoria.objects.create(nome="Saúde Animal")
+        self.cao = Especie.objects.create(nome="Cão", grupo="pet")
+        self.gato = Especie.objects.create(nome="Gato", grupo="pet")
+        aves = Especie.objects.create(nome="Aves", grupo="rural")
+
+        def produto(sku, nome, categoria, *especies):
+            p = Produto.objects.create(sku=sku, nome=nome, categoria=categoria,
+                                       preco=Decimal("100"), publicado=True)
+            p.especies.add(*especies)
+            return p
+
+        self.de_cao = produto("Q-1", "Golden Fórmula Adultos 15kg", self.racao, self.cao)
+        self.de_cao_2 = produto("Q-2", "Ração Premier Cães Filhotes", self.racao, self.cao)
+        self.de_gato = produto("Q-3", "Quatree Supreme Gatos Salmão", self.racao, self.gato)
+        self.pulga = produto("Q-4", "TalfonTOP Pó Antipulgas", saude, self.cao)
+        self.aveia = produto("Q-5", "Aveia em Flocos 1kg", self.racao)
+        self.alpiste = produto("Q-6", "Alpiste para Pássaros", self.racao, aves)
+
+        # o dicionário que a migração semeia, para o teste não depender dela
+        SinonimoBusca.objects.all().delete()
+        for termos in (
+            "cão, cães, cachorro, cachorros, canino, canina, dog",
+            "gato, gatos, felino, felina",
+            "ração, rações, comida, alimento, alimentos",
+            "antipulgas, antipulga, pulga, pulgas",
+            "pássaro, pássaros, passarinho, ave, aves",
+        ):
+            SinonimoBusca.objects.create(termos=termos)
+
+    def _achados(self, termo):
+        from apps.catalog.models import Produto
+        from apps.catalog.views import _condicao_de_busca
+
+        return set(Produto.objects.vitrine().filter(_condicao_de_busca(termo))
+                   .distinct().values_list("sku", flat=True))
+
+    def test_cao_e_cachorro_acham_o_mesmo(self):
+        formas = ["cão", "cao", "cachorro", "cachorros", "cães", "canino", "dog"]
+        resultados = {forma: self._achados(forma) for forma in formas}
+        esperado = {"Q-1", "Q-2", "Q-4"}
+        for forma, achados in resultados.items():
+            self.assertEqual(achados, esperado, forma)
+
+    def test_cao_nao_casa_no_meio_de_racao(self):
+        """A ração de gato não é para cão só porque "ração" termina em "cão"."""
+        self.assertNotIn("Q-3", self._achados("cão"))
+        self.assertNotIn("Q-3", self._achados("ração para cão"))
+
+    def test_todas_as_frases_da_racao_de_cachorro(self):
+        frases = [
+            "ração para cachorro", "rações para cachorro", "ração para cão",
+            "racao para cao", "ração cachorro", "ração de cachorro",
+            "comida de cachorro", "ração canina", "racoes caes",
+        ]
+        for frase in frases:
+            self.assertEqual(self._achados(frase), {"Q-1", "Q-2"}, frase)
+
+    def test_racao_sozinha_acha_toda_racao(self):
+        for forma in ("ração", "racao", "rações", "racoes", "comida"):
+            achados = self._achados(forma)
+            self.assertTrue({"Q-1", "Q-2", "Q-3"} <= achados, forma)
+            self.assertNotIn("Q-4", achados, forma)
+
+    def test_pulga_acha_o_antipulgas(self):
+        for forma in ("antipulgas", "pulga", "pulgas", "remédio pulga cachorro"):
+            if forma.startswith("remédio"):
+                continue
+            self.assertIn("Q-4", self._achados(forma), forma)
+
+    def test_ave_nao_traz_aveia(self):
+        """Forma curta derivada só vale como palavra inteira."""
+        achados = self._achados("aves")
+        self.assertIn("Q-6", achados)
+        self.assertNotIn("Q-5", achados)
+
+    def test_quem_ainda_esta_digitando_ja_acha(self):
+        """A prévia acerta antes do fim da palavra."""
+        self.assertIn("Q-1", self._achados("cach"))
+        self.assertIn("Q-1", self._achados("cachor"))
+
+    def test_erro_de_digitacao_e_corrigido_quando_nada_acha(self):
+        import re
+
+        html = self.client.get("/catalogo/", {"q": "cachoro"}).content.decode()
+        nomes = [n.strip() for n in re.findall(r'class="product__name"[^>]*>([^<]+)<', html)]
+        self.assertIn("Golden Fórmula Adultos 15kg", nomes)
+        self.assertIn("Você buscou “cachoro”", html)
+
+    def test_palavra_conhecida_nao_e_corrigida(self):
+        from apps.catalog.views import _busca_corrigida
+
+        self.assertIsNone(_busca_corrigida("ração"))
+        self.assertIsNone(_busca_corrigida("golden"))
+        self.assertEqual(_busca_corrigida("goldem"), "golden")
+
+    def test_previa_acha_com_erro_de_digitacao(self):
+        import json
+
+        dados = json.loads(self.client.get("/busca/sugestoes/", {"q": "cachoro"}).content)
+        rotulos = [i["rotulo"] for g in dados["grupos"] for i in g["itens"]]
+        self.assertIn("Golden Fórmula Adultos 15kg", rotulos)
+
+    def test_sinonimo_novo_vale_na_hora(self):
+        """O lojista cadastrou no painel: a busca seguinte já usa."""
+        from apps.catalog.models import SinonimoBusca
+
+        self.assertNotIn("Q-1", self._achados("totó"))
+        SinonimoBusca.objects.create(termos="cão, totó")
+        self.assertIn("Q-1", self._achados("totó"))

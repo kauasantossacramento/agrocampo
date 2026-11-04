@@ -161,16 +161,24 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
-EMAIL_BACKEND = env(
-    "DJANGO_EMAIL_BACKEND",
-    default=(
-        "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
-        else "django.core.mail.backends.console.EmailBackend"
-    ),
+# Vazio decide pelo EMAIL_HOST. O compose repassava "console" fixo e as
+# variáveis do SMTP nem chegavam ao container: preencher o .env não ligava
+# o e-mail. Agora só um backend escrito de propósito passa por cima.
+EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND", default="") or (
+    "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
 )
 EMAIL_CONFIGURADO = bool(EMAIL_HOST)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="AgroCampo <nao-responda@agrocampo.com.br>")
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Quem recebe o e-mail de erro 500/502 (separe vários por vírgula). Fica no
+# .env do servidor, não aqui: o repositório é público.
+ALERTA_ERROS_EMAIL = env("ALERTA_ERROS_EMAIL", default="")
+# o nginx anota nele só as linhas 502/503/504; o cron lê e esvazia
+LOG_ERROS_BORDA = env("LOG_ERROS_BORDA", default="/var/log/agrocampo/borda-5xx.log")
+# nos testes o alerta sai na hora, sem thread
+ALERTA_ERROS_SINCRONO = env.bool("ALERTA_ERROS_SINCRONO", default=False)
 
 # ---------------------------------------------------------------------- DRF
 REST_FRAMEWORK = {

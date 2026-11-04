@@ -247,6 +247,74 @@ class LinhaProduto(TimeStampedModel, SluggedModel):
         return f"/catalogo/?linha={self.slug}"
 
 
+class SinonimoBusca(TimeStampedModel):
+    """Palavras que o cliente usa como se fossem a mesma.
+
+    O catálogo diz "Cão"; o cliente digita "cachorro", "canino", "dog". O
+    catálogo diz "ração"; ele digita "comida". Cada linha é um grupo: buscar
+    qualquer palavra do grupo procura todas. Vale para a loja inteira, sem
+    precisar repetir a palavra em cada produto.
+    """
+
+    termos = models.CharField(
+        "palavras que significam a mesma coisa", max_length=400,
+        help_text="Separe por vírgula: cão, cachorro, canino, dog. Acento, "
+                  "maiúscula e plural não importam.",
+    )
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["termos"]
+        verbose_name = "sinônimo da busca"
+        verbose_name_plural = "sinônimos da busca"
+
+    def __str__(self):
+        return self.termos[:60]
+
+    @property
+    def lista_de_termos(self) -> list[str]:
+        """Os termos já como a busca compara: sem acento, minúsculos."""
+        termos = []
+        for termo in self.termos.split(","):
+            limpo = " ".join(texto_sem_acento(termo).split())
+            if len(limpo) >= 2:
+                termos.append(limpo)
+        return termos
+
+    @classmethod
+    def grupos(cls) -> list[set[str]]:
+        """Todos os grupos ativos, guardados um minuto em memória.
+
+        A busca consulta isto a cada letra digitada; ir ao banco toda vez
+        por uma tabela que muda uma vez por semana seria desperdício.
+        """
+        from django.core.cache import cache
+
+        grupos = cache.get(cls.CHAVE_CACHE)
+        if grupos is None:
+            grupos = [
+                set(g.lista_de_termos) for g in cls.objects.filter(ativo=True)
+            ]
+            cache.set(cls.CHAVE_CACHE, grupos, 60)
+        return grupos
+
+    CHAVE_CACHE = "busca:sinonimos"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+
+        # o lojista salvou: a próxima busca já usa o grupo novo
+        cache.delete(self.CHAVE_CACHE)
+
+    def delete(self, *args, **kwargs):
+        resultado = super().delete(*args, **kwargs)
+        from django.core.cache import cache
+
+        cache.delete(self.CHAVE_CACHE)
+        return resultado
+
+
 class DestaqueBusca(TimeStampedModel):
     """Produtos que sobem para o topo quando alguém busca certos termos.
 

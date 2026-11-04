@@ -117,6 +117,9 @@
         <div class="section-head__title">
           <h1 style="font-size:var(--fs-xl)">{{ titulo }}</h1>
           <p>{{ total }} produto{{ total|pluralize }}{% if busca %} para “{{ busca }}”{% endif %}</p>
+          {% if busca_digitada %}
+            <p class="xs muted">Você buscou “{{ busca_digitada }}”. Mostrando o que mais se parece.</p>
+          {% endif %}
         </div>
         <form method="get" id="form-ordem">
           {% for chave, valores in request.GET.lists %}{% if chave != 'ordem' and chave != 'pagina' %}{% for v in valores %}<input type="hidden" name="{{ chave }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}

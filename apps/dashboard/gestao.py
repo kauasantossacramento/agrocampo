@@ -12,7 +12,7 @@ from typing import Callable
 
 from django import forms
 
-from apps.catalog.models import (Categoria, DestaqueBusca, Especie,
+from apps.catalog.models import (Categoria, DestaqueBusca, Especie, SinonimoBusca,
                                  LinhaProduto, Marca)
 from apps.core.models import (Banner, Diferencial, Pagina, PromocaoDestaque,
                               SiteConfig, VideoInstagram)
@@ -308,6 +308,19 @@ class RegraEntregaForm(_EstilizadoMixin, forms.ModelForm):
         self.fields["cidade"].empty_label = "Todas as cidades"
 
 
+class SinonimoBuscaForm(_EstilizadoMixin, forms.ModelForm):
+    """Um grupo de palavras que a busca trata como iguais."""
+
+    class Meta:
+        model = SinonimoBusca
+        fields = ("termos", "ativo")
+        widgets = {
+            "termos": forms.TextInput(attrs={
+                "placeholder": "cão, cachorro, canino, dog",
+            }),
+        }
+
+
 class DestaqueBuscaForm(_EstilizadoMixin, forms.ModelForm):
     """Quais produtos sobem para o topo quando o cliente busca certos termos."""
 
@@ -567,6 +580,20 @@ SECOES: dict[str, Secao] = {
             ("Produtos", lambda o: o.produtos.count()),
             ("Na vitrine", lambda o: o.destaque),
             ("No ar", lambda o: o.publicado),
+        ],
+    ),
+    "sinonimos-busca": Secao(
+        slug="sinonimos-busca", titulo="Sinônimos da busca", singular="grupo de sinônimos",
+        model=SinonimoBusca, form=SinonimoBuscaForm, icone="i-busca",
+        descricao=(
+            "Palavras que o cliente usa como se fossem a mesma. Com “cão, "
+            "cachorro, canino” num grupo, quem busca qualquer uma acha as três."
+        ),
+        ordenacao=("termos",),
+        busca=("termos",),
+        colunas=[
+            ("Palavras", lambda o: o.termos[:80]),
+            ("No ar", lambda o: o.ativo),
         ],
     ),
     "destaques-busca": Secao(

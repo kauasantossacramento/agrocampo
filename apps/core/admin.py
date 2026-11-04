@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import AssinanteNewsletter, Banner, Diferencial, Pagina, SiteConfig
+from .models import AssinanteNewsletter, Banner, Diferencial, ErroServidor, Pagina, SiteConfig
 
 
 @admin.register(SiteConfig)
@@ -177,3 +177,17 @@ class PaginaAdmin(admin.ModelAdmin):
 class AssinanteNewsletterAdmin(admin.ModelAdmin):
     list_display = ("email", "nome", "ativo", "criado_em")
     search_fields = ("email",)
+
+
+@admin.register(ErroServidor)
+class ErroServidorAdmin(admin.ModelAdmin):
+    """Erros 500 e de gateway, agrupados. Só leitura: quem escreve é o site."""
+
+    list_display = ("tipo", "excecao", "onde", "ocorrencias", "ultima_em",
+                    "avisado_em", "resolvido")
+    list_filter = ("tipo", "resolvido")
+    search_fields = ("excecao", "mensagem", "onde", "caminho", "usuario")
+    list_editable = ("resolvido",)
+    readonly_fields = ("assinatura", "tipo", "excecao", "mensagem", "onde",
+                       "caminho", "metodo", "usuario", "rastro", "ocorrencias",
+                       "primeira_em", "ultima_em", "avisado_em")

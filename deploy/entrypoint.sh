@@ -30,7 +30,11 @@ echo "[entrypoint] migracoes..."
 python manage.py migrate --noinput
 
 echo "[entrypoint] estaticos..."
-python manage.py collectstatic --noinput --clear >/dev/null
+# Sem --clear: ele apagava o volume que o nginx serve e copiava tudo de
+# novo a cada subida — nesses segundos a página saía sem CSS, e a janela do
+# deploy ficava mais longa. O manifesto mantém os arquivos antigos com hash,
+# o que ainda ajuda quem está com a página anterior aberta.
+python manage.py collectstatic --noinput >/dev/null
 
 # Semeia apenas na primeira subida (banco ainda sem produtos nem config).
 if [[ "${AGROCAMPO_SEED:-0}" == "1" ]]; then

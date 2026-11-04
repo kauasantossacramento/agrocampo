@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% comment %}
+  Página do erro 404. Diferente da 500, aqui o site está inteiro — só o
+  endereço não existe —, então vale a casca normal da loja, com a busca no
+  topo. A contagem leva para o início sozinha, mas para se o cliente
+  começar a mexer: ninguém quer ser tirado da página no meio de uma busca.
+{% endcomment %}
+{% block title %}Página não encontrada — {{ site.nome_loja }}{% endblock %}
+{% block content %}
+<div class="wrap section">
+  <div class="empty card" style="max-width:560px;margin-inline:auto" data-erro-404>
+    <div class="empty__icon">🔎</div>
+    <p class="empty__title">Não encontramos esta página</p>
+    <p class="small">O endereço pode ter mudado ou o produto saiu do catálogo. Busque pelo que você procura, ou volte ao início.</p>
+
+    <form action="{% url 'catalog:busca' %}" method="get" class="input-icon" role="search"
+          style="margin-top:var(--s-5);text-align:left">
+      <svg width="18" height="18"><use href="#i-busca"></use></svg>
+      <input type="search" name="q" placeholder="Ex.: ração para cachorro" aria-label="Buscar produtos">
+    </form>
+
+    <a href="/" class="btn btn--primary" style="margin-top:var(--s-5)">Ir para a página inicial</a>
+    <p class="xs muted" style="margin-top:var(--s-3)" data-contagem-texto>
+      Levando você para o início em <strong data-contagem>10</strong> s…
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var caixa = document.querySelector('[data-erro-404]');
+    var numero = document.querySelector('[data-contagem]');
+    var texto = document.querySelector('[data-contagem-texto]');
+    if (!caixa || !numero) return;
+    var resta = 10;
+    var relogio = setInterval(function () {
+      resta -= 1;
+      numero.textContent = String(Math.max(resta, 0));
+      if (resta <= 0) { clearInterval(relogio); window.location.replace('/'); }
+    }, 1000);
+    // começou a buscar ou a tocar na tela: a contagem para
+    function parar() {
+      clearInterval(relogio);
+      if (texto) texto.remove();
+      ['focusin', 'keydown', 'pointerdown', 'scroll'].forEach(function (ev) {
+        window.removeEventListener(ev, parar, true);
+      });
+    }
+    ['focusin', 'keydown', 'pointerdown', 'scroll'].forEach(function (ev) {
+      window.addEventListener(ev, parar, true);
+    });
+  })();
+</script>
+{% endblock %}
