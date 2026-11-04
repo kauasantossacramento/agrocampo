@@ -110,6 +110,16 @@ services:
       - estaticos:/var/www/static:ro
       # só as linhas 502/503/504 — o cron lê e transforma em alerta
       - logs_borda:/var/log/agrocampo
+    # O arquivo nasce do root do nginx; o cron roda como o usuário 1000 e
+    # precisa esvaziá-lo depois de ler. O master do nginx abre o log como
+    # root, então entregar o arquivo ao 1000 não muda nada para ele.
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        touch /var/log/agrocampo/borda-5xx.log &&
+        chown 1000:999 /var/log/agrocampo/borda-5xx.log &&
+        exec nginx -g 'daemon off;'
     networks:
       - interna        # fala com o gunicorn
       - traefik        # recebe do Traefik
