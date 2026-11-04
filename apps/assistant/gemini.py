@@ -38,7 +38,8 @@ def gerar_resposta(*, chave: str, modelo: str, instrucoes: str, historico: list[
         "system_instruction": {"parts": [{"text": instrucoes}]},
         "contents": contents,
         "generationConfig": {
-            "temperature": 0.5,
+            # 0,5 deixava a resposta criativa demais para um balcão de loja
+            "temperature": 0.3,
             # os modelos 3.x gastam parte do limite "pensando": o limite baixo
             # cortava a resposta no meio. Atendimento de loja não precisa de
             # raciocínio longo, então ele fica desligado.

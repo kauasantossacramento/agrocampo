@@ -4,8 +4,9 @@
   existe (layout.css). Os cinco destinos são os que o cliente mais usa:
   início, categorias, busca, carrinho e conta.
 
-  "Categorias" abre a mesma gaveta do botão de menu do topo, e "Buscar" só
-  leva o foco à caixa de busca que já está na tela: nada de tela nova.
+  "Categorias" desce até a seção "Compre por categoria" da home (de outra
+  página, abre a home já nela), e "Buscar" só leva o foco à caixa de busca
+  que já está na tela: nada de tela nova.
 {% endcomment %}
 {% with caminho=request.path %}
 <nav class="barra-app" aria-label="Navegação principal">
@@ -14,10 +15,11 @@
     <svg width="22" height="22" aria-hidden="true"><use href="#i-casa"></use></svg>
     <span>Início</span>
   </a>
-  <button type="button" class="barra-app__item" data-drawer-open="#menu-mobile">
+  {# leva à seção "Compre por categoria" da home; fora dela, abre a home lá #}
+  <a href="{% url 'core:home' %}#categorias" class="barra-app__item" data-barra-categorias>
     <svg width="22" height="22" aria-hidden="true"><use href="#i-grade"></use></svg>
     <span>Categorias</span>
-  </button>
+  </a>
   <button type="button" class="barra-app__item" data-barra-busca>
     <svg width="22" height="22" aria-hidden="true"><use href="#i-busca"></use></svg>
     <span>Buscar</span>

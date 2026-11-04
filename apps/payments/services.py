@@ -9,6 +9,7 @@ import uuid
 from decimal import Decimal
 
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.notifications.models import Notificacao
@@ -234,7 +235,7 @@ def _confirmar_pedido(pedido, pagamento):
         tipo=Notificacao.Tipo.PEDIDO_NOVO,
         titulo="Novo pedido recebido",
         mensagem=f"{pedido.numero} · {pedido.nome_cliente} · R$ {pedido.total}",
-        link=f"/painel/pedidos/{pedido.numero}/",
+        link=reverse("dashboard:pedido", args=[pedido.numero]),
         pedido=pedido,
     )
 
@@ -256,7 +257,7 @@ def _pagamento_recusado(pedido, pagamento):
 @transaction.atomic
 def estornar(pagamento: Pagamento, valor=None, motivo=Estorno.Motivo.OUTRO, autor=None,
              observacao="") -> Estorno:
-    """Solicita o estorno na Stone e devolve o registro criado."""
+    """Faz o estorno no adquirente agora e devolve o registro criado."""
     valor = Decimal(valor) if valor is not None else pagamento.valor_estornavel
     estorno = Estorno.objects.create(
         pagamento=pagamento,
@@ -266,6 +267,109 @@ def estornar(pagamento: Pagamento, valor=None, motivo=Estorno.Motivo.OUTRO, auto
         solicitado_por=autor,
         status=Estorno.Status.PROCESSANDO,
     )
+    return _executar_estorno(estorno)
+
+
+def solicitar_estorno_cliente(pedido, motivo: str, detalhe: str, autor) -> Estorno:
+    """O cliente pede o estorno; quem decide é a loja.
+
+    Pedido de 04/11/2026: o estorno saía direto no adquirente, sem motivo e
+    sem a loja ver — inclusive de pedido já em separação. Agora fica
+    registrado como solicitação, entra na linha do tempo e avisa a equipe.
+    """
+    from apps.orders.models import EventoPedido
+
+    pagamento = pedido.pagamento_atual
+    rotulo = Estorno.Motivo(motivo).label
+    estorno = Estorno.objects.create(
+        pagamento=pagamento,
+        valor=pagamento.valor_estornavel,
+        motivo=motivo,
+        observacao=(detalhe or "")[:250],
+        solicitado_por=autor,
+        status=Estorno.Status.SOLICITADO,
+    )
+    EventoPedido.objects.create(
+        pedido=pedido, status_anterior=pedido.status, status_novo=pedido.status,
+        titulo="Estorno solicitado",
+        descricao=f"Motivo: {rotulo}" + (f" — {detalhe}" if detalhe else "")[:280],
+        autor=autor,
+    )
+    notificar_lojistas(
+        tipo=Notificacao.Tipo.ESTORNO,
+        nivel=Notificacao.Nivel.ALERTA,
+        titulo=f"Pedido de estorno · {pedido.numero}",
+        mensagem=f"R$ {estorno.valor:.2f} · {rotulo}".replace(".", ",")
+        + (f" — {detalhe[:120]}" if detalhe else ""),
+        link=f"/painel/pedidos/{pedido.numero}/",
+        pedido=pedido,
+    )
+    return estorno
+
+
+@transaction.atomic
+def aprovar_estorno(estorno: Estorno, autor) -> Estorno:
+    """A loja aprovou: o dinheiro volta e o pedido vira "estornado"."""
+    from apps.orders.models import Pedido
+    from apps.orders.services import devolver_estoque
+
+    if estorno.status != Estorno.Status.SOLICITADO:
+        raise ValueError("Este estorno já foi decidido.")
+    estorno.status = Estorno.Status.PROCESSANDO
+    estorno.save(update_fields=["status"])
+    _executar_estorno(estorno)
+    if estorno.status == Estorno.Status.FALHOU:
+        # o banco não concluiu: a solicitação volta para a fila, para a loja
+        # tentar de novo em vez de o pedido ficar sem resposta
+        estorno.status = Estorno.Status.SOLICITADO
+        estorno.save(update_fields=["status"])
+        return estorno
+    if estorno.status == Estorno.Status.CONCLUIDO:
+        pedido = estorno.pagamento.pedido
+        # o que ainda não saiu da loja volta para a prateleira
+        if pedido.status not in {Pedido.Status.ENVIADO, Pedido.Status.ENTREGUE}:
+            devolver_estoque(pedido, motivo="Estorno aprovado pela loja")
+        if pedido.pode_ir_para(Pedido.Status.ESTORNADO):
+            pedido.mudar_status(
+                Pedido.Status.ESTORNADO, autor=autor, titulo="Estorno aprovado",
+                descricao=f"R$ {estorno.valor:.2f} retornam em até 5 dias úteis.".replace(".", ","),
+            )
+    return estorno
+
+
+def recusar_estorno(estorno: Estorno, autor, resposta: str) -> Estorno:
+    """A loja recusou, com o porquê — o cliente lê no pedido e no aviso."""
+    from apps.orders.models import EventoPedido
+
+    if estorno.status != Estorno.Status.SOLICITADO:
+        raise ValueError("Este estorno já foi decidido.")
+    resposta = (resposta or "").strip()[:250]
+    if not resposta:
+        raise ValueError("Escreva ao cliente o motivo da recusa.")
+    estorno.status = Estorno.Status.RECUSADO
+    estorno.resposta_loja = resposta
+    estorno.save(update_fields=["status", "resposta_loja"])
+    pedido = estorno.pagamento.pedido
+    EventoPedido.objects.create(
+        pedido=pedido, status_anterior=pedido.status, status_novo=pedido.status,
+        titulo="Estorno não aprovado", descricao=resposta, autor=autor,
+    )
+    notificar(
+        destinatario=pedido.usuario,
+        tipo=Notificacao.Tipo.ESTORNO,
+        nivel=Notificacao.Nivel.ALERTA,
+        titulo="Seu pedido de estorno não foi aprovado",
+        mensagem=resposta,
+        link=pedido.get_absolute_url(),
+        pedido=pedido,
+        email=True,
+    )
+    return estorno
+
+
+def _executar_estorno(estorno: Estorno) -> Estorno:
+    """Chama o adquirente para um estorno já registrado."""
+    pagamento, valor = estorno.pagamento, estorno.valor
     try:
         resultado = get_gateway(pagamento.provedor).estornar(pagamento, valor)
     except ErroGateway as exc:
@@ -284,7 +388,7 @@ def estornar(pagamento: Pagamento, valor=None, motivo=Estorno.Motivo.OUTRO, auto
             destinatario=pedido.usuario,
             tipo=Notificacao.Tipo.ESTORNO,
             nivel=Notificacao.Nivel.SUCESSO,
-            titulo="Estorno solicitado",
+            titulo="Estorno aprovado",
             mensagem=(
                 f"R$ {valor} retorna ao seu meio de pagamento em até 5 dias úteis."
             ),

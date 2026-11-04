@@ -185,7 +185,13 @@ def home(request):
             "ofertas": ofertas,
             "oferta_relampago": oferta_relampago,
             "especies": Especie.objects.navegaveis().filter(destaque_home=True)[:24],
-            "marcas": Marca.objects.publicados().filter(destaque=True)[:18],
+            # só marca que a loja vende de fato, com as que têm logo na frente:
+            # 13 das 24 cadastradas não tinham produto e enchiam a faixa de nomes
+            "marcas": sorted(
+                Marca.objects.publicados()
+                .filter(destaque=True, produtos__publicado=True).distinct()[:18],
+                key=lambda m: (not m.logo, m.ordem, m.nome),
+            ),
             "posts": Post.objects.visiveis()[:3] if config.blog_ativo else [],
             # só vídeo já comprimido entra: o arquivo cru do celular deixaria
             # a home pesada para quem abre no 4G do sítio

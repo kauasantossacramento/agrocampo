@@ -87,10 +87,23 @@ def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
     nome = config.assistente_nome or "Silvinha"
 
     blocos = [
-        f"Você é {nome}, atendente virtual da loja {config.nome_loja} "
-        "(ração, saúde animal, aves, insumos rurais). Fale em português do Brasil, "
-        "de forma calorosa e curta — no máximo 3 parágrafos curtos, sem markdown "
-        "pesado (negrito simples com * é ok, nada de tabelas ou títulos).",
+        f"Você é {nome}, atendente virtual da {config.nome_loja}"
+        + (f", em {config.cidade_uf}" if config.cidade_uf else "")
+        + ": uma loja agropecuária e pet que vende ração, saúde animal, "
+        "acessórios e insumos para o campo, com entrega na cidade e na zona "
+        "rural. Fale em português do Brasil, como uma atendente de balcão "
+        "experiente: simpática, direta e prática. No máximo 3 frases curtas por "
+        "parágrafo e 2 parágrafos, sem markdown pesado (negrito simples com * é "
+        "ok, nada de tabelas ou títulos).",
+        # Medido em 04/11/2026: a cada "Oi" ela se apresentava de novo e
+        # improvisava frases fora de lugar ("como posso te dar uma historinha
+        # hoje?"). A apresentação já está no balão de boas-vindas.
+        "CONVERSA: você JÁ se apresentou na primeira mensagem da conversa — não "
+        "repita seu nome nem dê boas-vindas de novo. Se o cliente só cumprimentar, "
+        "responda em uma frase e pergunte qual animal ele tem ou o que está "
+        "procurando. Responda exatamente o que foi perguntado. Nada de "
+        "expressões infantis, trocadilhos ou frases de efeito; nada de emojis "
+        "em excesso (no máximo um, e só se couber).",
         "REGRAS: só cite produtos, preços, cidades e prazos que estejam neste "
         "contexto. Se não souber, diga que não tem essa informação e ofereça o "
         "WhatsApp da loja. Nunca invente estoque, preço ou prazo. Não dê "
@@ -107,6 +120,34 @@ def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
         "marcado como 'assinatura', acrescente assinar=<dias> na mesma linha. "
         "Diga em uma frase que o botão de compra vai aparecer na conversa.",
     ]
+
+    # o que a loja é e como ela vende: sem isto a assistente falava de uma
+    # loja genérica e não sabia oferecer assinatura, Pix ou as linhas da casa
+    from apps.catalog.models import Categoria, Especie, LinhaProduto
+
+    categorias = list(Categoria.objects.publicados().values_list("nome", flat=True)[:12])
+    if categorias:
+        blocos.append("CATEGORIAS DA LOJA: " + ", ".join(categorias) + ".")
+    animais = list(Especie.objects.navegaveis().values_list("nome", flat=True)[:16])
+    if animais:
+        blocos.append("ANIMAIS ATENDIDOS: " + ", ".join(animais) + ".")
+    linhas = list(LinhaProduto.objects.filter(ativo=True).values_list("nome", flat=True))
+    if linhas:
+        blocos.append(
+            "LINHAS DE PRODUTO (qualidade, da mais alta para a de entrada, na ordem "
+            "do cadastro): " + ", ".join(linhas) + ". Use para orientar quem pede "
+            "indicação por faixa de preço ou qualidade."
+        )
+    vantagens = []
+    if config.desconto_pix:
+        vantagens.append(f"{config.desconto_pix}% de desconto pagando no Pix")
+    if getattr(config, "assinatura_visivel", True):
+        vantagens.append(
+            "assinatura: o cliente recebe o mesmo produto de novo a cada 30, 60 ou "
+            "90 dias, sem precisar pedir, e pode cancelar quando quiser"
+        )
+    vantagens.append("entrega também na zona rural")
+    blocos.append("COMO A LOJA VENDE: " + "; ".join(vantagens) + ".")
 
     contato = []
     if config.whatsapp:

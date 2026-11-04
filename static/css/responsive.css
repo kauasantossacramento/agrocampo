@@ -353,3 +353,48 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .toast-stack { bottom: calc(var(--barra-app-h) + var(--s-3)); }
   .pwa-convite { bottom: calc(var(--barra-app-h) + var(--s-2)); }
 }
+
+/* ═══════════════ ajustes de 04/11/2026 (tarde) */
+/* a seção de categorias não para escondida atrás do topo fixo */
+.secao-categorias { scroll-margin-top: calc(var(--header-h, 140px) + 8px); }
+
+/* a arte do selo encosta no canto da caixa: as artes de linha são largas
+   (PREMIUM com fitas, 1101 × 672) e, centralizadas numa caixa quadrada,
+   desciam 12 px e pareciam soltas no meio da foto */
+.selo-linha__png { object-position: top right; }
+
+@media (max-width: 620px) {
+  /* banner colado na busca: o respiro de cima sobrava no celular */
+  .vitrine-capa { padding-top: 0; margin-top: 0; }
+  /* no celular troca-se o slide arrastando; as setas cobriam a arte */
+  .vitrine-capa .vitrine-capa__seta { display: none; }
+  /* selo no canto do card, vazando um pouco da borda, como um adesivo */
+  .product .selo-linha { top: -6px; right: -6px; }
+}
+
+/* ═══════════ assistente no celular: folha que sobe do pé da tela
+   Presa ao pé com altura fixa, a janela ficava atrás da barra de app e, com
+   o teclado aberto, perdia o cabeçalho. Em tela cheia (primeira tentativa)
+   sobrava um vão vazio enorme. Agora é uma folha de até 3/4 da tela: a
+   altura usa dvh, que encolhe com o teclado — topo, conversa e caixa de
+   texto continuam à vista, e a loja aparece atrás, escurecida. */
+@media (max-width: 620px) {
+  .silvinha.is-aberta { inset: auto 0 0 0; left: 0; bottom: 0; z-index: 1300; }
+  .silvinha.is-aberta .silvinha__janela {
+    position: fixed; left: 0; right: 0; bottom: 0; width: 100%;
+    height: min(560px, 78dvh); max-height: none;
+    border-radius: 20px 20px 0 0;
+    display: flex; flex-direction: column;
+    box-shadow: 0 -10px 40px rgba(20, 14, 10, .28);
+  }
+  .silvinha.is-aberta .silvinha__mensagens { flex: 1; height: auto; min-height: 0; }
+  body.silvinha-aberta::before {
+    content: ""; position: fixed; inset: 0; z-index: 1290;
+    background: rgba(20, 14, 10, .45);
+  }
+  body.silvinha-aberta .barra-app,
+  body.silvinha-aberta .zap { display: none; }
+}
+
+/* "Instalar o app" só aparece quando o app.js confirma que dá para instalar */
+[data-pwa-abrir][hidden] { display: none !important; }

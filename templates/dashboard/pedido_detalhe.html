@@ -116,6 +116,45 @@
       </div>
     {% endif %}
 
+    {% if estorno_pendente %}
+      {% comment %}
+        O cliente pediu estorno, com o motivo. Aprovar devolve o dinheiro na
+        hora pelo banco e marca o pedido como estornado; recusar exige uma
+        resposta, que o cliente lê no pedido e recebe por e-mail.
+      {% endcomment %}
+      <div class="card card--pad" style="border:2px solid var(--amber, #E0A100)">
+        <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-2)">Pedido de estorno do cliente</h3>
+        <p class="small" style="margin:0 0 var(--s-2)">
+          <strong>R$ {{ estorno_pendente.valor|floatformat:2 }}</strong> ·
+          {{ estorno_pendente.get_motivo_display }} ·
+          {{ estorno_pendente.criado_em|date:"d/m H:i" }}
+        </p>
+        {% if estorno_pendente.observacao %}
+          <p class="small muted" style="margin:0 0 var(--s-4)">“{{ estorno_pendente.observacao }}”</p>
+        {% endif %}
+        <form method="post" action="{% url 'dashboard:decidir_estorno' pedido.numero %}" style="margin-bottom:var(--s-3)">
+          {% csrf_token %}
+          <input type="hidden" name="estorno" value="{{ estorno_pendente.pk }}">
+          <input type="hidden" name="decisao" value="aprovar">
+          <button type="submit" class="btn btn--dark btn--block"
+                  onclick="return confirm('Devolver R$ {{ estorno_pendente.valor|floatformat:2 }} ao cliente agora?')">
+            Aprovar e devolver o dinheiro
+          </button>
+        </form>
+        <details>
+          <summary class="small strong" style="cursor:pointer">Recusar o estorno</summary>
+          <form method="post" action="{% url 'dashboard:decidir_estorno' pedido.numero %}" class="stack" style="gap:var(--s-2);margin-top:var(--s-3)">
+            {% csrf_token %}
+            <input type="hidden" name="estorno" value="{{ estorno_pendente.pk }}">
+            <input type="hidden" name="decisao" value="recusar">
+            <textarea name="resposta" rows="3" maxlength="240" required
+                      placeholder="Explique ao cliente, ex.: o pedido já saiu para entrega"></textarea>
+            <button type="submit" class="btn btn--ghost btn--block">Recusar e avisar o cliente</button>
+          </form>
+        </details>
+      </div>
+    {% endif %}
+
     <div class="card card--pad">
       <h3 style="font-size:var(--fs-base);margin-bottom:var(--s-4)">Próximo passo</h3>
 

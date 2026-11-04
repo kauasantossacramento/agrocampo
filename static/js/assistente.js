@@ -190,19 +190,29 @@
   // reidrata a conversa anterior
   historico.forEach(m => adicionar(m.papel, m.texto));
 
+  const celular = window.matchMedia('(max-width: 620px)');
   function abrir() {
     janela.hidden = false;
     botao.setAttribute('aria-expanded', 'true');
     raiz.classList.add('is-aberta');
-    setTimeout(() => campo.focus(), 50);
+    // no celular a janela ocupa a tela: barra de app e WhatsApp saem de cena
+    document.body.classList.add('silvinha-aberta');
+    // no celular o foco abriria o teclado por cima da conversa antes de o
+    // cliente ler qualquer coisa: ele toca na caixa quando quiser escrever
+    if (!celular.matches) setTimeout(() => campo.focus(), 50);
   }
   function fecharJanela() {
     janela.hidden = true;
     botao.setAttribute('aria-expanded', 'false');
     raiz.classList.remove('is-aberta');
+    document.body.classList.remove('silvinha-aberta');
   }
   botao.addEventListener('click', () => janela.hidden ? abrir() : fecharJanela());
   fechar.addEventListener('click', fecharJanela);
+  // no celular a loja fica escurecida atrás da folha: tocar nela fecha
+  document.addEventListener('click', (e) => {
+    if (celular.matches && !janela.hidden && e.target === document.body) fecharJanela();
+  });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !janela.hidden) fecharJanela(); });
 
   let ocupado = false;

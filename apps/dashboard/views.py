@@ -150,6 +150,7 @@ def detalhe_pedido(request, numero):
             "pagamento": pedido.pagamento_atual,
             "faltantes": pedido.itens_indisponiveis,
             "link_whatsapp": _whatsapp_do_pedido(pedido),
+            "estorno_pendente": pedido.estorno_pendente,
         },
     )
 
@@ -204,6 +205,36 @@ def recusar(request, numero):
     except ValueError as exc:
         messages.error(request, str(exc))
     return redirect(request.META.get("HTTP_REFERER", "dashboard:painel"))
+
+
+@operador_requerido
+@require_POST
+def decidir_estorno(request, numero):
+    """Aprova (dinheiro volta) ou recusa (com resposta ao cliente)."""
+    from apps.payments.models import Estorno
+    from apps.payments.services import aprovar_estorno, recusar_estorno
+
+    pedido = get_object_or_404(Pedido, numero=numero)
+    estorno = get_object_or_404(
+        Estorno, pk=request.POST.get("estorno"), pagamento__pedido=pedido,
+    )
+    try:
+        if request.POST.get("decisao") == "aprovar":
+            aprovar_estorno(estorno, request.user)
+            if estorno.status == Estorno.Status.CONCLUIDO:
+                messages.success(request, f"Estorno de R$ {estorno.valor} aprovado e devolvido ao cliente.")
+            else:
+                messages.error(
+                    request,
+                    "O banco não concluiu o estorno. Tente de novo em alguns minutos; "
+                    "se persistir, entre em contato com o suporte KS TEC.",
+                )
+        else:
+            recusar_estorno(estorno, request.user, request.POST.get("resposta", ""))
+            messages.success(request, "Estorno recusado. O cliente recebeu a sua resposta.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    return redirect("dashboard:pedido", numero=pedido.numero)
 
 
 @operador_requerido

@@ -454,6 +454,10 @@
 }
 .brand-chip:hover { filter: none; opacity: 1; transform: scale(1.08); }
 .brand-chip img { max-height: 44px; width: auto; object-fit: contain; }
+/* com a logo de verdade a marca aparece em cores: o cinza de 55% era para
+   o nome escrito, e no celular, sem hover, a logo nunca voltava à cor */
+.brand-chip:has(img) { filter: none; opacity: 1; }
+.brand-chip img { max-height: 48px; max-width: 150px; }
 .brand-chip__text { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-lg); color: var(--ink-3); white-space: nowrap; }
 
 /* ============================================================== newsletter */

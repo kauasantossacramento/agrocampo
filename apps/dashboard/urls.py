@@ -11,6 +11,7 @@ urlpatterns = [
     path("pedidos/<str:numero>/aprovar/", views.aprovar, name="aprovar"),
     path("pedidos/<str:numero>/recusar/", views.recusar, name="recusar"),
     path("pedidos/<str:numero>/enviar/", views.enviar, name="enviar"),
+    path("pedidos/<str:numero>/estorno/", views.decidir_estorno, name="decidir_estorno"),
     path("itinerario/", views.itinerario, name="itinerario"),
     path("produtos/", views.produtos, name="produtos"),
     path("marcas/criar/", views.marca_criar, name="marca_criar"),

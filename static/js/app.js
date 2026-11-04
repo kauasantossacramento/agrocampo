@@ -266,6 +266,30 @@
       });
     });
 
+    /* Arrastar com o dedo troca o slide (pedido de 04/11/2026: no celular
+       as setas saíram). Só conta como arrasto o movimento mais horizontal
+       que vertical — quem rola a página por cima do banner continua rolando.
+       Depois de um arrasto o toque não vira clique no link do banner. */
+    if (slides.length > 1) {
+      let inicioX = null, inicioY = 0, arrastou = false;
+      hero.addEventListener('touchstart', (e) => {
+        inicioX = e.touches[0].clientX; inicioY = e.touches[0].clientY; arrastou = false;
+      }, { passive: true });
+      hero.addEventListener('touchend', (e) => {
+        if (inicioX === null) return;
+        const dx = e.changedTouches[0].clientX - inicioX;
+        const dy = e.changedTouches[0].clientY - inicioY;
+        inicioX = null;
+        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+        arrastou = true;
+        parar();
+        if (dx < 0) proximo(); else { anterior(); iniciar(); }
+      }, { passive: true });
+      hero.addEventListener('click', (e) => {
+        if (arrastou) { e.preventDefault(); e.stopPropagation(); arrastou = false; }
+      }, true);
+    }
+
     hero.addEventListener('mouseenter', parar);
     hero.addEventListener('mouseleave', iniciar);
     hero.addEventListener('focusin', parar);
@@ -889,6 +913,16 @@
 
   /* ----------------------------------------- polling do status do Pix */
   function iniciarBarraApp() {
+    // na própria home a seção já está na página: rola até ela, sem recarregar
+    $$('[data-barra-categorias]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const secao = document.getElementById('categorias');
+        if (!secao) return;  // outra página: o link leva à home já na seção
+        e.preventDefault();
+        secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', '#categorias');
+      });
+    });
     $$('[data-barra-busca]').forEach((botao) => {
       botao.addEventListener('click', () => {
         const campo = $('.header__busca-movel input[name="q"]') || $('.header__search input[name="q"]');
@@ -896,6 +930,40 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
         // o foco depois da rolagem: antes dela o teclado abre e a tela pula
         setTimeout(() => campo.focus(), 250);
+      });
+    });
+  }
+
+  /* ------------------------------ instalar o app, sempre ao alcance
+     A tira do convite some por 7 dias quando o cliente a fecha — e depois
+     disso não havia mais caminho para instalar (pedido de 04/11/2026). O
+     item no menu do celular e no rodapé fica sempre lá, até o site rodar
+     como app instalado. */
+  function iniciarInstalarApp() {
+    const botoes = $$('[data-pwa-abrir]');
+    if (!botoes.length) return;
+    const instalado = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (instalado) return;
+
+    let evento = null;
+    window.addEventListener('beforeinstallprompt', (e) => { evento = e; });
+    window.addEventListener('appinstalled', () => botoes.forEach((b) => { b.hidden = true; }));
+
+    const iphone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    botoes.forEach((botao) => {
+      botao.hidden = false;
+      botao.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (evento) {
+          evento.prompt();
+          const escolha = await evento.userChoice;
+          evento = null;
+          if (escolha.outcome === 'accepted') toast('App instalado. Bom proveito!', 'success');
+          return;
+        }
+        toast(iphone
+          ? 'No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.'
+          : 'No Chrome, toque nos três pontinhos ⋮ e depois em “Instalar app”.', 'info');
       });
     });
   }
@@ -1143,6 +1211,7 @@
     iniciarConvitePwa();
     iniciarBarraApp();
     iniciarPromoModal();
+    iniciarInstalarApp();
   }
 
   if (document.readyState === 'loading') {

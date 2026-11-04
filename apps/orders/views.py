@@ -45,6 +45,9 @@ def detalhe(request, numero):
             "eventos": pedido.eventos.all(),
             "similares": similares[:3],
             "estorno": Estorno.objects.filter(pagamento__pedido=pedido).first(),
+            "motivos_estorno": [
+                (m.value, m.label) for m in Estorno.MOTIVOS_DO_CLIENTE
+            ],
         },
     )
 
@@ -59,11 +62,31 @@ def solicitar_estorno(request, numero):
         messages.error(request, "Este pedido não tem valor disponível para estorno.")
         return redirect(pedido.get_absolute_url())
 
-    motivo = (
-        Estorno.Motivo.PEDIDO_RECUSADO
-        if pedido.status == Pedido.Status.RECUSADO
-        else Estorno.Motivo.DESISTENCIA
-    )
+    if pedido.status != Pedido.Status.RECUSADO:
+        # Pedido de estorno vai para a loja decidir, com o motivo: o estorno
+        # direto devolvia dinheiro de pedido já separado sem ninguém ver.
+        # (Recusado pela loja segue automático: quem recusou foi ela.)
+        from apps.payments.services import solicitar_estorno_cliente
+
+        if pedido.estorno_pendente:
+            messages.info(request, "Seu pedido de estorno já está com a loja.")
+            return redirect(pedido.get_absolute_url())
+        motivo = request.POST.get("motivo", "")
+        detalhe = request.POST.get("detalhe", "").strip()
+        if motivo not in Estorno.MOTIVOS_DO_CLIENTE:
+            messages.error(request, "Escolha o motivo do estorno.")
+            return redirect(pedido.get_absolute_url())
+        if motivo == Estorno.Motivo.OUTRO and not detalhe:
+            messages.error(request, "Conte em poucas palavras o motivo do estorno.")
+            return redirect(pedido.get_absolute_url())
+        solicitar_estorno_cliente(pedido, motivo, detalhe, request.user)
+        messages.success(
+            request,
+            "Pedido de estorno enviado. A loja analisa e você recebe a resposta por aqui e por e-mail.",
+        )
+        return redirect(pedido.get_absolute_url())
+
+    motivo = Estorno.Motivo.PEDIDO_RECUSADO
     resultado = estornar(pagamento, motivo=motivo, autor=request.user)
 
     if resultado.status == Estorno.Status.CONCLUIDO:

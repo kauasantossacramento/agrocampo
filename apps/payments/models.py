@@ -484,18 +484,28 @@ class Estorno(TimeStampedModel):
         PROCESSANDO = "processando", "Processando"
         CONCLUIDO = "concluido", "Concluído"
         FALHOU = "falhou", "Falhou"
+        RECUSADO = "recusado", "Recusado pela loja"
 
     class Motivo(models.TextChoices):
         SEM_ESTOQUE = "sem_estoque", "Produto sem estoque"
         PEDIDO_RECUSADO = "pedido_recusado", "Pedido recusado pelo lojista"
         DESISTENCIA = "desistencia", "Desistência do cliente"
         DUPLICIDADE = "duplicidade", "Cobrança em duplicidade"
+        ATRASO = "atraso", "Demora na entrega"
+        PRODUTO_ERRADO = "produto_errado", "Produto errado ou com defeito"
         OUTRO = "outro", "Outro"
+
+    MOTIVOS_DO_CLIENTE = (
+        Motivo.DESISTENCIA, Motivo.ATRASO, Motivo.PRODUTO_ERRADO,
+        Motivo.DUPLICIDADE, Motivo.OUTRO,
+    )
 
     pagamento = models.ForeignKey(Pagamento, on_delete=models.CASCADE, related_name="estornos")
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     motivo = models.CharField(max_length=30, choices=Motivo.choices, default=Motivo.OUTRO)
     observacao = models.CharField(max_length=250, blank=True)
+    # o que a loja respondeu ao recusar — o cliente lê isto no pedido
+    resposta_loja = models.CharField("resposta da loja", max_length=250, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SOLICITADO)
     referencia_externa = models.CharField(max_length=120, blank=True)
     solicitado_por = models.ForeignKey(

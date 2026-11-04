@@ -621,6 +621,97 @@ class CompraComPagarmeTests(BaseCheckout):
             self.assertIn("no-store", resposta.headers.get("Cache-Control", ""), url)
 
 
+class EstornoPorSolicitacaoTests(BaseCheckout):
+    """O cliente pede com motivo, a loja decide (04/11/2026).
+
+    Antes o estorno saía direto no adquirente, sem motivo e sem a loja ver;
+    e o pedido em separação continuava "em separação" com o dinheiro já
+    devolvido, porque a transição para "estornado" não existia.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.pagamento = cobrar_cartao(self.pedido, CARTAO_APROVADO)
+        self.pedido.refresh_from_db()
+        self.client.force_login(self.usuario)
+        self.lojista = User.objects.create_user(
+            email="loja@exemplo.com", password="senha-forte-123",
+            papel=User.Papel.LOJISTA, is_staff=True,
+        )
+
+    def _pedir(self, **dados):
+        return self.client.post(reverse("orders:estorno", args=[self.pedido.numero]), dados)
+
+    def test_pedir_sem_motivo_nao_vale(self):
+        self._pedir()
+        self.assertFalse(Estorno.objects.exists())
+
+    def test_outro_exige_explicacao(self):
+        self._pedir(motivo="outro")
+        self.assertFalse(Estorno.objects.exists())
+
+    def test_pedido_vira_solicitacao_e_nao_mexe_no_dinheiro(self):
+        from apps.notifications.models import Notificacao
+
+        self._pedir(motivo="desistencia", detalhe="Comprei duas vezes sem querer")
+        estorno = Estorno.objects.get()
+        self.assertEqual(estorno.status, Estorno.Status.SOLICITADO)
+        self.assertEqual(estorno.observacao, "Comprei duas vezes sem querer")
+        self.pagamento.refresh_from_db()
+        self.assertEqual(self.pagamento.valor_estornado, 0)
+        self.assertTrue(
+            Notificacao.objects.filter(titulo__startswith="Pedido de estorno").exists()
+        )
+        self.assertTrue(self.pedido.eventos.filter(titulo="Estorno solicitado").exists())
+
+    def test_tela_do_cliente_troca_o_aprovado_pelo_estorno(self):
+        html = self.client.get(self.pedido.get_absolute_url()).content.decode()
+        self.assertIn("Pagamento confirmado!", html)
+        self.assertNotIn("validou a disponibilidade", html)
+        self._pedir(motivo="atraso")
+        html = self.client.get(self.pedido.get_absolute_url()).content.decode()
+        self.assertIn("Estorno em análise", html)
+        self.assertNotIn("Pagamento confirmado!", html)
+
+    def test_loja_aprova_e_o_pedido_vira_estornado(self):
+        self._pedir(motivo="desistencia")
+        estorno = Estorno.objects.get()
+        self.client.force_login(self.lojista)
+        self.client.post(
+            reverse("dashboard:decidir_estorno", args=[self.pedido.numero]),
+            {"estorno": estorno.pk, "decisao": "aprovar"},
+        )
+        estorno.refresh_from_db()
+        self.pedido.refresh_from_db()
+        self.assertEqual(estorno.status, Estorno.Status.CONCLUIDO)
+        self.assertEqual(self.pedido.status, Pedido.Status.ESTORNADO)
+
+    def test_loja_recusa_com_resposta(self):
+        self._pedir(motivo="desistencia")
+        estorno = Estorno.objects.get()
+        self.client.force_login(self.lojista)
+        self.client.post(
+            reverse("dashboard:decidir_estorno", args=[self.pedido.numero]),
+            {"estorno": estorno.pk, "decisao": "recusar", "resposta": "Já saiu para entrega."},
+        )
+        estorno.refresh_from_db()
+        self.assertEqual(estorno.status, Estorno.Status.RECUSADO)
+        self.client.force_login(self.usuario)
+        html = self.client.get(self.pedido.get_absolute_url()).content.decode()
+        self.assertIn("Já saiu para entrega.", html)
+
+    def test_recusa_sem_resposta_nao_vale(self):
+        self._pedir(motivo="desistencia")
+        estorno = Estorno.objects.get()
+        self.client.force_login(self.lojista)
+        self.client.post(
+            reverse("dashboard:decidir_estorno", args=[self.pedido.numero]),
+            {"estorno": estorno.pk, "decisao": "recusar", "resposta": ""},
+        )
+        estorno.refresh_from_db()
+        self.assertEqual(estorno.status, Estorno.Status.SOLICITADO)
+
+
 class CieloTests(BaseCheckout):
     """Driver da Cielo: o que a loja manda e o que ela entende de volta.
 

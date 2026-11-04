@@ -57,10 +57,13 @@ class Pedido(TimeStampedModel):
         # Pedidos antigos ainda param nestes dois status — mantidos para que
         # o lojista consiga encerrá-los.
         Status.AGUARDANDO_APROVACAO: {Status.APROVADO, Status.EM_SEPARACAO, Status.RECUSADO},
-        Status.APROVADO: {Status.EM_SEPARACAO, Status.CANCELADO},
-        Status.EM_SEPARACAO: {Status.ENVIADO, Status.CANCELADO},
-        Status.ENVIADO: {Status.ENTREGUE},
-        Status.ENTREGUE: set(),
+        # Estornado é possível de qualquer etapa com dinheiro pago: o estorno
+        # de 04/11/2026 devolveu o valor e o pedido ficou "em separação",
+        # porque esta transição não existia.
+        Status.APROVADO: {Status.EM_SEPARACAO, Status.CANCELADO, Status.ESTORNADO},
+        Status.EM_SEPARACAO: {Status.ENVIADO, Status.CANCELADO, Status.ESTORNADO},
+        Status.ENVIADO: {Status.ENTREGUE, Status.ESTORNADO},
+        Status.ENTREGUE: {Status.ESTORNADO},
         Status.RECUSADO: {Status.ESTORNADO, Status.CANCELADO},
         Status.CANCELADO: set(),
         Status.ESTORNADO: set(),
@@ -224,6 +227,15 @@ class Pedido(TimeStampedModel):
     def pode_ser_estornado(self):
         pagamento = self.pagamento_atual
         return bool(pagamento and pagamento.valor_estornavel > 0 and pagamento.liquidado)
+
+    @property
+    def estorno_pendente(self):
+        """Pedido de estorno do cliente esperando a decisão da loja."""
+        from apps.payments.models import Estorno
+
+        return Estorno.objects.filter(
+            pagamento__pedido=self, status=Estorno.Status.SOLICITADO
+        ).first()
 
     @property
     def itens_indisponiveis(self):

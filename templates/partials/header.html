@@ -196,6 +196,14 @@
       <a href="{% url 'catalog:marcas' %}" class="filters__link">Marcas</a>
       {% if site.blog_ativo %}<a href="{% url 'blog:lista' %}" class="filters__link">Blog</a>{% endif %}
       {% if site.assinatura_visivel %}<a href="{% url 'catalog:catalogo' %}?assinatura=1" class="filters__link" style="color:var(--red);font-weight:700">Assinatura{% if site.desconto_assinatura_padrao %} −{{ site.desconto_assinatura_padrao }}%{% endif %}</a>{% endif %}
+      {# some quando o site já roda como app instalado (app.js) #}
+      <button type="button" class="filters__link" data-pwa-abrir hidden
+              style="background:none;border:0;width:100%;text-align:left;cursor:pointer">
+        <span class="row" style="gap:var(--s-2)">
+          <svg width="17" height="17" style="flex:none;color:var(--red)" aria-hidden="true"><use href="#i-casa"></use></svg>
+          Instalar o app no celular
+        </span>
+      </button>
     </div>
   </div>
 </aside>
