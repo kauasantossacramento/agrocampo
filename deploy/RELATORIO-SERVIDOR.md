@@ -566,3 +566,32 @@ logo, chamada ou frasco. Entregue em WebP no tamanho de exibição: 1 MB virou
 166 KB no computador e 85 KB no celular, onde a faixa larga viraria uma tira
 ilegível e por isso a arte do celular manda na altura do quadro. O JPEG
 original de 1 MB foi removido de `media/banners/`.
+
+### 10.10 Pagar.me como adquirente (04/11/2026)
+
+Commit `cb3605f`. O driver que se chamava "Stone / Pagar.me" falava só a API
+da Stone (OAuth em `api.stone.com.br`). A Pagar.me é outra API — Basic em
+`api.pagar.me/core/v5` — e é a que a Stone entrega a quem contrata pagamento
+online. Agora são dois drivers separados, com um `pagarme.py` próprio
+cobrindo cartão, Pix, boleto, captura, consulta, cancelamento, estorno
+parcial e cartão salvo.
+
+Procedimento: `pg_dump` (`backups/pre-pagarme-2026-11-04-*.sql.gz`) →
+`git pull --ff-only` → `docker compose build web` → `up -d --no-deps web`.
+Migração `payments.0003` aplicada pelo entrypoint.
+
+**Credenciais.** Gravadas direto no banco de produção, nos campos de
+**produção** do provedor — nunca no repositório, que é público. São chaves
+reais: o recebedor ativo na conta é VETERINARIA AGRO-CAMPO, CNPJ
+42.073.031/0001-12, conferido por uma chamada somente de leitura
+(`GET /charges?size=1`, HTTP 200).
+
+**A loja segue em modo simulado de propósito.** Driver `simulado`, ambiente
+`sandbox`: ligar a Pagar.me em produção faz toda compra passar de verdade no
+cartão do cliente, e essa virada é decisão do lojista, não do deploy. Para
+ligar: *Configurações › Pagamentos* → Driver **Pagar.me**, Ambiente
+**Produção**, salvar.
+
+Pendente do lojista: cadastrar o webhook `/pagamentos/webhook/pagarme/` no
+painel da Pagar.me (eventos `charge.paid`, `charge.payment_failed`,
+`charge.refunded`) e, se quiser, o usuário/senha Basic do webhook.
