@@ -277,6 +277,7 @@
       img.className = 'silvinha-aponta__img';
       caixa.append(balao, img);
       secao.classList.add('tem-silvinha');
+      grade.classList.add('tem-silvinha__grade');
       secao.prepend(caixa);
       // apoiada na fileira de produtos, não no topo da seção: a linha reta do
       // tronco encosta no topo dos cards e o dedo cai sobre eles

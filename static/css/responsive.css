@@ -486,7 +486,11 @@ pre, code { overflow-x: auto; max-width: 100%; }
 @media (max-width: 620px) {
   /* no celular o título e o "Ver todos" ocupam a largura: ela desce para o
      vão entre a linha do título e os cards, apoiada um pouco dentro deles */
-  .silvinha-aponta { --w: 92px; right: 4px; transform: translateY(calc(var(--w) * -0.6875 + 16px)); }
+  /* no celular ela ficava afundada 16px dentro do card, por cima da foto e do
+     selo: agora os braços apoiam na borda de cima do card, à esquerda do selo,
+     e a fileira desce um pouco para caber a cabeça sem tocar no "Ver todos" */
+  .silvinha-aponta { --w: 92px; right: 58px; }
+  .tem-silvinha__grade { margin-top: 40px; }
   .silvinha-aponta__balao { max-width: 112px; font-size: 11px; padding: 5px 8px; top: 14%; right: calc(100% - 14px); }
 }
 @media (prefers-reduced-motion: reduce) {
