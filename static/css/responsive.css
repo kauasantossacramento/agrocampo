@@ -318,7 +318,7 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .header__desejos { display: none; }
   .header__burger { flex: none; }
   .logo { min-width: 0; flex: 1 1 auto; }
-  .logo img { height: min(var(--logo-h, 52px), 52px); max-width: 100%; object-fit: contain; }
+  .logo img { height: min(var(--logo-h, 56px), 56px); max-width: 100%; object-fit: contain; }
 
   /* painel de notificações (e o da conta) vira uma folha presa ao topo,
      com a largura da tela e rolagem própria */
@@ -505,3 +505,32 @@ pre, code { overflow-x: auto; max-width: 100%; }
   .silvinha__figura, .silvinha__convite { transition: none; }
   .silvinha-aponta__balao { animation: none; }
 }
+
+/* ═══════════════════ Silvinha na busca: faixa nos resultados e item nas sugestões */
+.busca-silvinha {
+  display: flex; align-items: center; gap: var(--s-4);
+  margin: 0 0 var(--s-5); padding: var(--s-3) var(--s-4);
+  background: #fff; border: 1px solid var(--line, #eee); border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+}
+.busca-silvinha__img { width: 56px; height: 56px; flex: none; border-radius: 50%; object-fit: cover; background: var(--bg-soft, #f6f1ec); }
+.busca-silvinha__texto { flex: 1; min-width: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.busca-silvinha__texto strong { font-size: var(--fs-sm); color: var(--ink); }
+.busca-silvinha__texto span { font-size: var(--fs-xs); color: var(--muted); }
+.busca-silvinha__btn { flex: none; }
+.busca-silvinha__vazio { display: block; width: 120px; height: auto; margin: 0 auto var(--s-3); }
+@media (max-width: 620px) {
+  .busca-silvinha { flex-wrap: wrap; gap: var(--s-3); }
+  .busca-silvinha__img { width: 46px; height: 46px; }
+  .busca-silvinha__btn { width: 100%; }
+}
+.sugestoes__silvinha {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border-top: 1px solid var(--line, #eee);
+  background: #fff8f2; color: var(--ink); text-decoration: none;
+}
+.sugestoes__silvinha:hover, .sugestoes__silvinha:focus-visible { background: #fdeee2; }
+.sugestoes__silvinha img { width: 36px; height: 36px; flex: none; border-radius: 50%; object-fit: cover; }
+.sugestoes__silvinha > span { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.sugestoes__silvinha strong { font-size: var(--fs-sm); color: var(--red, #c62828); }
+.sugestoes__silvinha > span > span { font-size: var(--fs-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

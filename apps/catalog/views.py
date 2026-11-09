@@ -348,6 +348,7 @@ def catalogo(request, categoria=None, marca=None, especie=None):
         request,
         "catalog/catalogo.html",
         {
+            "mostrar_assistente": True,
             "titulo": titulo,
             "pagina": pagina,
             "produtos": pagina.object_list,

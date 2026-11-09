@@ -423,6 +423,15 @@ class SiteConfig(TimeStampedModel):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
+    def save(self, *args, **kwargs):
+        # logo nova: corta a sobra transparente em volta da arte
+        from .midia import aparar_margens
+
+        for campo in (self.logo, self.logo_claro):
+            if campo and not getattr(campo, "_committed", True):
+                aparar_margens(campo)
+        super().save(*args, **kwargs)
+
     @property
     def texto_rodape(self):
         return self.rodape_sobre or self.descricao

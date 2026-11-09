@@ -120,10 +120,14 @@ class SilvinhaTests(TestCase):
         self.assertEqual(r.status_code, 429)
 
     # --------------------------------------------------------------- widget
-    def test_widget_aparece_na_home_e_no_produto_mas_nao_no_catalogo(self):
+    def test_widget_aparece_na_home_no_produto_e_na_busca(self):
+        # desde 09/11/2026 ela também está no catálogo e nos resultados da busca
         self.assertContains(self.client.get("/"), 'id="silvinha"')
         self.assertContains(self.client.get(self.racao.get_absolute_url()), 'data-produto="%s"' % self.racao.slug)
-        self.assertNotContains(self.client.get("/catalogo/"), 'id="silvinha"')
+        self.assertContains(self.client.get("/catalogo/"), 'id="silvinha"')
+        busca = self.client.get("/busca/", {"q": "ração"})
+        self.assertContains(busca, 'id="silvinha"')
+        self.assertContains(busca, "data-silvinha-perguntar")
 
     def test_widget_some_quando_desligada(self):
         config = SiteConfig.load()

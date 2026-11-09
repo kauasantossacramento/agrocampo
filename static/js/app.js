@@ -1278,10 +1278,25 @@
     if (!input || !painel) return;
     let timer = null, ultimo = '', ativo = -1, controlador = null;
 
+    // a Silvinha no fim das sugestões: abre a conversa com a busca como
+    // pergunta (assistente.js); onde ela não está, o link leva à busca com
+    // ?silvinha=1 e a conversa abre lá
+    function itemSilvinha(termo, achou) {
+      if (!form.dataset.silvinhaNome || !termo || termo.length < 2) return '';
+      const pergunta = achou ? 'Estou procurando ' + termo + '. Qual você me indica?'
+        : 'Procurei “' + termo + '” e não achei. Vocês têm algo parecido?';
+      return '<a class="sugestoes__silvinha" href="' + esc(form.action) + '?q=' + encodeURIComponent(termo) + '&silvinha=1"'
+        + ' data-silvinha-perguntar="' + esc(pergunta) + '">'
+        + '<img src="' + esc(form.dataset.silvinhaImg) + '" alt="">'
+        + '<span><strong>Perguntar à ' + esc(form.dataset.silvinhaNome) + '</strong>'
+        + '<span>sobre “' + esc(termo) + '”</span></span></a>';
+    }
+
     function render(d) {
       if (!d.grupos || !d.grupos.length) {
         if (d.termo && d.termo.length >= 2) {
-          painel.innerHTML = '<div class="sugestoes__vazio">Nada para “' + esc(d.termo) + '”. Tente outra palavra.</div>';
+          painel.innerHTML = '<div class="sugestoes__vazio">Nada para “' + esc(d.termo) + '”. Tente outra palavra.</div>'
+            + itemSilvinha(d.termo, false);
           abrir();
         } else fechar();
         return;
@@ -1306,6 +1321,7 @@
         });
       });
       if (d.ver_todos) html += '<a class="sugestoes__todos" href="' + esc(d.ver_todos) + '">Ver todos os resultados para “' + esc(d.termo) + '” →</a>';
+      html += itemSilvinha(d.termo, true);
       painel.innerHTML = html;
       ativo = -1;
       abrir();

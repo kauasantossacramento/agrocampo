@@ -293,3 +293,44 @@ def agendar_processamento(banner_id: int, com_video: bool = True) -> None:
     threading.Thread(
         target=trabalho, daemon=True, name=f"midia-banner-{banner_id}",
     ).start()
+
+
+def aparar_margens(campo) -> bool:
+    """Corta a sobra transparente em volta de uma logo enviada.
+
+    Logos exportadas de editor costumam vir num quadrado com a arte no meio:
+    a da AgroCampo (09/11/2026) tinha 1254x1254 com o desenho só na faixa do
+    meio, e a 52px de altura no celular a arte ficava com 27px. A altura que
+    o lojista escolhe passa a valer para o desenho, não para o vazio.
+    Devolve True se trocou o arquivo do campo.
+    """
+    from io import BytesIO
+
+    from PIL import Image
+
+    if not campo:
+        return False
+    try:
+        campo.open("rb")
+        imagem = Image.open(campo)
+        imagem.load()
+    except Exception:  # arquivo que o Pillow não lê (svg, corrompido): fica como veio
+        return False
+    if imagem.mode not in ("RGBA", "LA", "P"):
+        return False
+    imagem = imagem.convert("RGBA")
+    caixa = imagem.getchannel("A").point(lambda v: 255 if v > 10 else 0).getbbox()
+    if not caixa:
+        return False
+    largura, altura = imagem.size
+    folga = max(2, round(max(largura, altura) * 0.01))
+    caixa = (max(0, caixa[0] - folga), max(0, caixa[1] - folga),
+             min(largura, caixa[2] + folga), min(altura, caixa[3] + folga))
+    # só vale a pena se sobra mais de 8% em algum sentido
+    if (caixa[2] - caixa[0]) > largura * 0.92 and (caixa[3] - caixa[1]) > altura * 0.92:
+        return False
+    saida = BytesIO()
+    imagem.crop(caixa).save(saida, "PNG", optimize=True)
+    nome = Path(campo.name).stem + "-aparada.png"
+    campo.save(nome, ContentFile(saida.getvalue()), save=False)
+    return True

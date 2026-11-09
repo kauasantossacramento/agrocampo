@@ -215,9 +215,13 @@
     document.body.classList.remove('silvinha-aberta');
   }
   botao.addEventListener('click', () => janela.hidden ? abrir() : fecharJanela());
-  // pointerdown, e não click: no celular o primeiro toque fechava o teclado,
-  // a folha mudava de altura e o click caía fora do X — "não fechava"
-  fechar.addEventListener('pointerdown', (e) => { e.preventDefault(); fecharJanela(); });
+  // No toque, fecha no touchend e cancela o click que viria depois.
+  // Histórico: só com click, o primeiro toque fechava o teclado, a folha
+  // mudava de altura e o click caía fora do X. Com pointerdown a janela sumia
+  // antes de o dedo subir e o click "atravessava" para o que estava embaixo
+  // (um produto, um link) — parecia que o X falhava ou abria outra página.
+  // O touchend sempre vai para o elemento onde o toque começou.
+  fechar.addEventListener('touchend', (e) => { e.preventDefault(); fecharJanela(); }, { passive: false });
   fechar.addEventListener('click', fecharJanela);
   // no celular a loja fica escurecida atrás da folha: tocar nela fecha
   document.addEventListener('click', (e) => {
@@ -285,6 +289,32 @@
       posicionar();
       window.addEventListener('resize', posicionar);
     }
+  }
+
+  /* ------------------ perguntar de fora da janela (busca, sugestões)
+     Qualquer link com data-silvinha-perguntar abre a conversa e já envia a
+     pergunta. Sem JS (ou sem a Silvinha na página) o link leva à busca com
+     ?silvinha=1, e a conversa abre aqui ao carregar. */
+  function perguntar(texto) {
+    abrir();
+    campo.value = texto;
+    if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', { cancelable: true }));
+  }
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest && e.target.closest('[data-silvinha-perguntar]');
+    if (!link) return;
+    e.preventDefault();
+    const painel = link.closest('[data-sugestoes-painel]');
+    if (painel) painel.hidden = true;
+    perguntar(link.dataset.silvinhaPerguntar);
+  });
+  const pedido = new URLSearchParams(location.search);
+  if (pedido.get('silvinha') && pedido.get('q')) {
+    const termo = pedido.get('q').trim();
+    pedido.delete('silvinha');
+    history.replaceState(null, '', location.pathname + (pedido.toString() ? '?' + pedido : '') + location.hash);
+    // depois do listener de envio existir
+    setTimeout(() => perguntar('Estou procurando ' + termo + '. Qual você me indica?'), 0);
   }
 
   let ocupado = false;

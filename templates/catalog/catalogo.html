@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ titulo }} — {{ site.nome_loja }}{% endblock %}
 
@@ -134,6 +135,20 @@
         </form>
       </div>
 
+      {% if busca and produtos and site.assistente_ativo %}
+        {# a Silvinha nos resultados: abre a conversa já com a busca como pergunta #}
+        <div class="busca-silvinha">
+          <img src="{% static 'img/silvinha/avatar.webp' %}" alt="" class="busca-silvinha__img">
+          <p class="busca-silvinha__texto">
+            <strong>Ficou em dúvida sobre “{{ busca }}”?</strong>
+            <span>A {{ site.assistente_nome }} conhece cada produto e ajuda você a escolher.</span>
+          </p>
+          <a class="btn btn--primary btn--sm busca-silvinha__btn"
+             href="?q={{ busca|urlencode }}&silvinha=1"
+             data-silvinha-perguntar="Estou procurando {{ busca }}. Qual você me indica?">Perguntar à {{ site.assistente_nome }}</a>
+        </div>
+      {% endif %}
+
       {% if produtos %}
         <div class="grid grid--4" data-stagger>
           {% for produto in produtos %}{% include 'partials/product_card.html' %}{% endfor %}
@@ -162,7 +177,11 @@
         {% endif %}
       {% else %}
         <div class="empty card">
-          <div class="empty__icon">🔍</div>
+          {% if busca and site.assistente_ativo %}
+            <img src="{% static 'img/silvinha/pensando.webp' %}" alt="" class="busca-silvinha__vazio">
+          {% else %}
+            <div class="empty__icon">🔍</div>
+          {% endif %}
           <p class="empty__title">Nada por aqui ainda</p>
           <p class="small">
             {% if categoria_atual %}Esta categoria ainda não tem produtos cadastrados.
@@ -170,7 +189,16 @@
             {% else %}Nenhum produto com esses filtros.{% endif %}
             {% if total_catalogo %}O catálogo tem {{ total_catalogo }} produto{{ total_catalogo|pluralize }} esperando por você.{% endif %}
           </p>
-          <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver todos os produtos</a>
+          {% if busca and site.assistente_ativo %}
+            <p class="small" style="margin-top:var(--s-3)">Conte para a {{ site.assistente_nome }} o que você precisa: ela procura com você.</p>
+            <div class="row" style="justify-content:center;gap:var(--s-3);margin-top:var(--s-5);flex-wrap:wrap">
+              <a href="?q={{ busca|urlencode }}&silvinha=1" class="btn btn--primary"
+                 data-silvinha-perguntar="Procurei “{{ busca }}” e não achei. Vocês têm algo parecido?">Perguntar à {{ site.assistente_nome }}</a>
+              <a href="{% url 'catalog:catalogo' %}" class="btn btn--ghost">Ver todos os produtos</a>
+            </div>
+          {% else %}
+            <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver todos os produtos</a>
+          {% endif %}
         </div>
       {% endif %}
     </div>

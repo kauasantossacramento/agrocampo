@@ -2554,3 +2554,28 @@ class EsteticaDeNovembroTests(TestCase):
         html = self._home()
         self.assertIn("data-promo-modal", html)
         self.assertIn("Promoção de sexta", html)
+
+
+class LogoAparadaTests(TestCase):
+    def test_logo_quadrada_perde_a_sobra_transparente(self):
+        import io
+        import tempfile
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        from PIL import Image
+
+        from .models import SiteConfig
+
+        img = Image.new("RGBA", (400, 400), (0, 0, 0, 0))
+        img.paste((200, 0, 0, 255), (20, 150, 380, 250))
+        buf = io.BytesIO(); img.save(buf, "PNG")
+        with tempfile.TemporaryDirectory() as pasta, override_settings(MEDIA_ROOT=pasta):
+            config = SiteConfig.load()
+            config.logo = SimpleUploadedFile("logo.png", buf.getvalue(), content_type="image/png")
+            config.save()
+            config.refresh_from_db()
+            with config.logo.open("rb") as f:
+                largura, altura = Image.open(f).size
+        self.assertLess(altura, 120)
+        self.assertGreater(largura, 350)
