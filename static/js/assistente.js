@@ -180,7 +180,13 @@
   function adicionar(papel, texto, pendente) {
     const el = document.createElement('div');
     el.className = 'silvinha__msg ' + (papel === 'usuario' ? 'silvinha__msg--eu' : 'silvinha__msg--ela');
-    if (pendente) { el.classList.add('is-pensando'); el.innerHTML = '<span></span><span></span><span></span>'; }
+    if (pendente) {
+      el.classList.add('is-pensando');
+      // a Silvinha pensando ao lado dos pontinhos enquanto a resposta vem
+      const img = raiz.dataset.imgPensando
+        ? '<img class="silvinha__pensando" src="' + raiz.dataset.imgPensando + '" alt="">' : '';
+      el.innerHTML = img + '<span></span><span></span><span></span>';
+    }
     else el.innerHTML = render(texto);
     lista.appendChild(el);
     lista.scrollTop = lista.scrollHeight;
@@ -192,6 +198,7 @@
 
   const celular = window.matchMedia('(max-width: 620px)');
   function abrir() {
+    esconderEspia(false);
     janela.hidden = false;
     botao.setAttribute('aria-expanded', 'true');
     raiz.classList.add('is-aberta');
@@ -214,6 +221,70 @@
     if (celular.matches && !janela.hidden && e.target === document.body) fecharJanela();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !janela.hidden) fecharJanela(); });
+
+  /* ------------------------------- ela sobe da borda de baixo da tela
+     Uma vez por dia por visitante; quem já abriu a conversa hoje não vê. */
+  const espia = raiz.querySelector('[data-silvinha-espia]');
+  const hoje = new Date().toISOString().slice(0, 10);
+  const lerDia = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const marcarDia = (k) => { try { localStorage.setItem(k, hoje); } catch (e) { /* aba privada */ } };
+  function esconderEspia(marcar) {
+    if (!espia || espia.hidden) return;
+    espia.classList.remove('is-visivel');
+    setTimeout(() => { espia.hidden = true; }, 350);
+    if (marcar !== false) marcarDia('silvinha_espiou');
+  }
+  // as duas Silvinhas juntas na tela é Silvinha demais: a que sobe da borda
+  // espera enquanto a que aponta para a vitrine estiver à vista
+  const apontaVisivel = () => {
+    const a = document.querySelector('.silvinha-aponta');
+    if (!a) return false;
+    const r = a.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight;
+  };
+  if (espia && lerDia('silvinha_espiou') !== hoje) {
+    const segundos = Math.max(2, Number(espia.dataset.segundos) || 8);
+    const tentarSubir = () => {
+      if (!janela.hidden) return;
+      if (apontaVisivel()) { setTimeout(tentarSubir, 3000); return; }
+      espia.hidden = false;
+      requestAnimationFrame(() => espia.classList.add('is-visivel'));
+      marcarDia('silvinha_espiou');
+    };
+    setTimeout(tentarSubir, segundos * 1000);
+    espia.querySelectorAll('[data-silvinha-espia-abrir]').forEach((b) => b.addEventListener('click', abrir));
+    espia.querySelector('[data-silvinha-espia-fechar]').addEventListener('click', () => esconderEspia());
+  }
+
+  /* ---------------------- ela aponta para a primeira vitrine (página inicial)
+     A primeira seção com cards de produto é a que ela indica — se o lojista
+     reordenar a home, ela acompanha sem configurar nada. */
+  if (raiz.dataset.apontar && lerDia('silvinha_apontou') !== hoje) {
+    const card = document.querySelector('main .section .product');
+    const secao = card && card.closest('.section');
+    const grade = card && card.parentElement;
+    if (secao && grade) {
+      const caixa = document.createElement('div');
+      caixa.className = 'silvinha-aponta';
+      const balao = document.createElement('button');
+      balao.type = 'button';
+      balao.className = 'silvinha-aponta__balao';
+      balao.textContent = raiz.dataset.apontar;
+      balao.addEventListener('click', () => { caixa.remove(); marcarDia('silvinha_apontou'); });
+      const img = document.createElement('img');
+      img.src = raiz.dataset.imgApontar;
+      img.alt = '';
+      img.className = 'silvinha-aponta__img';
+      caixa.append(balao, img);
+      secao.classList.add('tem-silvinha');
+      secao.prepend(caixa);
+      // apoiada na fileira de produtos, não no topo da seção: a linha reta do
+      // tronco encosta no topo dos cards e o dedo cai sobre eles
+      const posicionar = () => { caixa.style.top = grade.offsetTop + 'px'; };
+      posicionar();
+      window.addEventListener('resize', posicionar);
+    }
+  }
 
   let ocupado = false;
   form.addEventListener('submit', async (e) => {

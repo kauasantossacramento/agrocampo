@@ -93,6 +93,14 @@ def _foto_para_envio(caminho: Path) -> tuple[str, bytes, str]:
     return (caminho.stem + ".png", _png(imagem), "image/png")
 
 
+def referencias_extras() -> list[Path]:
+    """Exemplos de estilo e a logo da loja, se o escopo pedir."""
+    extras = [PASTA / c for c in ESCOPO.get("referencias_estilo", [])]
+    if ESCOPO.get("logo"):
+        extras.append((PASTA / ESCOPO["logo"]).resolve())
+    return [e for e in extras if e.exists()]
+
+
 def fotos_da_proprietaria() -> list[Path]:
     if not REFERENCIAS.exists():
         return []
@@ -115,6 +123,13 @@ def montar_prompt(pedido: str, ajuste: str = "", com_fotos: bool = True,
         # só para testar o motor antes de as fotos chegarem
         partes.append("The character is a friendly Brazilian woman in her thirties "
                       "(placeholder for engine testing only).")
+    if ESCOPO.get("referencias_estilo"):
+        partes.append("After the photos come STYLE EXAMPLES: match their rendering style, "
+                      "proportions, eyes and uniform exactly — but the FACE must be the woman "
+                      "from the photos, not the face in the examples.")
+    if ESCOPO.get("logo"):
+        partes.append("Then comes the STORE LOGO: reproduce it faithfully, small, on the left "
+                      "chest of the shirt — same drawing, colours and lettering.")
     if com_folha:
         partes.append("The LAST reference image is the approved character sheet: "
                       "keep exactly the same face, hair, art style and uniform as in it.")
@@ -241,7 +256,9 @@ def avaliar(imagem: Image.Image, criterios: str, fotos: list[Path],
         "nariz, boca, cabelo, tom de pele), pose, consistência com a folha e estilo — "
         "uma imagem que parece FOTO quando o pedido é ilustração leva nota baixa de estilo. Marque "
         "maos_ok=false se houver dedo a mais/a menos ou mão deformada, e sem_texto=false "
-        "se houver qualquer letra, logo ou balão desenhado. Em correcao_em_ingles, escreva "
+        "se houver qualquer letra ou balão desenhado ALÉM da logo da loja no peito da camisa — "
+        "a logo é pedida e tem o lettering \"VETERINÁRIA AGROCAMPO\" com um cavalo vermelho: "
+        "esse texto NÃO conta. Em correcao_em_ingles, escreva "
         "o que o gerador deve mudar para acertar."
     )}]
     # rótulo antes de cada imagem: sem fotos, o avaliador tomava a folha de
@@ -299,7 +316,9 @@ def produzir(nome: str, pedido: str, criterios: str, tamanho: str, checagens: di
              tentativas: int, qualidade: str, usar_folha: bool) -> Path | None:
     fotos = fotos_da_proprietaria()
     folha = SAIDA / "referencia.png"
-    referencias = list(fotos)
+    # ordem combinada com o prompt: fotos (rosto) → exemplos de estilo → logo
+    # → folha aprovada por último
+    referencias = list(fotos) + referencias_extras()
     if usar_folha and folha.exists():
         referencias.append(folha)
     pasta = SAIDA / nome

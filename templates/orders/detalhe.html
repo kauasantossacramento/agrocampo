@@ -96,9 +96,8 @@
   {# ================================================= PEDIDO APROVADO #}
   {% elif pedido.status == 'aprovado' or pedido.status == 'em_separacao' %}
     <div class="card card--pad center" data-reveal="scale">
-      <div style="width:64px;height:64px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;margin:0 auto var(--s-4)">
-        <svg width="30" height="30" class="check-anim"><use href="#i-check"></use></svg>
-      </div>
+      {% load static %}
+      <img src="{% static 'img/silvinha/comemorando.webp' %}" alt="" class="silvinha-comemora" loading="lazy">
       <h2 style="font-size:var(--fs-xl)">Pagamento confirmado!</h2>
       <p class="lead" style="max-width:440px;margin:var(--s-3) auto var(--s-5)">
         Recebemos o seu pagamento e já estamos separando os produtos do seu pedido.

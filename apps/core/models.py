@@ -291,6 +291,28 @@ class SiteConfig(TimeStampedModel):
     gemini_modelo = models.CharField(
         "Gemini · modelo", max_length=60, default="gemini-3.6-flash", blank=True,
     )
+    # Aparições da Silvinha pela loja. As imagens ficam em static/img/silvinha/
+    # (geradas por tools/silvinha); aqui o lojista liga, desliga e escreve
+    # o que ela diz no balão — texto em imagem gerada não dá para trocar.
+    silvinha_espiar = models.BooleanField(
+        "Silvinha sobe da borda da tela", default=True,
+        help_text="Alguns segundos depois de a pessoa chegar, ela aparece com um balão. Uma vez por dia.",
+    )
+    silvinha_frase_espiar = models.CharField(
+        "frase de quando ela sobe", max_length=90, blank=True,
+        default="Oi! Quer ajuda para escolher?",
+    )
+    silvinha_espiar_segundos = models.PositiveSmallIntegerField(
+        "esperar antes de subir (segundos)", default=8,
+    )
+    silvinha_apontar = models.BooleanField(
+        "Silvinha aponta para a primeira vitrine", default=True,
+        help_text="Na página inicial, ela se debruça sobre a primeira linha de produtos.",
+    )
+    silvinha_frase_apontar = models.CharField(
+        "frase de quando ela aponta", max_length=90, blank=True,
+        default="Os mais vendidos estão aqui!",
+    )
 
     # --------------------------- nomes e vitrines das linhas (histórico)
     # As linhas viraram cadastro (Painel › Conteúdo › Linhas de produto):

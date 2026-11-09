@@ -384,6 +384,8 @@ class AssistenteForm(_EstilizadoMixin, forms.ModelForm):
             "assistente_ativo", "assistente_nome", "assistente_imagem",
             "assistente_boas_vindas", "assistente_instrucoes",
             "gemini_api_key", "gemini_modelo",
+            "silvinha_espiar", "silvinha_frase_espiar", "silvinha_espiar_segundos",
+            "silvinha_apontar", "silvinha_frase_apontar",
         )
         widgets = {
             "assistente_instrucoes": forms.Textarea(attrs={

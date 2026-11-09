@@ -169,7 +169,8 @@
     </div>
   {% else %}
     <div class="empty card">
-      <div class="empty__icon">🛒</div>
+      {% load static %}
+      <img src="{% static 'img/silvinha/apontando-lado.webp' %}" alt="" class="silvinha-carrinho" loading="lazy">
       <p class="empty__title">Seu carrinho está vazio</p>
       <p class="small">Que tal começar pelos nossos mais vendidos?</p>
       <a href="{% url 'catalog:catalogo' %}" class="btn btn--primary" style="margin-top:var(--s-5)">Ver catálogo</a>

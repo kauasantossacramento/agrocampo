@@ -3,8 +3,14 @@
   (quem inclui passa `mostrar_assistente`), e só se o lojista ligou.
   A foto da personagem vem do painel; sem foto, a inicial do nome.
 {% endcomment %}
+{% load static %}
 {% if site.assistente_ativo and mostrar_assistente %}
 <div class="silvinha" id="silvinha"
+     data-img-pensando="{% static 'img/silvinha/pensando.webp' %}"
+     {% if site.silvinha_apontar and request.path == '/' %}
+       data-apontar="{{ site.silvinha_frase_apontar }}"
+       data-img-apontar="{% static 'img/silvinha/olhando-de-cima.webp' %}"
+     {% endif %}
      data-url="{% url 'assistant:conversar' %}"
      data-acao="{% url 'assistant:acao' %}"
      data-logado="{% if user.is_authenticated %}1{% else %}0{% endif %}"
@@ -14,11 +20,9 @@
   <button type="button" class="silvinha__botao" data-silvinha-abrir
           aria-expanded="false" aria-controls="silvinha-janela"
           aria-label="Conversar com {{ site.assistente_nome }}">
-    {% if site.assistente_imagem %}
-      <img src="{{ site.assistente_imagem.url }}" alt="" class="silvinha__avatar">
-    {% else %}
-      <span class="silvinha__avatar silvinha__avatar--inicial">{{ site.assistente_nome|first|upper }}</span>
-    {% endif %}
+    {# a foto do painel tem a palavra final; sem ela, a Silvinha desenhada #}
+    <img src="{% if site.assistente_imagem %}{{ site.assistente_imagem.url }}{% else %}{% static 'img/silvinha/avatar.webp' %}{% endif %}"
+         alt="" class="silvinha__avatar">
     <span class="silvinha__chamada">
       <strong>{{ site.assistente_nome }}</strong>
       <span>Posso ajudar?</span>
@@ -28,11 +32,8 @@
   <section class="silvinha__janela" id="silvinha-janela" hidden
            role="dialog" aria-label="Conversa com {{ site.assistente_nome }}">
     <header class="silvinha__topo">
-      {% if site.assistente_imagem %}
-        <img src="{{ site.assistente_imagem.url }}" alt="" class="silvinha__avatar silvinha__avatar--sm">
-      {% else %}
-        <span class="silvinha__avatar silvinha__avatar--sm silvinha__avatar--inicial">{{ site.assistente_nome|first|upper }}</span>
-      {% endif %}
+      <img src="{% if site.assistente_imagem %}{{ site.assistente_imagem.url }}{% else %}{% static 'img/silvinha/avatar.webp' %}{% endif %}"
+           alt="" class="silvinha__avatar silvinha__avatar--sm">
       <div>
         <strong>{{ site.assistente_nome }}</strong>
         <span class="xs">Assistente virtual da {{ site.nome_loja }}</span>
@@ -43,7 +44,10 @@
     </header>
 
     <div class="silvinha__mensagens" data-silvinha-mensagens aria-live="polite">
-      <div class="silvinha__msg silvinha__msg--ela">{{ site.assistente_boas_vindas }}</div>
+      <div class="silvinha__ola">
+        <img src="{% static 'img/silvinha/acenando.webp' %}" alt="" loading="lazy">
+        <div class="silvinha__msg silvinha__msg--ela">{{ site.assistente_boas_vindas }}</div>
+      </div>
     </div>
 
     <form class="silvinha__form" data-silvinha-form>
@@ -57,5 +61,26 @@
       Respostas automáticas — para receita ou sintoma, procure um veterinário.
     </p>
   </section>
+
+  {% if site.silvinha_espiar %}
+    {% comment %}
+      Ela sobe da borda de baixo da tela com um balão, alguns segundos depois
+      de a pessoa chegar. Uma vez por dia (assistente.js guarda a data), e
+      some quando a conversa abre. Tocar nela ou no balão abre a conversa.
+    {% endcomment %}
+    <div class="silvinha-espia" data-silvinha-espia hidden
+         data-segundos="{{ site.silvinha_espiar_segundos }}">
+      <div class="silvinha-espia__fala">
+        <button type="button" class="silvinha-espia__balao" data-silvinha-espia-abrir>
+          {{ site.silvinha_frase_espiar|default:"Oi! Quer ajuda para escolher?" }}
+        </button>
+        <button type="button" class="silvinha-espia__fechar" data-silvinha-espia-fechar aria-label="Agora não">
+          <svg width="12" height="12" aria-hidden="true"><use href="#i-x"></use></svg>
+        </button>
+      </div>
+      <img src="{% static 'img/silvinha/saindo-de-baixo.webp' %}" alt="{{ site.assistente_nome }}"
+           class="silvinha-espia__img" data-silvinha-espia-abrir>
+    </div>
+  {% endif %}
 </div>
 {% endif %}

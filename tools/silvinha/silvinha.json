@@ -7,11 +7,11 @@
     "_avaliador": "Olha cada imagem gerada ao lado das fotos de referência e da folha de personagem, e diz se ela segue o escopo. O gpt-5.4-mini aprovava como ilustração uma imagem com cara de foto."
   },
   "personagem": {
-    "identidade": "The character is based on the real woman shown in the reference photos, who is the store owner and authorised this use. Preserve her identity faithfully: face shape, eyes and eye colour, eyebrows, nose, lips and smile, skin tone, hairline, hair colour, length and texture. She must be instantly recognisable as the same person.",
-    "estilo": "High-end 3D ANIMATED-FILM CHARACTER in the style of a Pixar feature, with realism: a stylised 3D render, NOT a photograph and NOT a flat drawing. Subsurface-scattered skin with soft natural texture, slightly enlarged expressive eyes with catchlights, gently simplified and appealing proportions (no caricature), groomed hair rendered as clean 3D strands, soft cinematic studio lighting with warm key and gentle rim light. Keep her likeness clearly recognisable: same face shape, nose, smile and teeth, skin tone, freckles hint, long straight black hair parted to the side.",
-    "roupa": "She wears the store uniform: a short-sleeved polo shirt in the store red (#D62B20) with a cream (#FFF1E4) collar, and dark jeans. Small simple earrings. No text, no letters, no logos anywhere on the clothes or in the image.",
-    "regras": "Single character only. Transparent background, nothing behind her: no floor, no shadow on the ground, no props unless the pose asks. Anatomically correct hands with five fingers. No text, no speech bubbles, no watermark, no frame.",
-    "_estilo": "Escolha do lojista em 09/11/2026: 3D estilo Pixar, com realismo. Substituiu 'ilustração semi-realista' — com as fotos reais o gerador saía quase foto."
+    "identidade": "The character is based on the real woman shown in the reference photos, who is the store owner and authorised this use. Preserve her identity faithfully: face shape, eyes and eye colour, eyebrows, nose, lips and smile, skin tone, hairline, hair colour, length and texture. She must be instantly recognisable as the same person. Her skin is a deep, muted medium-brown (around RGB 177,121,95 on the cheeks: not orange, not golden), and her face is a long oval with a longer lower third and chin, high cheekbones and natural-size almond eyes.",
+    "estilo": "Polished REALISTIC 3D CHARACTER RENDER exactly like the approved character sheet (the last reference image): lifelike proportions, smooth realistic skin with a hint of freckles, very glossy long straight black hair, soft bright studio lighting, clean premium brand-mascot finish.",
+    "roupa": "She wears the store uniform exactly as in the approved character sheet: a WHITE short-sleeved polo shirt with a RED collar and red sleeve cuffs, the AgroCampo store logo on the left chest, black trousers with a belt when visible. Small gold earrings.",
+    "regras": "Single character only. Transparent background, nothing behind her: no floor, no shadow on the ground, no props unless the pose asks. Anatomically correct hands with five fingers. The ONLY text allowed is the store logo on the shirt: no other text, no speech bubbles, no watermark, no frame.",
+    "_estilo": "Escolha do lojista em 09/11/2026: a tentativa 1 da folha no estilo do exemplo (3D realista polido, polo branca com gola e punhos vermelhos e a logo)."
   },
   "folha_de_personagem": {
     "nome": "referencia",
@@ -58,12 +58,11 @@
       "uso": "Ela aparece no alto, olha para baixo e aponta para a linha de produtos logo abaixo (por padrão, a primeira vitrine da home).",
       "tamanho": "1536x1024",
       "balao": "esquerda",
-      "prompt": "Seen from slightly above: she leans over the top edge of the image looking DOWN, with her head, shoulders and one arm coming down from the top edge (her body is cut off by the top edge). With her index finger she points straight down towards something below the bottom of the image, eyes following her finger, interested and helpful expression. The bottom half and the left third are empty (transparent).",
-      "criterios": "Vem da borda superior (corpo cortado no topo), olhando para baixo e apontando para baixo com o indicador; parte de baixo vazia.",
+      "prompt": "Seen from above: she leans DOWN over the top edge of the image, as if peeking over the top of a phone screen. Her head, hair, shoulders and ONE arm come into the image FROM the top edge; her body continues beyond the top edge and is cut off cleanly by it — her shoulders and upper back touch the top border, nothing of her torso ends inside the image (no floating torso, no rounded cut-out body). Her other hand rests on the top edge. With the index finger of the extended arm she points straight DOWN at something below the image; her eyes follow her finger, warm helpful smile. The whole bottom half and the left third are empty (transparent).",
+      "criterios": "Ela se debruça pela borda superior: ombros e costas encostados no topo e cortados por ele (nenhum tronco terminando dentro da imagem), olhando e apontando para baixo; metade de baixo vazia.",
       "checagens": {
         "borda_ocupada": "superior",
-        "borda_vazia": "inferior",
-        "lado_vazio": "esquerda"
+        "borda_vazia": "inferior"
       }
     },
     {
@@ -105,5 +104,6 @@
     "_nota_minima_estilo": "O estilo tem régua própria: semi-realista legítimo é polido, e o avaliador tendia a chamar de foto qualquer pintura bem acabada. 6 separa pintura de foto."
   },
   "fotos_por_geracao": 3,
-  "_fotos_por_geracao": "As 3 primeiras de referencias/ (1-estudio, 2-selfie-rosa, 3-selfie-carro): os melhores rostos."
+  "_fotos_por_geracao": "As 3 primeiras de referencias/ (1-estudio, 2-selfie-rosa, 3-selfie-carro): os melhores rostos.",
+  "logo": "../../static/img/logo-agrocampo.png"
 }
