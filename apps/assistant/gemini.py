@@ -53,6 +53,24 @@ def gerar_resposta(*, chave: str, modelo: str, instrucoes: str, historico: list[
         ],
     }
 
+    # uma segunda tentativa quando a falha é passageira (tempo esgotado, 429,
+    # 5xx ou resposta vazia): em 09/11/2026 uma pergunta falhou e a mesma, logo
+    # depois, saiu certa — o cliente não deve ver "estou com dificuldade" por isso
+    ultimo = None
+    for tentativa in range(2):
+        try:
+            return _chamar(chave=chave, modelo=modelo, corpo=corpo)
+        except _Passageiro as exc:
+            ultimo = exc
+            log.info("Gemini, tentativa %s falhou: %s", tentativa + 1, exc)
+    raise GeminiErro(str(ultimo))
+
+
+class _Passageiro(GeminiErro):
+    """Falha que costuma passar sozinha."""
+
+
+def _chamar(*, chave: str, modelo: str, corpo: dict) -> str:
     try:
         resposta = requests.post(
             f"{BASE}/{modelo}:generateContent",
@@ -61,7 +79,7 @@ def gerar_resposta(*, chave: str, modelo: str, instrucoes: str, historico: list[
             timeout=TIMEOUT,
         )
     except requests.RequestException as exc:
-        raise GeminiErro(f"Sem resposta do Gemini: {exc}") from exc
+        raise _Passageiro(f"Sem resposta do Gemini: {exc}") from exc
 
     if resposta.status_code != 200:
         try:
@@ -69,7 +87,8 @@ def gerar_resposta(*, chave: str, modelo: str, instrucoes: str, historico: list[
         except ValueError:
             detalhe = resposta.text[:200]
         log.warning("Gemini %s: %s", resposta.status_code, detalhe)
-        raise GeminiErro(f"Gemini respondeu {resposta.status_code}: {detalhe}")
+        erro = _Passageiro if resposta.status_code == 429 or resposta.status_code >= 500 else GeminiErro
+        raise erro(f"Gemini respondeu {resposta.status_code}: {detalhe}")
 
     dados = resposta.json()
     try:
@@ -81,5 +100,5 @@ def gerar_resposta(*, chave: str, modelo: str, instrucoes: str, historico: list[
         raise GeminiErro(f"Resposta vazia do Gemini{f' ({motivo})' if motivo else ''}.")
 
     if not texto:
-        raise GeminiErro("Resposta vazia do Gemini.")
+        raise _Passageiro("Resposta vazia do Gemini.")
     return texto
