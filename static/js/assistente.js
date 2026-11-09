@@ -225,21 +225,35 @@
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !janela.hidden) fecharJanela(); });
 
-  /* --------------------------------- balão de convite ao lado dela
-     Aparece alguns segundos depois de a pessoa chegar, fica 10 s e some;
-     passar o cursor (ou focar) mostra de novo — isso é do CSS. */
+  /* --------------------------------- balão de dúvida ao lado dela
+     Aparece alguns segundos depois de a pessoa começar a rolar a página (quem
+     rola está olhando a loja, não só de passagem) e fica até ela fechar no X
+     ou abrir a conversa. Fechou no X: não volta mais naquele dia. */
   const hoje = new Date().toISOString().slice(0, 10);
   const lerDia = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const marcarDia = (k) => { try { localStorage.setItem(k, hoje); } catch (e) { /* aba privada */ } };
   const convite = raiz.querySelector('[data-silvinha-convite]');
-  function esconderConvite() { raiz.classList.remove('mostra-convite'); }
-  if (convite) {
+  function esconderConvite() {
+    if (!convite || convite.hidden) return;
+    raiz.classList.remove('mostra-convite');
+    setTimeout(() => { convite.hidden = true; }, 300);
+  }
+  if (convite && lerDia('silvinha_convite_fechado') !== hoje) {
     const segundos = Math.max(1, Number(convite.dataset.segundos) || 4);
-    setTimeout(() => {
-      if (!janela.hidden) return;
-      raiz.classList.add('mostra-convite');
-      setTimeout(esconderConvite, 10000);
-    }, segundos * 1000);
+    const aoRolar = () => {
+      window.removeEventListener('scroll', aoRolar);
+      setTimeout(() => {
+        if (!janela.hidden) return;
+        convite.hidden = false;
+        requestAnimationFrame(() => raiz.classList.add('mostra-convite'));
+      }, segundos * 1000);
+    };
+    window.addEventListener('scroll', aoRolar, { passive: true });
+    convite.querySelector('[data-silvinha-convite-abrir]').addEventListener('click', abrir);
+    convite.querySelector('[data-silvinha-convite-fechar]').addEventListener('click', () => {
+      esconderConvite();
+      marcarDia('silvinha_convite_fechado');
+    });
   }
 
   /* ---------------------- ela aponta para a primeira vitrine (página inicial)

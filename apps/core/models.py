@@ -296,7 +296,7 @@ class SiteConfig(TimeStampedModel):
     # o que ela diz no balão — texto em imagem gerada não dá para trocar.
     silvinha_espiar = models.BooleanField(
         "balão de convite ao lado da Silvinha", default=True,
-        help_text="Alguns segundos depois de a pessoa chegar, o balão aparece ao lado dela por 10 segundos.",
+        help_text="Alguns segundos depois de a pessoa começar a rolar a página, o balão aparece ao lado dela, com um X para fechar.",
     )
     silvinha_frase_espiar = models.CharField(
         "frase do balão de convite", max_length=90, blank=True,

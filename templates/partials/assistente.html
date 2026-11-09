@@ -27,13 +27,19 @@
           aria-expanded="false" aria-controls="silvinha-janela"
           aria-label="Conversar com {{ site.assistente_nome }}: tire suas dúvidas">
     <img src="{% static 'img/silvinha/saindo-de-baixo.webp' %}" alt="" class="silvinha__figura">
-    {% if site.silvinha_espiar %}
-      <span class="silvinha__convite" data-silvinha-convite
-            data-segundos="{{ site.silvinha_espiar_segundos }}">
-        {{ site.silvinha_frase_espiar|default:"Clique em mim para tirar suas dúvidas!" }}
-      </span>
-    {% endif %}
   </button>
+  {% if site.silvinha_espiar %}
+    {# fora do botão para poder ter o próprio X; aparece depois de a pessoa rolar a página #}
+    <div class="silvinha__convite" data-silvinha-convite hidden
+         data-segundos="{{ site.silvinha_espiar_segundos }}">
+      <button type="button" class="silvinha__convite-texto" data-silvinha-convite-abrir>
+        {{ site.silvinha_frase_espiar|default:"Clique em mim para tirar suas dúvidas!" }}
+      </button>
+      <button type="button" class="silvinha__convite-fechar" data-silvinha-convite-fechar aria-label="Fechar aviso">
+        <svg width="12" height="12" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </div>
+  {% endif %}
 
   <section class="silvinha__janela" id="silvinha-janela" hidden
            role="dialog" aria-label="Conversa com {{ site.assistente_nome }}">
