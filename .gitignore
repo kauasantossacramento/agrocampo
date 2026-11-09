@@ -52,3 +52,10 @@ id_ed25519
 *_ed25519
 *_rsa
 !*.pub
+
+# ---- motor de imagens da Silvinha ----
+# a chave da OpenAI, as fotos da proprietária e o que foi gerado não vão para
+# o repositório, que é público
+tools/silvinha/.env
+tools/silvinha/referencias/
+tools/silvinha/saida/

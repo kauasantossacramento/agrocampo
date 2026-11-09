@@ -39,20 +39,33 @@ def _palavras(texto: str) -> list[str]:
 
 
 def produtos_relacionados(pergunta: str, produto_atual=None):
-    """Produtos publicados que batem com as palavras da pergunta."""
-    palavras = _palavras(pergunta)
+    """Produtos publicados que batem com a pergunta, os mais aderentes primeiro.
+
+    Usa a mesma busca do site (sinônimos, plural, sem acento, começo de
+    palavra): antes a Silvinha tinha uma busca própria, mais crua, e numa
+    pergunta sobre "ração para cachorro filhote" recebia ração de galinha —
+    "ração" sozinha casava com tudo. Agora cada palavra vale um ponto, e
+    vence quem casa com mais palavras; palavra que não acha produto nenhum
+    ("entrega", "Valença") simplesmente não pontua.
+    """
+    from django.db.models import Case, IntegerField, Value, When
+
+    from apps.catalog.views import _condicao_de_busca, _palavras_da_busca
+
     qs = Produto.objects.vitrine().select_related("categoria", "marca")
+    palavras = [p for p in _palavras_da_busca(pergunta) if p not in PALAVRAS_IGNORADAS][:8]
+    encontrados = []
     if palavras:
-        filtro = Q()
-        for p in palavras:
-            filtro |= (
-                Q(nome__icontains=p) | Q(resumo__icontains=p)
-                | Q(categoria__nome__icontains=p) | Q(marca__nome__icontains=p)
-                | Q(especies__nome__icontains=p)
+        pontos = Value(0)
+        for palavra in palavras:
+            pontos = pontos + Case(
+                When(_condicao_de_busca(palavra), then=Value(1)),
+                default=Value(0), output_field=IntegerField(),
             )
-        encontrados = list(qs.filter(filtro).distinct().order_by("-vendas")[:MAX_PRODUTOS])
-    else:
-        encontrados = []
+        encontrados = list(
+            qs.annotate(_pontos=pontos).filter(_pontos__gt=0)
+            .order_by("-_pontos", "-prioridade_busca", "-vendas")[:MAX_PRODUTOS]
+        )
     if not encontrados:
         # sem match, manda os mais vendidos: ela precisa de algo para sugerir
         encontrados = list(qs.order_by("-vendas", "-destaque")[:MAX_PRODUTOS])
@@ -108,8 +121,10 @@ def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
         "contexto. Se não souber, diga que não tem essa informação e ofereça o "
         "WhatsApp da loja. Nunca invente estoque, preço ou prazo. Não dê "
         "diagnóstico veterinário: para sintomas, oriente a procurar um veterinário. "
-        "Quando indicar um produto, escreva o link completo dele (começando com http), "
-        "sem markdown de link — o site transforma o link num cartão com foto.",
+        "Quando indicar um produto, diga na frase o nome e o preço dele e escreva "
+        "o link completo (começando com http), sem markdown de link — o site "
+        "transforma o link num cartão com foto. Nunca diga \"qual das opções\" "
+        "sem ter dito antes quais são.",
         "COMPRA PELO CHAT: você consegue iniciar a compra. Quando o cliente disser "
         "que quer comprar/levar/pedir um produto específico que está neste contexto, "
         "confirme o produto e a quantidade (pergunte a quantidade se ele não disse) e, "

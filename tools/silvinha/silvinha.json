@@ -1,0 +1,106 @@
+{
+  "_sobre": "Escopo das imagens da Silvinha. Os prompts vão em inglês, que é a língua em que os modelos de imagem seguem instrução com mais fidelidade; os nomes e as regras ficam em português. Para mudar roupa, estilo ou uma pose, mude aqui e gere de novo — o gerar.py não guarda texto de prompt.",
+  "modelos": {
+    "imagem": "gpt-image-2.6-sunburst",
+    "_imagem": "Da família do gpt-image-2 (images 2.0). O 2.0 e o 2.6-flare recusam fundo transparente, e a Silvinha precisa dele: ela sai de trás da borda da tela e passa por cima dos produtos.",
+    "avaliador": "gpt-5.4",
+    "_avaliador": "Olha cada imagem gerada ao lado das fotos de referência e da folha de personagem, e diz se ela segue o escopo. O gpt-5.4-mini aprovava como ilustração uma imagem com cara de foto."
+  },
+  "personagem": {
+    "identidade": "The character is based on the real woman shown in the reference photos, who is the store owner and authorised this use. Preserve her identity faithfully: face shape, eyes and eye colour, eyebrows, nose, lips and smile, skin tone, hairline, hair colour, length and texture. She must be instantly recognisable as the same person.",
+    "estilo": "Polished semi-realistic DIGITAL ILLUSTRATION, clearly hand-painted and not a photograph: visible soft painterly brushwork, smooth simplified skin without pores, gently stylised features that still keep her likeness, clean confident edges, warm even light, friendly and trustworthy expression — like a premium brand mascot for a pet and farm store. Not a photo, not photorealistic, not a 3D render, not a caricature, not anime, no exaggerated proportions.",
+    "roupa": "She wears the store uniform: a short-sleeved polo shirt in the store red (#D62B20) with a cream (#FFF1E4) collar, and dark jeans. Small simple earrings. No text, no letters, no logos anywhere on the clothes or in the image.",
+    "regras": "Single character only. Transparent background, nothing behind her: no floor, no shadow on the ground, no props unless the pose asks. Anatomically correct hands with five fingers. No text, no speech bubbles, no watermark, no frame."
+  },
+  "folha_de_personagem": {
+    "nome": "referencia",
+    "tamanho": "1024x1536",
+    "prompt": "Character reference portrait: the woman standing, facing the viewer, from the knees up, arms relaxed at her sides, gentle smile, looking straight at the camera. This image will be the visual reference for every other pose, so show the face, hair and uniform clearly and evenly lit."
+  },
+  "poses": [
+    {
+      "nome": "avatar",
+      "uso": "Botão redondo da assistente e cabeçalho da conversa.",
+      "tamanho": "1024x1024",
+      "prompt": "Head and shoulders portrait, centred, warm smile, looking straight at the viewer, slight head tilt. Leave a little transparent margin around the head so it fits inside a circle.",
+      "criterios": "Busto centralizado, olhando para a frente, sorrindo, cabeça inteira dentro da imagem com margem.",
+      "checagens": {
+        "cantos_transparentes": true
+      }
+    },
+    {
+      "nome": "acenando",
+      "uso": "Boas-vindas, com o balão de fala ao lado direito dela.",
+      "tamanho": "1024x1536",
+      "balao": "direita",
+      "prompt": "Waist-up, body turned slightly to her left, waving hello with her raised right hand (palm open, five fingers), cheerful smile, looking at the viewer. Keep the right third of the image completely empty (transparent) — a speech bubble will be placed there by the website.",
+      "criterios": "Meio corpo, acenando com a mão aberta e cinco dedos, sorrindo, terço direito da imagem vazio para o balão.",
+      "checagens": {
+        "cantos_transparentes": true,
+        "lado_vazio": "direita"
+      }
+    },
+    {
+      "nome": "saindo_de_baixo",
+      "uso": "Ela sobe da borda de baixo da tela, de baixo para cima, para puxar conversa.",
+      "tamanho": "1024x1024",
+      "balao": "acima",
+      "prompt": "She is rising up into view from the bottom edge of the image, as if emerging from below the bottom of a phone screen: only her head, shoulders and upper chest are visible, her body is cut off exactly by the bottom edge of the image, both forearms resting on that bottom edge like leaning on a windowsill. She looks up and slightly forward with a curious, playful smile. The top half of the image is empty (transparent) for a speech bubble.",
+      "criterios": "Corpo cortado exatamente na borda inferior, só cabeça, ombros e braços apoiados na borda; olhar para cima/frente; metade de cima vazia.",
+      "checagens": {
+        "borda_ocupada": "inferior",
+        "borda_vazia": "superior"
+      }
+    },
+    {
+      "nome": "olhando_de_cima",
+      "uso": "Ela aparece no alto, olha para baixo e aponta para a linha de produtos logo abaixo (por padrão, a primeira vitrine da home).",
+      "tamanho": "1536x1024",
+      "balao": "esquerda",
+      "prompt": "Seen from slightly above: she leans over the top edge of the image looking DOWN, with her head, shoulders and one arm coming down from the top edge (her body is cut off by the top edge). With her index finger she points straight down towards something below the bottom of the image, eyes following her finger, interested and helpful expression. The bottom half and the left third are empty (transparent).",
+      "criterios": "Vem da borda superior (corpo cortado no topo), olhando para baixo e apontando para baixo com o indicador; parte de baixo vazia.",
+      "checagens": {
+        "borda_ocupada": "superior",
+        "borda_vazia": "inferior",
+        "lado_vazio": "esquerda"
+      }
+    },
+    {
+      "nome": "apontando_lado",
+      "uso": "Indicar uma linha de produtos ou um cartão ao lado dela.",
+      "tamanho": "1024x1536",
+      "balao": "acima",
+      "prompt": "Waist-up, she points with her right index finger to her left (the viewer's right), arm extended, looking in the same direction with an encouraging smile, as if presenting a product shelf next to her.",
+      "criterios": "Meio corpo apontando para o lado direito de quem vê, olhando na mesma direção.",
+      "checagens": {
+        "cantos_transparentes": true
+      }
+    },
+    {
+      "nome": "pensando",
+      "uso": "Enquanto a resposta está sendo escrita.",
+      "tamanho": "1024x1024",
+      "prompt": "Head and shoulders, index finger touching her chin, eyes looking up and to the side, thoughtful little smile, as if looking something up.",
+      "criterios": "Busto, dedo no queixo, olhar para cima, expressão de quem está pensando.",
+      "checagens": {
+        "cantos_transparentes": true
+      }
+    },
+    {
+      "nome": "comemorando",
+      "uso": "Pedido confirmado e pagamento aprovado.",
+      "tamanho": "1024x1536",
+      "prompt": "Waist-up, big genuine smile, giving a thumbs up with her right hand at chest height, celebrating good news with the viewer.",
+      "criterios": "Meio corpo, polegar para cima, sorriso aberto.",
+      "checagens": {
+        "cantos_transparentes": true
+      }
+    }
+  ],
+  "aprovacao": {
+    "nota_minima": 7,
+    "_nota_minima": "De 0 a 10, para semelhança com o rosto, pose e consistência com a folha de personagem. Abaixo disso, gera de novo com a correção que o avaliador escreveu.",
+    "nota_minima_estilo": 6,
+    "_nota_minima_estilo": "O estilo tem régua própria: semi-realista legítimo é polido, e o avaliador tendia a chamar de foto qualquer pintura bem acabada. 6 separa pintura de foto."
+  }
+}
