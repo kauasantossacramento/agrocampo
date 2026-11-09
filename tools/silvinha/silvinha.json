@@ -8,9 +8,10 @@
   },
   "personagem": {
     "identidade": "The character is based on the real woman shown in the reference photos, who is the store owner and authorised this use. Preserve her identity faithfully: face shape, eyes and eye colour, eyebrows, nose, lips and smile, skin tone, hairline, hair colour, length and texture. She must be instantly recognisable as the same person.",
-    "estilo": "Polished semi-realistic DIGITAL ILLUSTRATION, clearly hand-painted and not a photograph: visible soft painterly brushwork, smooth simplified skin without pores, gently stylised features that still keep her likeness, clean confident edges, warm even light, friendly and trustworthy expression — like a premium brand mascot for a pet and farm store. Not a photo, not photorealistic, not a 3D render, not a caricature, not anime, no exaggerated proportions.",
+    "estilo": "High-end 3D ANIMATED-FILM CHARACTER in the style of a Pixar feature, with realism: a stylised 3D render, NOT a photograph and NOT a flat drawing. Subsurface-scattered skin with soft natural texture, slightly enlarged expressive eyes with catchlights, gently simplified and appealing proportions (no caricature), groomed hair rendered as clean 3D strands, soft cinematic studio lighting with warm key and gentle rim light. Keep her likeness clearly recognisable: same face shape, nose, smile and teeth, skin tone, freckles hint, long straight black hair parted to the side.",
     "roupa": "She wears the store uniform: a short-sleeved polo shirt in the store red (#D62B20) with a cream (#FFF1E4) collar, and dark jeans. Small simple earrings. No text, no letters, no logos anywhere on the clothes or in the image.",
-    "regras": "Single character only. Transparent background, nothing behind her: no floor, no shadow on the ground, no props unless the pose asks. Anatomically correct hands with five fingers. No text, no speech bubbles, no watermark, no frame."
+    "regras": "Single character only. Transparent background, nothing behind her: no floor, no shadow on the ground, no props unless the pose asks. Anatomically correct hands with five fingers. No text, no speech bubbles, no watermark, no frame.",
+    "_estilo": "Escolha do lojista em 09/11/2026: 3D estilo Pixar, com realismo. Substituiu 'ilustração semi-realista' — com as fotos reais o gerador saía quase foto."
   },
   "folha_de_personagem": {
     "nome": "referencia",
@@ -102,5 +103,7 @@
     "_nota_minima": "De 0 a 10, para semelhança com o rosto, pose e consistência com a folha de personagem. Abaixo disso, gera de novo com a correção que o avaliador escreveu.",
     "nota_minima_estilo": 6,
     "_nota_minima_estilo": "O estilo tem régua própria: semi-realista legítimo é polido, e o avaliador tendia a chamar de foto qualquer pintura bem acabada. 6 separa pintura de foto."
-  }
+  },
+  "fotos_por_geracao": 3,
+  "_fotos_por_geracao": "As 3 primeiras de referencias/ (1-estudio, 2-selfie-rosa, 3-selfie-carro): os melhores rostos."
 }

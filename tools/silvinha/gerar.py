@@ -96,14 +96,19 @@ def _foto_para_envio(caminho: Path) -> tuple[str, bytes, str]:
 def fotos_da_proprietaria() -> list[Path]:
     if not REFERENCIAS.exists():
         return []
-    return sorted(p for p in REFERENCIAS.iterdir() if p.suffix.lower() in EXTENSOES_FOTO)[:MAX_FOTOS]
+    # Mais fotos não é melhor: com 6 fotos reais o gerador copiava o realismo
+    # delas e ignorava o estilo pedido. O escopo diz quantas vão (as primeiras
+    # em ordem de nome — por isso as fotos são numeradas, rosto melhor antes).
+    limite = ESCOPO.get("fotos_por_geracao", MAX_FOTOS)
+    return sorted(p for p in REFERENCIAS.iterdir() if p.suffix.lower() in EXTENSOES_FOTO)[:limite]
 
 
 # ─────────────────────────────────────────────────────────────── prompt
 def montar_prompt(pedido: str, ajuste: str = "", com_fotos: bool = True,
                   com_folha: bool = False) -> str:
     p = ESCOPO["personagem"]
-    partes = []
+    # o estilo abre o pedido: no fim, ele perdia para o realismo das fotos
+    partes = ["ART STYLE (most important): " + p["estilo"]]
     if com_fotos:
         partes.append(p["identidade"])
     else:
@@ -113,7 +118,10 @@ def montar_prompt(pedido: str, ajuste: str = "", com_fotos: bool = True,
     if com_folha:
         partes.append("The LAST reference image is the approved character sheet: "
                       "keep exactly the same face, hair, art style and uniform as in it.")
-    partes += [p["estilo"], p["roupa"], "POSE: " + pedido, p["regras"]]
+    if com_fotos:
+        partes.append("Use the reference photos ONLY for her identity (face, hair, skin tone) — "
+                      "never copy their photographic look, lighting or clothes.")
+    partes += [p["roupa"], "POSE: " + pedido, p["regras"]]
     if ajuste:
         partes.append("CORRECTIONS FROM THE PREVIOUS ATTEMPT (must fix): " + ajuste)
     return "\n\n".join(partes)
