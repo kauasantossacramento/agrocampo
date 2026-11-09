@@ -17,16 +17,22 @@
      data-csrf="{{ csrf_token }}"
      {% if produto %}data-produto="{{ produto.slug }}"{% endif %}
      data-nome="{{ site.assistente_nome }}">
+  {% comment %}
+    A própria Silvinha é o botão da conversa (pedido de 09/11/2026): antes
+    eram um balão redondo e, ao mesmo tempo, ela subindo da borda — duas
+    chamadas para a mesma coisa. Agora é ela, pequena, no pé da tela à
+    esquerda, com um balão dizendo que é só clicar.
+  {% endcomment %}
   <button type="button" class="silvinha__botao" data-silvinha-abrir
           aria-expanded="false" aria-controls="silvinha-janela"
-          aria-label="Conversar com {{ site.assistente_nome }}">
-    {# a foto do painel tem a palavra final; sem ela, a Silvinha desenhada #}
-    <img src="{% if site.assistente_imagem %}{{ site.assistente_imagem.url }}{% else %}{% static 'img/silvinha/avatar.webp' %}{% endif %}"
-         alt="" class="silvinha__avatar">
-    <span class="silvinha__chamada">
-      <strong>{{ site.assistente_nome }}</strong>
-      <span>Posso ajudar?</span>
-    </span>
+          aria-label="Conversar com {{ site.assistente_nome }}: tire suas dúvidas">
+    <img src="{% static 'img/silvinha/saindo-de-baixo.webp' %}" alt="" class="silvinha__figura">
+    {% if site.silvinha_espiar %}
+      <span class="silvinha__convite" data-silvinha-convite
+            data-segundos="{{ site.silvinha_espiar_segundos }}">
+        {{ site.silvinha_frase_espiar|default:"Clique em mim para tirar suas dúvidas!" }}
+      </span>
+    {% endif %}
   </button>
 
   <section class="silvinha__janela" id="silvinha-janela" hidden
@@ -62,25 +68,5 @@
     </p>
   </section>
 
-  {% if site.silvinha_espiar %}
-    {% comment %}
-      Ela sobe da borda de baixo da tela com um balão, alguns segundos depois
-      de a pessoa chegar. Uma vez por dia (assistente.js guarda a data), e
-      some quando a conversa abre. Tocar nela ou no balão abre a conversa.
-    {% endcomment %}
-    <div class="silvinha-espia" data-silvinha-espia hidden
-         data-segundos="{{ site.silvinha_espiar_segundos }}">
-      <div class="silvinha-espia__fala">
-        <button type="button" class="silvinha-espia__balao" data-silvinha-espia-abrir>
-          {{ site.silvinha_frase_espiar|default:"Oi! Quer ajuda para escolher?" }}
-        </button>
-        <button type="button" class="silvinha-espia__fechar" data-silvinha-espia-fechar aria-label="Agora não">
-          <svg width="12" height="12" aria-hidden="true"><use href="#i-x"></use></svg>
-        </button>
-      </div>
-      <img src="{% static 'img/silvinha/saindo-de-baixo.webp' %}" alt="{{ site.assistente_nome }}"
-           class="silvinha-espia__img" data-silvinha-espia-abrir>
-    </div>
-  {% endif %}
 </div>
 {% endif %}

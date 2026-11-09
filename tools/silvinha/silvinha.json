@@ -58,11 +58,11 @@
       "uso": "Ela aparece no alto, olha para baixo e aponta para a linha de produtos logo abaixo (por padrão, a primeira vitrine da home).",
       "tamanho": "1536x1024",
       "balao": "esquerda",
-      "prompt": "Seen from above: she leans DOWN over the top edge of the image, as if peeking over the top of a phone screen. Her head, hair, shoulders and ONE arm come into the image FROM the top edge; her body continues beyond the top edge and is cut off cleanly by it — her shoulders and upper back touch the top border, nothing of her torso ends inside the image (no floating torso, no rounded cut-out body). Her other hand rests on the top edge. With the index finger of the extended arm she points straight DOWN at something below the image; her eyes follow her finger, warm helpful smile. The whole bottom half and the left third are empty (transparent).",
-      "criterios": "Ela se debruça pela borda superior: ombros e costas encostados no topo e cortados por ele (nenhum tronco terminando dentro da imagem), olhando e apontando para baixo; metade de baixo vazia.",
+      "prompt": "She stands BEHIND a horizontal counter edge and leans forward over it, looking DOWN, as if peeking over the top of a product shelf. Her WHOLE head and hair are fully visible with clear empty transparent space ABOVE her hair (nothing touches the top border). Her body is cut by a perfectly straight HORIZONTAL line about two-thirds down the image (the counter edge): below that line only her pointing hand and forearm continue. One hand rests flat on that edge; with the index finger of the other hand she points straight DOWN at something below, eyes following her finger, warm helpful smile. Everything below her fingertip and the left third of the image are empty (transparent).",
+      "criterios": "Cabeça e cabelo inteiros com folga acima (nada encostando na borda de cima); corpo cortado por uma linha horizontal reta (a borda onde se apoia); uma mão apoiada na borda e a outra apontando para baixo; olhando para o dedo.",
       "checagens": {
-        "borda_ocupada": "superior",
-        "borda_vazia": "inferior"
+        "borda_vazia": "superior",
+        "lado_vazio": "esquerda"
       }
     },
     {

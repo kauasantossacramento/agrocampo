@@ -74,6 +74,61 @@ def produtos_relacionados(pergunta: str, produto_atual=None):
     return encontrados[:MAX_PRODUTOS + 1]
 
 
+def _texto_limpo(texto: str, limite: int) -> str:
+    """Descrição sem HTML nem espaço sobrando, cortada no fim de uma frase."""
+    import html
+
+    texto = html.unescape(re.sub(r"<[^>]+>", " ", texto or ""))
+    texto = " ".join(texto.split())
+    if len(texto) <= limite:
+        return texto
+    corte = texto.rfind(". ", 0, limite)
+    return texto[: corte + 1 if corte > limite * 0.6 else limite].rstrip() + " …"
+
+
+def _detalhe_produto(p: Produto) -> str:
+    """A ficha que a Silvinha usa para responder sobre um produto: a linha de
+    sempre mais as observações do cadastro (descrição, benefícios,
+    composição) e para quais animais ele é."""
+    partes = [_linha_produto(p)]
+    animais = ", ".join(e.nome for e in p.especies.all()[:6])
+    if animais:
+        partes.append(f"  Para: {animais}.")
+    if p.marca_id:
+        partes.append(f"  Marca: {p.marca.nome}.")
+    if p.descricao:
+        partes.append("  Observações do cadastro: " + _texto_limpo(p.descricao, 900))
+    if p.beneficios:
+        partes.append("  Benefícios: " + _texto_limpo(p.beneficios, 300))
+    if p.composicao:
+        partes.append("  Composição: " + _texto_limpo(p.composicao, 300))
+    return "\n".join(partes)
+
+
+def catalogo_resumido() -> str:
+    """Uma linha por produto à venda, para ela saber o que a loja tem.
+
+    Sem a descrição (seriam ~60 mil tokens por pergunta); a descrição vai só
+    dos produtos ligados à conversa. Guardado 5 minutos.
+    """
+    from django.core.cache import cache
+
+    texto = cache.get("assistente:catalogo")
+    if texto is not None:
+        return texto
+    linhas = []
+    for p in (Produto.objects.vitrine().select_related("categoria", "linha")
+              .prefetch_related("especies").order_by("categoria__nome", "nome")):
+        animais = "/".join(e.nome for e in p.especies.all()[:3]) or "—"
+        preco = f"R$ {p.preco_atual:.2f}".replace(".", ",")
+        estoque = "" if p.em_estoque else " · SEM estoque"
+        linha = f" · {p.linha_nome}" if p.linha_id else ""
+        linhas.append(f"- {p.nome} · {preco} · {animais}{linha}{estoque} · codigo: {p.slug}")
+    texto = "\n".join(linhas)
+    cache.set("assistente:catalogo", texto, 300)
+    return texto
+
+
 def _linha_produto(p: Produto) -> str:
     preco = p.preco_atual
     partes = [f"- {p.nome} — R$ {preco:.2f}".replace(".", ",")]
@@ -95,7 +150,7 @@ def _linha_produto(p: Produto) -> str:
     return " ".join(partes)
 
 
-def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
+def montar_instrucoes(pergunta: str, produto_atual=None, historico=None) -> str:
     config = SiteConfig.load()
     nome = config.assistente_nome or "Silvinha"
 
@@ -204,14 +259,29 @@ def montar_instrucoes(pergunta: str, produto_atual=None) -> str:
     if config.aviso_entrega:
         blocos.append(f"AVISO DE ENTREGA: {config.aviso_entrega}")
 
-    produtos = produtos_relacionados(pergunta, produto_atual)
+    # a busca olha também as últimas falas do cliente: "e esse serve para
+    # filhote?" não cita o produto, mas a mensagem anterior citou
+    anteriores = [m.get("texto", "") for m in (historico or [])[-4:] if m.get("papel") == "usuario"]
+    produtos = produtos_relacionados(" ".join(anteriores[-2:] + [pergunta]), produto_atual)
     if produto_atual:
         blocos.append(
             f"O CLIENTE ESTÁ NA PÁGINA DO PRODUTO: {produto_atual.nome}. "
             f"Descrição: {(produto_atual.descricao or produto_atual.resumo or '')[:600]}"
         )
+    catalogo = catalogo_resumido()
+    if catalogo:
+        blocos.append(
+            "CATÁLOGO COMPLETO DA LOJA (uma linha por produto à venda; use para saber "
+            "o que existe, sugerir alternativas e responder 'vocês têm…?'):\n" + catalogo
+        )
     if produtos:
-        blocos.append("PRODUTOS RELEVANTES:\n" + "\n".join(_linha_produto(p) for p in produtos))
+        blocos.append(
+            "PRODUTOS LIGADOS À PERGUNTA, COM AS OBSERVAÇÕES DO CADASTRO — responda sobre "
+            "cada produto de acordo com essas observações (indicação, idade, porte, modo de "
+            "uso, cuidados). Se a resposta não estiver nas observações, diga que não tem essa "
+            "informação e ofereça o WhatsApp da loja; nunca invente:\n"
+            + "\n\n".join(_detalhe_produto(p) for p in produtos)
+        )
 
     if config.assistente_instrucoes:
         blocos.append("ORIENTAÇÕES DO LOJISTA:\n" + config.assistente_instrucoes)
@@ -235,7 +305,7 @@ def responder(*, sessao: str, pergunta: str, historico: list[dict],
         registro.save()
         return {"texto": texto, "ok": False}
 
-    instrucoes = montar_instrucoes(pergunta, produto)
+    instrucoes = montar_instrucoes(pergunta, produto, historico)
     mensagens = [m for m in historico[-MAX_HISTORICO:] if m.get("texto")]
     mensagens.append({"papel": "usuario", "texto": pergunta})
 

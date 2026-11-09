@@ -295,15 +295,15 @@ class SiteConfig(TimeStampedModel):
     # (geradas por tools/silvinha); aqui o lojista liga, desliga e escreve
     # o que ela diz no balão — texto em imagem gerada não dá para trocar.
     silvinha_espiar = models.BooleanField(
-        "Silvinha sobe da borda da tela", default=True,
-        help_text="Alguns segundos depois de a pessoa chegar, ela aparece com um balão. Uma vez por dia.",
+        "balão de convite ao lado da Silvinha", default=True,
+        help_text="Alguns segundos depois de a pessoa chegar, o balão aparece ao lado dela por 10 segundos.",
     )
     silvinha_frase_espiar = models.CharField(
-        "frase de quando ela sobe", max_length=90, blank=True,
-        default="Oi! Quer ajuda para escolher?",
+        "frase do balão de convite", max_length=90, blank=True,
+        default="Clique em mim para tirar suas dúvidas!",
     )
     silvinha_espiar_segundos = models.PositiveSmallIntegerField(
-        "esperar antes de subir (segundos)", default=8,
+        "esperar antes do balão (segundos)", default=4,
     )
     silvinha_apontar = models.BooleanField(
         "Silvinha aponta para a primeira vitrine", default=True,

@@ -349,7 +349,7 @@ pre, code { overflow-x: auto; max-width: 100%; }
 @media (max-width: 860px) {
   body { padding-bottom: var(--barra-app-h); }
   .zap { bottom: calc(var(--barra-app-h) + var(--s-3)); }
-  .silvinha { bottom: calc(var(--barra-app-h) + var(--s-3)); }
+  .silvinha:not(.is-aberta) { bottom: var(--barra-app-h); }
   .toast-stack { bottom: calc(var(--barra-app-h) + var(--s-3)); }
   .pwa-convite { bottom: calc(var(--barra-app-h) + var(--s-2)); }
 }
@@ -410,44 +410,46 @@ pre, code { overflow-x: auto; max-width: 100%; }
 /* enquanto a resposta vem: ela pensando ao lado dos pontinhos */
 .silvinha__pensando { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: center 25%; margin-right: 6px; vertical-align: middle; background: #fff; }
 
-/* ─── ela sobe da borda de baixo da tela, com um balão
-   Fica ao lado do botão da assistente, encostada no pé da tela (no celular,
-   em cima da barra de app). Sobe com um deslize; o balão aparece depois. */
-.silvinha-espia {
-  position: fixed; z-index: 905; left: 250px; bottom: 0;
-  width: 230px; transform: translateY(105%);
-  transition: transform .55s cubic-bezier(.2, .9, .25, 1.15);
+/* ─── a própria Silvinha é o botão da conversa
+   Pequena, encostada no pé da tela à esquerda (no celular, sobre a barra de
+   app), saindo de baixo. O balão de convite fica à direita dela. */
+.silvinha { left: 10px; bottom: 0; }
+.silvinha__botao {
+  position: relative; display: block; height: auto; padding: 0;
+  border-radius: 0; background: none; box-shadow: none;
 }
-.silvinha-espia[hidden] { display: none; }
-.silvinha-espia.is-visivel { transform: none; }
-.silvinha-espia__img { display: block; width: 100%; height: auto; cursor: pointer; filter: drop-shadow(0 -4px 12px rgba(0, 0, 0, .12)); }
-.silvinha-espia__fala { position: absolute; bottom: calc(100% - 18px); left: 8%; max-width: 220px; }
-.silvinha-espia__balao {
-  position: relative; display: block; max-width: 220px;
-  padding: 10px 14px; border: 0; border-radius: 16px 16px 16px 4px; cursor: pointer;
-  background: #fff; color: var(--ink); font: 600 var(--fs-sm)/1.35 var(--font-body, inherit);
-  text-align: left; box-shadow: var(--sh-2);
+.silvinha__botao:hover { transform: none; }
+.silvinha__figura {
+  display: block; width: 128px; height: auto;
+  filter: drop-shadow(0 -2px 10px rgba(0, 0, 0, .14));
+  transition: transform .25s var(--ease-spring, ease);
+}
+.silvinha__botao:hover .silvinha__figura,
+.silvinha__botao:focus-visible .silvinha__figura { transform: translateY(-4px); }
+.silvinha__convite {
+  position: absolute; left: calc(100% - 18px); bottom: 58%;
+  width: max-content; max-width: 190px; padding: 9px 13px;
+  border-radius: 16px 16px 16px 4px; background: #fff; color: var(--ink);
+  font: 600 var(--fs-sm)/1.35 var(--font-body, inherit); text-align: left;
+  box-shadow: var(--sh-2); pointer-events: none;
   opacity: 0; transform: translateY(6px) scale(.96);
-  transition: opacity .3s ease .45s, transform .3s ease .45s;
+  transition: opacity .3s ease, transform .3s ease;
 }
-.silvinha-espia.is-visivel .silvinha-espia__balao { opacity: 1; transform: none; }
-.silvinha-espia__fechar {
-  position: absolute; top: -10px; right: -10px; z-index: 2;
-  width: 26px; height: 26px; border-radius: 50%; border: 0; cursor: pointer;
-  display: grid; place-items: center; background: var(--ink); color: #fff;
-  opacity: 0; transition: opacity .3s ease .6s;
-}
-.silvinha-espia.is-visivel .silvinha-espia__fechar { opacity: .85; }
-body.silvinha-aberta .silvinha-espia { display: none; }
+.silvinha.mostra-convite .silvinha__convite,
+.silvinha__botao:hover .silvinha__convite,
+.silvinha__botao:focus-visible .silvinha__convite { opacity: 1; transform: none; }
+/* a janela da conversa abre logo acima dela */
+.silvinha__janela { bottom: calc(100% + 10px); }
 
 /* ─── ela se debruça sobre a primeira vitrine e aponta para baixo
-   A linha reta onde o tronco termina fica a 75,5% da altura da imagem
-   (proporção 560 × 323): alinhada ao topo da seção, ela parece estar atrás
-   dela, apoiada na borda. */
+   A linha reta onde o tronco termina fica a 85,4% da altura da imagem
+   (560 × 451, altura = 0,805 da largura): o recuo para cima é
+   0,854 × 0,805 = 0,6875 da largura. Alinhada ao topo dos cards, ela parece
+   estar atrás deles, apoiada na borda, com a cabeça inteira à vista. */
 .section.tem-silvinha { position: relative; }
 /* `top` vem do JS (topo da fileira de cards); o recuo para cima é a parte
    da imagem acima da linha reta do tronco */
-.silvinha-aponta { --w: 180px; position: absolute; z-index: 6; right: 10rem; top: 0; transform: translateY(calc(var(--w) * -0.4355)); width: var(--w); pointer-events: none; }
+.silvinha-aponta { --w: 150px; position: absolute; z-index: 6; right: clamp(4px, 10vw, 10rem); top: 0; transform: translateY(calc(var(--w) * -0.6875)); width: var(--w); pointer-events: none; }
 .silvinha-aponta__img { display: block; width: 100%; height: auto; }
 .silvinha-aponta__balao {
   position: absolute; right: calc(100% - 8px); top: 4%; width: max-content; max-width: 200px;
@@ -456,6 +458,10 @@ body.silvinha-aberta .silvinha-espia { display: none; }
   font: 600 var(--fs-sm)/1.35 var(--font-body, inherit); text-align: left; box-shadow: var(--sh-2);
   animation: silvinha-balao .4s ease .8s both;
 }
+/* o balão da vitrine só cabe onde sobra espaço entre o título e ela; em
+   tela menor ele cobria o título, e no celular disputava com o "Clique em
+   mim" — o gesto de apontar já diz o recado */
+@media (max-width: 1099px) { .silvinha-aponta__balao { display: none; } }
 @keyframes silvinha-balao { from { opacity: 0; transform: translateY(6px) scale(.95); } to { opacity: 1; transform: none; } }
 
 /* pedido pago e carrinho vazio */
@@ -463,17 +469,17 @@ body.silvinha-aberta .silvinha-espia { display: none; }
 .silvinha-carrinho { display: block; width: 130px; height: auto; margin: 0 auto var(--s-3); }
 
 @media (max-width: 860px) {
-  .silvinha-espia { left: 74px; bottom: var(--barra-app-h, 0px); width: 170px; }
-  .silvinha-espia__fala, .silvinha-espia__balao { max-width: 170px; }
-  .silvinha-espia__balao { font-size: var(--fs-xs); }
+  .silvinha { left: 6px; bottom: var(--barra-app-h, 0px); }
+  .silvinha__figura { width: 96px; }
+  .silvinha__convite { max-width: 150px; font-size: var(--fs-xs); padding: 7px 10px; }
 }
 @media (max-width: 620px) {
   /* no celular o título e o "Ver todos" ocupam a largura: ela desce para o
      vão entre a linha do título e os cards, apoiada um pouco dentro deles */
-  .silvinha-aponta { --w: 104px; right: 4px; transform: translateY(calc(var(--w) * -0.4355 + 14px)); }
+  .silvinha-aponta { --w: 92px; right: 4px; transform: translateY(calc(var(--w) * -0.6875 + 16px)); }
   .silvinha-aponta__balao { max-width: 112px; font-size: 11px; padding: 5px 8px; top: 14%; right: calc(100% - 14px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .silvinha-espia, .silvinha-espia__balao, .silvinha-espia__fechar { transition: none; }
+  .silvinha__figura, .silvinha__convite { transition: none; }
   .silvinha-aponta__balao { animation: none; }
 }

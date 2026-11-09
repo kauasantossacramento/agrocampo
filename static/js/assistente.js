@@ -198,7 +198,7 @@
 
   const celular = window.matchMedia('(max-width: 620px)');
   function abrir() {
-    esconderEspia(false);
+    esconderConvite();
     janela.hidden = false;
     botao.setAttribute('aria-expanded', 'true');
     raiz.classList.add('is-aberta');
@@ -215,6 +215,9 @@
     document.body.classList.remove('silvinha-aberta');
   }
   botao.addEventListener('click', () => janela.hidden ? abrir() : fecharJanela());
+  // pointerdown, e não click: no celular o primeiro toque fechava o teclado,
+  // a folha mudava de altura e o click caía fora do X — "não fechava"
+  fechar.addEventListener('pointerdown', (e) => { e.preventDefault(); fecharJanela(); });
   fechar.addEventListener('click', fecharJanela);
   // no celular a loja fica escurecida atrás da folha: tocar nela fecha
   document.addEventListener('click', (e) => {
@@ -222,38 +225,21 @@
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !janela.hidden) fecharJanela(); });
 
-  /* ------------------------------- ela sobe da borda de baixo da tela
-     Uma vez por dia por visitante; quem já abriu a conversa hoje não vê. */
-  const espia = raiz.querySelector('[data-silvinha-espia]');
+  /* --------------------------------- balão de convite ao lado dela
+     Aparece alguns segundos depois de a pessoa chegar, fica 10 s e some;
+     passar o cursor (ou focar) mostra de novo — isso é do CSS. */
   const hoje = new Date().toISOString().slice(0, 10);
   const lerDia = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const marcarDia = (k) => { try { localStorage.setItem(k, hoje); } catch (e) { /* aba privada */ } };
-  function esconderEspia(marcar) {
-    if (!espia || espia.hidden) return;
-    espia.classList.remove('is-visivel');
-    setTimeout(() => { espia.hidden = true; }, 350);
-    if (marcar !== false) marcarDia('silvinha_espiou');
-  }
-  // as duas Silvinhas juntas na tela é Silvinha demais: a que sobe da borda
-  // espera enquanto a que aponta para a vitrine estiver à vista
-  const apontaVisivel = () => {
-    const a = document.querySelector('.silvinha-aponta');
-    if (!a) return false;
-    const r = a.getBoundingClientRect();
-    return r.bottom > 0 && r.top < window.innerHeight;
-  };
-  if (espia && lerDia('silvinha_espiou') !== hoje) {
-    const segundos = Math.max(2, Number(espia.dataset.segundos) || 8);
-    const tentarSubir = () => {
+  const convite = raiz.querySelector('[data-silvinha-convite]');
+  function esconderConvite() { raiz.classList.remove('mostra-convite'); }
+  if (convite) {
+    const segundos = Math.max(1, Number(convite.dataset.segundos) || 4);
+    setTimeout(() => {
       if (!janela.hidden) return;
-      if (apontaVisivel()) { setTimeout(tentarSubir, 3000); return; }
-      espia.hidden = false;
-      requestAnimationFrame(() => espia.classList.add('is-visivel'));
-      marcarDia('silvinha_espiou');
-    };
-    setTimeout(tentarSubir, segundos * 1000);
-    espia.querySelectorAll('[data-silvinha-espia-abrir]').forEach((b) => b.addEventListener('click', abrir));
-    espia.querySelector('[data-silvinha-espia-fechar]').addEventListener('click', () => esconderEspia());
+      raiz.classList.add('mostra-convite');
+      setTimeout(esconderConvite, 10000);
+    }, segundos * 1000);
   }
 
   /* ---------------------- ela aponta para a primeira vitrine (página inicial)
