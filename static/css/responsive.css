@@ -348,7 +348,15 @@ pre, code { overflow-x: auto; max-width: 100%; }
    reposicionam o balão do WhatsApp e, antes, o escondiam atrás da barra. */
 @media (max-width: 860px) {
   body { padding-bottom: var(--barra-app-h); }
-  .zap { bottom: calc(var(--barra-app-h) + var(--s-3)); }
+  /* no celular, um círculo pequeno e só o ícone: o oval de 54x48 cobria
+     metade do card de produto ao lado */
+  .zap {
+    right: 12px; bottom: calc(var(--barra-app-h) + 12px);
+    width: 42px; height: 42px; padding: 0; gap: 0; justify-content: center;
+    box-shadow: 0 3px 12px rgba(37, 211, 102, .38);
+  }
+  .zap svg { width: 22px; height: 22px; }
+  .zap__balao { display: none; }
   .silvinha:not(.is-aberta) { bottom: var(--barra-app-h); }
   .toast-stack { bottom: calc(var(--barra-app-h) + var(--s-3)); }
   .pwa-convite { bottom: calc(var(--barra-app-h) + var(--s-2)); }
