@@ -2579,3 +2579,26 @@ class LogoAparadaTests(TestCase):
                 largura, altura = Image.open(f).size
         self.assertLess(altura, 120)
         self.assertGreater(largura, 350)
+
+
+class SeloLeveTests(TestCase):
+    def test_selo_grande_vira_webp_pequeno(self):
+        import io
+        import tempfile
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        from apps.catalog.models import LinhaProduto
+
+        img = Image.new("RGBA", (2600, 1900), (0, 0, 0, 0))
+        img.paste((220, 170, 30, 255), (100, 100, 2500, 1800))
+        buf = io.BytesIO(); img.save(buf, "PNG")
+        with tempfile.TemporaryDirectory() as pasta, override_settings(MEDIA_ROOT=pasta):
+            linha = LinhaProduto.objects.create(
+                nome="Premium",
+                selo_imagem=SimpleUploadedFile("selo.png", buf.getvalue(), content_type="image/png"),
+            )
+            self.assertTrue(linha.selo_imagem.name.endswith(".webp"))
+            with linha.selo_imagem.open("rb") as f:
+                self.assertLessEqual(max(Image.open(f).size), 480)

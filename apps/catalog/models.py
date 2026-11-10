@@ -214,6 +214,15 @@ class LinhaProduto(TimeStampedModel, SluggedModel):
     def __str__(self):
         return self.nome
 
+    def save(self, *args, **kwargs):
+        # arte nova do selo: vira WebP leve (o PNG de vários MB aparecia
+        # cortado ao meio no celular enquanto baixava)
+        if self.selo_imagem and not getattr(self.selo_imagem, "_committed", True):
+            from apps.core.midia import reduzir_selo
+
+            reduzir_selo(self.selo_imagem)
+        super().save(*args, **kwargs)
+
     @staticmethod
     def _misturar(cor: str, alvo: tuple, peso: float) -> str:
         """Aproxima a cor do branco (clarear) ou do preto (escurecer)."""

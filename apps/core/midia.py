@@ -334,3 +334,36 @@ def aparar_margens(campo) -> bool:
     nome = Path(campo.name).stem + "-aparada.png"
     campo.save(nome, ContentFile(saida.getvalue()), save=False)
     return True
+
+
+def reduzir_selo(campo, lado: int = 480) -> bool:
+    """Deixa a arte de um selo leve: sem sobra transparente, até `lado` px e WebP.
+
+    Os selos de linha chegavam como PNG de 1 a 3 MB (até 2600 px) para
+    aparecer com ~40 px no card. No 4G o PNG desenhava de cima para baixo e a
+    medalha ficava cortada ao meio até terminar de baixar (10/11/2026).
+    480 px cobre o maior uso — 220 px × 1,6 na página do produto não passa
+    disso em tela comum — e o WebP com transparência fica em poucos KB.
+    """
+    from io import BytesIO
+
+    from PIL import Image
+
+    if not campo:
+        return False
+    try:
+        campo.open("rb")
+        imagem = Image.open(campo)
+        imagem.load()
+    except Exception:
+        return False
+    imagem = imagem.convert("RGBA")
+    caixa = imagem.getchannel("A").point(lambda v: 255 if v > 10 else 0).getbbox()
+    if caixa:
+        imagem = imagem.crop(caixa)
+    imagem.thumbnail((lado, lado), Image.LANCZOS)
+    saida = BytesIO()
+    imagem.save(saida, "WEBP", quality=88, method=6)
+    nome = Path(campo.name).stem + ".webp"
+    campo.save(nome, ContentFile(saida.getvalue()), save=False)
+    return True
