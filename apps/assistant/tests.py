@@ -225,6 +225,12 @@ class CartoesDeProdutoTests(TestCase):
         self.assertNotIn("- Ração Golden:", limpo)
         self.assertIn("Se quiser, me avise a quantidade!", limpo)
 
+    def test_link_entre_parenteses_nao_deixa_parenteses_vazios(self):
+        texto = "Temos a Ração Golden por R$ 289,90 (https://agrocampo.online/produto/racao-golden-15kg/). Quer?"
+        limpo, cartoes = services.produtos_citados(texto)
+        self.assertEqual([c["slug"] for c in cartoes], ["racao-golden-15kg"])
+        self.assertEqual(limpo, "Temos a Ração Golden por R$ 289,90. Quer?")
+
     def test_sem_links_nada_muda(self):
         limpo, cartoes = services.produtos_citados("Oi! Como posso ajudar?")
         self.assertEqual(cartoes, []); self.assertEqual(limpo, "Oi! Como posso ajudar?")

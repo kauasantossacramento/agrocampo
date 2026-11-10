@@ -196,7 +196,7 @@
         {% if pagamento.ultimos_digitos %}<div class="summary__row"><span>Cartão</span><span>{{ pagamento.bandeira }} •••• {{ pagamento.ultimos_digitos }}</span></div>{% endif %}
         {% if pagamento.codigo_autorizacao %}<div class="summary__row"><span>Autorização</span><span class="xs">{{ pagamento.codigo_autorizacao }}</span></div>{% endif %}
         {% if pagamento.nsu %}<div class="summary__row"><span>NSU</span><span class="xs">{{ pagamento.nsu }}</span></div>{% endif %}
-        {% if pagamento.referencia_externa %}<div class="summary__row"><span>ID Stone</span><span class="xs">{{ pagamento.referencia_externa }}</span></div>{% endif %}
+        {% if pagamento.referencia_externa %}<div class="summary__row"><span>Código da transação</span><span class="xs">{{ pagamento.referencia_externa }}</span></div>{% endif %}
         {% if pagamento.valor_estornado %}
           <div class="summary__row summary__row--green"><span>Estornado</span><span>R$ {{ pagamento.valor_estornado|floatformat:2 }}</span></div>
         {% endif %}

@@ -379,6 +379,8 @@ def produtos_citados(texto: str):
     def _tira(m):
         return "" if m.group(0).rstrip("/").split("/")[-1] in encontrados else m.group(0)
     limpo = URL_QUALQUER.sub(_tira, texto)
+    # "R$ 103,00 (https://…)" deixava "R$ 103,00 ()" depois de o link sair
+    limpo = re.sub(r"[ \t]*[(\[]\s*[)\]]", "", limpo)
     linhas = []
     for linha in limpo.splitlines():
         # "- Ração Golden: " (sobrou só o rótulo) ou "Confira nos links:" sem links
