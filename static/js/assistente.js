@@ -283,9 +283,20 @@
       secao.classList.add('tem-silvinha');
       grade.classList.add('tem-silvinha__grade');
       secao.prepend(caixa);
-      // apoiada na fileira de produtos, não no topo da seção: a linha reta do
-      // tronco encosta no topo dos cards e o dedo cai sobre eles
-      const posicionar = () => { caixa.style.top = grade.offsetTop + 'px'; };
+      // no computador ela se apoia na linha sob o título da vitrine (a borda
+      // de baixo de .secao-titulo); no celular, sem espaço ao lado do título,
+      // continua apoiada no topo da fileira de cards
+      const titulo = secao.querySelector('.secao-titulo');
+      const largo = window.matchMedia('(min-width: 621px)');
+      const posicionar = () => {
+        if (titulo && largo.matches) {
+          // medida pelo layout: o título entra com animação (translateY) e
+          // getBoundingClientRect pegaria a posição no meio do movimento
+          caixa.style.top = (titulo.offsetTop + titulo.offsetHeight - 1) + 'px';
+        } else {
+          caixa.style.top = grade.offsetTop + 'px';
+        }
+      };
       posicionar();
       window.addEventListener('resize', posicionar);
     }
