@@ -27,6 +27,9 @@
 
 .logo { display: flex; align-items: center; flex: none; }
 .logo img { height: var(--logo-h, 56px); width: auto; transition: transform .28s var(--ease-out); }
+/* a altura vem do painel (até 120px), mas a logo já é aparada nas bordas:
+   nunca passa da altura do cabeçalho */
+.logo img { max-height: calc(var(--header-h) - 8px); }
 .logo:hover img { transform: scale(1.04); }
 .logo__fallback {
   font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xl);
@@ -1321,6 +1324,7 @@
 
 /* --- cabeçalho: logo maior, busca esticada */
 .tema-vitrine .header__main { gap: var(--s-5); height: calc(var(--header-h) + 14px); }
+.tema-vitrine .logo img { max-height: calc(var(--header-h) + 2px); }
 .tema-vitrine .header__search { max-width: none; }
 .tema-vitrine .header__search input { height: 48px; border: 1.5px solid var(--line); background: #fff; }
 .tema-vitrine .header__search input:focus { border-color: var(--red); }
